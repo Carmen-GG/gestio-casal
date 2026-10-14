@@ -52,7 +52,7 @@
         {
           "binding": "DB",
           "database_name": "casal-gestio-staging",
-          "database_id": "SUBSTITUIR-PER-ID-D1-STAGING",
+          "database_id": "96c8cd60-4f89-4ca7-9456-48feb0e28b42",
           "migrations_dir": "db/migrations"
         }
       ]
