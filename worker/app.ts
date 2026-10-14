@@ -4,7 +4,7 @@ import type { Repositoris } from "./repositories/tipus";
 import { repositorisD1 } from "./repositories/d1";
 import { rellotgeSistema, type Rellotge } from "./lib/rellotge";
 import { ErrorAplicacio, errors, respostaError } from "./http/errors";
-import { capcaleresSeguretat, idPeticio, midaMaximaCos, politicaOrigen } from "./middleware/seguretat";
+import { capcaleresSeguretat, idPeticio, MIDA_MAXIMA_COS, midaMaximaCos, politicaOrigen } from "./middleware/seguretat";
 import { rutesPubliques } from "./routes/public";
 import { rutesAuth } from "./routes/auth";
 import { rutesGestio } from "./routes/gestio";
@@ -27,7 +27,7 @@ export function crearApp(deps: DependenciesApp = {}) {
 
   const app = new Hono<Entorn>().basePath("/api");
 
-  app.use("*", idPeticio, capcaleresSeguretat, politicaOrigen, midaMaximaCos(256 * 1024));
+  app.use("*", idPeticio, capcaleresSeguretat, politicaOrigen, midaMaximaCos(MIDA_MAXIMA_COS));
   app.use("*", async (c, next) => {
     c.set("rellotge", rellotge);
     c.set("repos", fabricaRepos(c.env, rellotge));

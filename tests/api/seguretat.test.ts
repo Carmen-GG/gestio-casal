@@ -148,3 +148,24 @@ describe("autorització", () => {
     expect((await c.peticio(`/api/gestio/casals/${casal.id}/cicles`)).status).toBe(401);
   });
 });
+
+describe("mida de les peticions", () => {
+  it("rebutja cossos massa grans, tant si s'indica la mida com si no", async () => {
+    const { casal, cicle } = await crearEscenari({ estatCicle: "inscripcions_obertes" });
+    const c = client();
+    const ruta = `/api/public/casals/${casal.codi}/cicles/${cicle.id}/sollicituds`;
+    const gran = JSON.stringify({ dades: { nom: "x".repeat(300 * 1024) } });
+    const ambMida = await c.peticio(ruta, {
+      method: "POST", body: gran, headers: { "Content-Type": "application/json", "Content-Length": String(gran.length), "Idempotency-Key": crypto.randomUUID() },
+    });
+    expect(ambMida.status).toBe(413);
+    // Enviament fragmentat, sense Content-Length.
+    const flux = new ReadableStream({ start(ctl) { for (let i = 0; i < 10; i++) ctl.enqueue(new TextEncoder().encode("x".repeat(64 * 1024))); ctl.close(); } });
+    const senseMida = await c.peticio(ruta, {
+      method: "POST", body: flux, headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
+      // @ts-expect-error: necessari per enviar un flux com a cos
+      duplex: "half",
+    });
+    expect(senseMida.status).toBe(413);
+  });
+});
