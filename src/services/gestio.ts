@@ -15,6 +15,7 @@ export const serveiAuth = {
 
 export const serveiGestio = {
   casal: (casalId: string, s?: AbortSignal) => api.get<{ casal: Casal }>(g(casalId), s),
+  crearCasal: (dades: unknown) => api.post<{ casal: Casal }>("/gestio/casals", dades),
 
   cicles: (casalId: string, s?: AbortSignal) => api.get<{ cicles: Cicle[] }>(`${g(casalId)}/cicles`, s),
   cicle: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<DetallCicle>(`${g(casalId)}/cicles/${cicleId}`, s),
