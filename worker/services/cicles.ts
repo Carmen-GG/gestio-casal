@@ -103,6 +103,10 @@ export class ServeiCicles {
         `No es pot passar de «${ETIQUETES_ESTAT_CICLE[cicle.estat]}» a «${ETIQUETES_ESTAT_CICLE[cap]}».`,
       );
     }
+    if (cap === "adjudicat" && !(await this.repos.adjudicacio.execucioConfirmada(cicleId))) {
+      throw errors.conflicte("sense_adjudicacio_confirmada",
+        "Per marcar el cicle com a adjudicat cal confirmar abans una proposta d'adjudicació.");
+    }
     const motiu = opcions.motiu?.trim() || null;
     if (tipus === "requereix_confirmacio" && (opcions.confirmacio !== true || !motiu)) {
       throw new ErrorAplicacio(428, "confirmacio_requerida", "Aquest canvi d'estat requereix una confirmació explícita i un motiu.");

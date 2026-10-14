@@ -25,7 +25,11 @@ export const nomComplet = (p: FilaSollicitud["participant"]) => [p.cognom1, p.co
  * per columnes i paginació. Les dades de contacte només apareixen si la persona
  * usuària té permís per veure-les (ho decideix el servidor).
  */
-export function LlistatSollicituds({ casalId, cicleId, activitats }: { casalId: string; cicleId: string; activitats: Activitat[] }) {
+export function LlistatSollicituds({ casalId, cicleId, activitats, versio = 0 }: {
+  casalId: string; cicleId: string; activitats: Activitat[];
+  /** Canvia quan una altra secció modifica dades que afecten el llistat (p. ex. places). */
+  versio?: number;
+}) {
   const [vista, setVista] = useState<Vista>("inscripcio");
   const [ordre, setOrdre] = useState<{ camp: Ordre; desc: boolean } | null>(null);
   const [text, setText] = useState("");
@@ -40,7 +44,7 @@ export function LlistatSollicituds({ casalId, cicleId, activitats }: { casalId: 
   if (q) params.q = q;
   if (activitat) params.activitat = activitat;
   if (estat) params.estat = estat;
-  const consulta = useConsulta((s) => serveiGestio.sollicituds(casalId, cicleId, params, s), [casalId, cicleId, JSON.stringify(params)]);
+  const consulta = useConsulta((s) => serveiGestio.sollicituds(casalId, cicleId, params, s), [casalId, cicleId, JSON.stringify(params), versio]);
 
   const cerca = (e: FormEvent) => { e.preventDefault(); setQ(text.trim()); setPagina(1); };
   const canviaVista = (v: Vista) => { setVista(v); setOrdre(null); setPagina(1); };

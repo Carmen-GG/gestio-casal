@@ -31,5 +31,5 @@ de dades (DPD) validin, com a mínim:
 - Procediment de còpies de seguretat i proves de restauració.
 
 ## Regles de negoci
-- Regles oficials d'adjudicació, continuïtat, desempat i llista d'espera.
+- Regles oficials d'adjudicació, continuïtat, desempat i llista d'espera: el motor és configurable i els paràmetres disponibles i pendents de decidir són a [adjudicacio.md](adjudicacio.md).
 - Llindar d'assistència i conseqüències (l'aplicació no aplicarà cap baixa automàtica).

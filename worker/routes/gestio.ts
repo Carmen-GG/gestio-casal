@@ -15,6 +15,8 @@ import { ServeiActivitats } from "../services/activitats";
 import { ServeiUsuaris } from "../services/usuaris";
 import { ServeiGestioSollicituds, filtraParticipant, taulaSollicituds, visibilitat } from "../services/gestio-sollicituds";
 import { ServeiImportacions } from "../services/importacions";
+import { ServeiAdjudicacio } from "../services/adjudicacio";
+import { confirmarProposta, desarParametres, movimentPlaca, novaProposta } from "../../shared/schemas/adjudicacio";
 import {
   consultaSollicituds, importacioConfirmacio, importacioPeticio, revisioDuplicat, sollicitudActualitzarDades,
   sollicitudCanviEstat, sollicitudPreferencies,
@@ -29,6 +31,16 @@ const cicles = (c: C) => new ServeiCicles(c.get("repos"), c.get("rellotge"));
 const activitats = (c: C) => new ServeiActivitats(c.get("repos"), c.get("rellotge"));
 const sollicituds = (c: C) => new ServeiGestioSollicituds(c.get("repos"), c.get("rellotge"));
 const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rellotge"));
+const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
+
+/** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
+async function exportacioAuditada(c: C, casalId: string, tipus: string, entitat: string, entitatId: string, taula: { files: unknown[] }, extra: Record<string, unknown> = {}) {
+  await c.get("repos").auditoria.registrar({
+    casal_id: casalId, usuari_id: c.get("usuari").id, tipus_operacio: `exportacio.${tipus}`, entitat, entitat_id: entitatId,
+    resultat: "exit", id_peticio: c.get("idPeticio"), detalls: { files: taula.files.length, ...extra },
+  }, new Date(c.get("rellotge").ara()).toISOString());
+  return c.json(taula);
+}
 
 /** Detall d'una sol·licitud amb només les dades que la persona usuària pot veure. */
 async function detallVisible(c: C, casalId: string, id: string) {
@@ -226,6 +238,63 @@ export const rutesGestio = new Hono<Entorn>()
       resultat: "exit", id_peticio: c.get("idPeticio"), detalls: { files: taula.files.length, activitat_id: activitat ?? null, dades_contacte: vis.contacte },
     }, new Date(c.get("rellotge").ara()).toISOString());
     return c.json(taula);
+  })
+
+  // ---------- Adjudicació ----------
+  .get("/casals/:casalId/cicles/:cicleId/adjudicacio", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await adjudicacio(c).resum(casalId, idRuta(c, "cicleId")));
+  })
+  .put("/casals/:casalId/cicles/:cicleId/adjudicacio/parametres", async (c) => {
+    const casalId = casalAutoritzat(c, "adjudicacio.executar");
+    const cos = await cosValidat(c, desarParametres);
+    return c.json({ configuracio: await adjudicacio(c).desarParametres(casalId, idRuta(c, "cicleId"), cos, ctx(c)) });
+  })
+  .post("/casals/:casalId/cicles/:cicleId/adjudicacio/propostes", async (c) => {
+    const casalId = casalAutoritzat(c, "adjudicacio.executar");
+    const cos = await cosValidat(c, novaProposta);
+    return c.json({ execucio: await adjudicacio(c).calcularProposta(casalId, idRuta(c, "cicleId"), cos, ctx(c)) }, 201);
+  })
+  .get("/casals/:casalId/adjudicacions/:execucioId", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await adjudicacio(c).detallExecucio(casalId, idRuta(c, "execucioId"), visibilitat(c.get("usuari"), casalId)));
+  })
+  .post("/casals/:casalId/adjudicacions/:execucioId/confirmar", async (c) => {
+    const casalId = casalAutoritzat(c, "adjudicacio.confirmar");
+    const cos = await cosValidat(c, confirmarProposta);
+    return c.json({ execucio: await adjudicacio(c).confirmar(casalId, idRuta(c, "execucioId"), cos, ctx(c)) });
+  })
+  .get("/casals/:casalId/adjudicacions/:execucioId/exportacio", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.exportar");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    const id = idRuta(c, "execucioId");
+    const vis = visibilitat(c.get("usuari"), casalId);
+    return exportacioAuditada(c, casalId, "adjudicacio", "execucio_adjudicacio", id, await adjudicacio(c).taulaResultats(casalId, id, vis));
+  })
+
+  // ---------- Places i llistes d'espera ----------
+  .get("/casals/:casalId/cicles/:cicleId/places", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await adjudicacio(c).places(casalId, idRuta(c, "cicleId"), visibilitat(c.get("usuari"), casalId)));
+  })
+  .post("/casals/:casalId/places/:placaId/moviments", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    const cos = await cosValidat(c, movimentPlaca);
+    return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  .get("/casals/:casalId/places/:placaId/moviments", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json({ moviments: await adjudicacio(c).movimentsPlaca(casalId, idRuta(c, "placaId")) });
+  })
+  .get("/casals/:casalId/cicles/:cicleId/exportacions/places", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.exportar");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    const tipus = c.req.query("tipus");
+    if (tipus !== "admesos" && tipus !== "espera") throw errors.peticioInvalida("Tipus d'exportació no vàlid.");
+    const cicleId = idRuta(c, "cicleId");
+    const vis = visibilitat(c.get("usuari"), casalId);
+    return exportacioAuditada(c, casalId, `places.${tipus}`, "cicle", cicleId, await adjudicacio(c).taulaPlaces(casalId, cicleId, tipus, vis),
+      { dades_contacte: vis.contacte });
   })
 
   // ---------- Historial ----------
