@@ -80,6 +80,25 @@ Cos (estricte, `shared/schemas/public.ts`):
 Participant, sol·licitud, preferències i auditoria es desen en una sola transacció: o tot o res.
 El número correlatiu i la data de recepció els assigna el servidor.
 
+## Gestió de sol·licituds, importació i exportació (Fase 4)
+
+Totes sota `/api/gestio/casals/{casalId}` i amb sessió. El servidor treu de les respostes les dades de
+contacte si la persona no té `sollicituds.dades_contacte`; el DNI/NIE no surt mai sencer.
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/sollicituds?vista=&ordre=&dir=&q=&activitat=&estat=&pagina=&mida=` | `sollicituds.consultar` | Llistat. `vista`: `inscripcio`, `alfabetic` o `activitat` (agrupat). `q`: nom/cognoms sense accents o número |
+| GET | `/sollicituds/{id}` | `sollicituds.consultar` | Detall amb preferències |
+| PATCH | `/sollicituds/{id}/dades` | `sollicituds.gestionar` | Dades personals. Cal `versio_participant` i `motiu` |
+| POST | `/sollicituds/{id}/estat` | `sollicituds.gestionar` | Rebuda, validada, pendent de revisió o anul·lada. Cal `versio` i `motiu` |
+| PUT | `/sollicituds/{id}/preferencies` | `sollicituds.gestionar` | Només abans de l'adjudicació. Cal `versio` i `motiu` |
+| GET | `/historial/sollicitud/{id}` | `sollicituds.consultar` | Historial. Per a dades personals només consta quins camps han canviat |
+| GET | `/cicles/{cicleId}/duplicats` | `sollicituds.consultar` | Parelles possiblement duplicades, per revisar a mà |
+| POST | `/cicles/{cicleId}/duplicats/revisio` | `sollicituds.gestionar` | Desa la decisió (`duplicat` / `no_duplicat`). No modifica cap sol·licitud |
+| POST | `/cicles/{cicleId}/importacions/{sollicituds\|activitats}/previsualitzacio` | `dades.importar` (+ `activitats.gestionar`) | Valida les files ja mapades i en retorna el resultat |
+| POST | `/cicles/{cicleId}/importacions/{sollicituds\|activitats}` | igual | Confirma: `clau`, `confirmacio: true` i `files_esperades` (les vàlides vistes). Només desa les vàlides |
+| GET | `/cicles/{cicleId}/exportacions/sollicituds[?activitat=]` | `dades.exportar` + `sollicituds.consultar` | Taula per a XLSX (el navegador genera el fitxer). Queda auditada |
+
 ## Previst
-- Fases 4–6: sol·licituds, importació/exportació, adjudicació, places, assistència, estadístiques, auditoria.
+- Fases 5–6: adjudicació, places, llistes d'espera, assistència, estadístiques.
 - Es publicarà una especificació OpenAPI quan hi hagi els endpoints de gestió.
