@@ -1,0 +1,32 @@
+# Primer accés al panell de gestió de staging (o un accés nou si s'ha perdut).
+# El codi i el correu surten de secrets del repositori i no s'escriuen enlloc: el repositori és públic
+# i els registres d'Actions també. Després, a la pàgina «Entrar» del panell, s'escriu el mateix codi a
+# «Codi d'accés». El codi val 60 minuts i un sol ús; per tornar a entrar cal canviar el secret i repetir-ho.
+# Secrets: ACCES_STAGING_CORREU (correu de la persona) i ACCES_STAGING_CODI (frase o codi de 20+ caràcters).
+name: Accés a staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acces:
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ACCES_CORREU: ${{ secrets.ACCES_STAGING_CORREU }}
+      ACCES_CODI: ${{ secrets.ACCES_STAGING_CODI }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: >-
+          node scripts/acces-dev.mjs --entorn staging --rol admin_central --nom "Administració central"
+          --correu-de-variable ACCES_CORREU --codi-de-variable ACCES_CODI --minuts 60
