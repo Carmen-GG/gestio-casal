@@ -149,7 +149,7 @@ export function DetallCicle() {
                     <td>{a.capacitat}</td>
                     <td><span className="etiqueta">{ETIQUETES_ESTAT_ACTIVITAT[a.estat]}</span></td>
                     {pot("activitats.gestionar") && (
-                      <td className="accions-fila">
+                      <td><div className="accions-fila">
                         {a.estat !== "arxivada" && <button type="button" className="boto boto--secundari boto--petit" onClick={() => setEditantActivitat(a.id)}>Edita</button>}
                         <button type="button" className="boto boto--secundari boto--petit" disabled={enCurs}
                           onClick={() => accio(() => serveiGestio.duplicarActivitat(casalId, a.id), `S'ha creat una còpia de «${a.nom}» en esborrany.`)}>Duplica</button>
@@ -157,7 +157,7 @@ export function DetallCicle() {
                           <button key={x.estat} type="button" className="boto boto--secundari boto--petit" disabled={enCurs}
                             onClick={() => setPendent({ tipus: "activitat", activitat: a, estat: x.estat })}>{x.text}</button>
                         ))}
-                      </td>
+                      </div></td>
                     )}
                   </tr>
                 ))}

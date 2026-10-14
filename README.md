@@ -4,8 +4,9 @@ Plataforma web per gestionar les inscripcions, adjudicacions, llistes d'espera i
 de les activitats dels Casals Cívics i Comunitaris, i (pròximament) el mòdul de difusió
 PG-Cartells. Casal inicial: Casal Cívic i Comunitari Terrassa – Can Boada.
 
-> **Estat:** Fase 1 (arquitectura i base). Encara no hi ha formulari d'inscripció ni panell
-> de gestió. No s'ha desplegat a cap entorn de Cloudflare. Vegeu «Limitacions conegudes».
+> **Estat:** Fase 2 (autenticació, autoritzacions i gestió de casals, cicles i activitats).
+> Encara no hi ha formulari d'inscripció (Fase 3). No s'ha desplegat a cap entorn de Cloudflare.
+> Vegeu «Limitacions conegudes».
 
 ## Tecnologies
 React 19 + TypeScript + Vite · Cloudflare Workers (Hono) amb Static Assets · Cloudflare D1 ·
@@ -24,6 +25,12 @@ npm run db:seed:local      # carrega dades FICTÍCIES de prova (casal Can Boada 
 npm run dev                # http://localhost:5173 (frontend + API al mateix servidor)
 ```
 Proveu `http://localhost:5173/inscripcio/CAN-BOADA` i `http://localhost:5173/api/salut`.
+
+Per entrar al panell de gestió (`/gestio`), genereu un enllaç d'un sol ús:
+```bash
+node scripts/acces-dev.mjs --email persona@exemple.cat --nom "Persona de prova" --rol gestor_casal --casal CAN-BOADA
+```
+Detalls: [`docs/autenticacio.md`](docs/autenticacio.md).
 
 ## Proves
 ```bash
@@ -74,12 +81,13 @@ una migració nova. Procediment i còpies de seguretat: [`docs/operacions.md`](d
 - [Arquitectura](docs/arquitectura.md) i [decisions (ADR)](docs/adr/)
 - [Model de dades](docs/model-dades.md)
 - [API](docs/api.md)
+- [Autenticació i autorització](docs/autenticacio.md)
 - [Operacions, còpies i recuperació](docs/operacions.md)
 - [Requisits pendents de validació institucional](docs/validacio-institucional.md)
 - [Auditoria de PG-Cartells](docs/auditoria-pg-cartells.md)
 
-## Limitacions conegudes (Fase 1)
-- Sense autenticació ni panell de gestió (Fase 2); sense formulari d'inscripció (Fase 3).
+## Limitacions conegudes
+- Sense formulari d'inscripció (Fase 3). L'autenticació corporativa (Entra ID) està preparada però no implementada.
 - Sense limitació de peticions ni protecció antibots als endpoints públics (Fase 3: Rate Limiting de
   Cloudflare i Turnstile).
 - El flux de desplegament no s'ha pogut executar: falten el compte i els identificadors de Cloudflare.
