@@ -112,6 +112,9 @@ main:focus { outline: none; }
 .dies__dia { display: flex; align-items: center; gap: 0.25rem; font-weight: 400; }
 
 .botonera { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.botonera--camp { align-items: flex-start; }
+.botonera--camp .boto { margin-top: 1.6rem; }
+.botonera--camp .camp--compacte { max-width: 16rem; }
 .boto--petit { padding: 0.3rem 0.7rem; font-size: 0.9rem; }
 .boto--perill { background: var(--color-error); border-color: var(--color-error); }
 .boto--perill:hover { background: #7d1013; }
@@ -193,3 +196,15 @@ main:focus { outline: none; }
 .llista-errors { color: var(--color-error); }
 .llista-avisos { color: #5c3c00; }
 .camp--en-linia { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+/* Adjudicació i places */
+.etiqueta--confirmada, .etiqueta--admesa { border-color: var(--color-exit); color: var(--color-exit); background: var(--color-exit-fons); }
+.etiqueta--proposta, .etiqueta--oferta_pendent { border-color: #8a5a00; color: #5c3c00; }
+.etiqueta--llista_espera { border-color: var(--color-primari); color: var(--color-primari); }
+.etiqueta--substituida, .etiqueta--descartada, .etiqueta--baixa { color: var(--color-text-secundari); }
+.etiqueta--renuncia { border-color: var(--color-error); color: var(--color-error); }
+
+/* Assistència */
+.llista-sessions { list-style: none; padding: 0; margin: 0.5rem 0; }
+.llista-sessions li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; align-items: center; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--color-vora); }
+.llista-sessions__activa { background: var(--color-exit-fons); }

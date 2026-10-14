@@ -6,6 +6,8 @@ import { D1RepositoriActivitats } from "./activitats";
 import { D1RepositoriSessions, D1RepositoriUsuaris } from "./usuaris";
 import { D1RepositoriSollicituds } from "./sollicituds";
 import { D1RepositoriGestioSollicituds } from "./gestio-sollicituds";
+import { D1RepositoriAdjudicacio } from "./adjudicacio";
+import { D1RepositoriAssistencia } from "./assistencia";
 import { D1RepositoriAuditoria, D1RepositoriHistorial, D1UnitatDeTreball } from "./registres";
 
 export function repositorisD1(db: D1Database, rellotge: Rellotge): Repositoris {
@@ -19,6 +21,8 @@ export function repositorisD1(db: D1Database, rellotge: Rellotge): Repositoris {
     auditoria: new D1RepositoriAuditoria(db),
     sollicituds: new D1RepositoriSollicituds(db),
     gestioSollicituds: new D1RepositoriGestioSollicituds(db),
+    adjudicacio: new D1RepositoriAdjudicacio(db),
+    assistencia: new D1RepositoriAssistencia(db),
     unitat: new D1UnitatDeTreball(db),
   };
 }

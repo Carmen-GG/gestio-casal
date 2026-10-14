@@ -99,6 +99,42 @@ contacte si la persona no té `sollicituds.dades_contacte`; el DNI/NIE no surt m
 | POST | `/cicles/{cicleId}/importacions/{sollicituds\|activitats}` | igual | Confirma: `clau`, `confirmacio: true` i `files_esperades` (les vàlides vistes). Només desa les vàlides |
 | GET | `/cicles/{cicleId}/exportacions/sollicituds[?activitat=]` | `dades.exportar` + `sollicituds.consultar` | Taula per a XLSX (el navegador genera el fitxer). Queda auditada |
 
+## Adjudicació i places (Fase 5)
+
+Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen a [adjudicacio.md](adjudicacio.md).
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/adjudicacio` | `sollicituds.consultar` | Paràmetres vigents, versions anteriors i execucions |
+| PUT | `/cicles/{cicleId}/adjudicacio/parametres` | `adjudicacio.executar` | Desa una versió nova. Cal `versio_actual` (la vigent o `null`) |
+| POST | `/cicles/{cicleId}/adjudicacio/propostes` | `adjudicacio.executar` | Calcula una proposta (cicle en procés d'adjudicació). `lletra` opcional amb el sorteig de lletra |
+| GET | `/adjudicacions/{id}` | `sollicituds.consultar` | Proposta o adjudicació amb els resultats per activitat |
+| POST | `/adjudicacions/{id}/confirmar` | `adjudicacio.confirmar` | `confirmacio: true`. Si substitueix una confirmada, cal `motiu` (428 si no hi és). 409 `proposta_obsoleta` si les dades han canviat |
+| GET | `/adjudicacions/{id}/exportacio` | `dades.exportar` + `sollicituds.consultar` | Taula de resultats per a XLSX. Queda auditada |
+| GET | `/cicles/{cicleId}/places` | `sollicituds.consultar` | Places per activitat amb ocupació |
+| POST | `/places/{id}/moviments` | `places.gestionar` | `accio` (`renunciar`, `donar_baixa`, `oferir`, `acceptar_oferta`, `retornar_espera`, `admetre`), `versio` i `motiu`. 409 `sense_places_lliures` si no hi ha capacitat |
+| GET | `/places/{id}/moviments` | `sollicituds.consultar` | Moviments de la plaça |
+| GET | `/cicles/{cicleId}/exportacions/places?tipus=admesos\|espera` | `dades.exportar` + `sollicituds.consultar` | Taula per a XLSX. Queda auditada |
+
+Canviar el cicle a «Adjudicat» des de l'API d'estats exigeix que hi hagi una adjudicació confirmada.
+
+## Assistència (Fase 6)
+
+Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen a [assistencia.md](assistencia.md).
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/assistencia` | `sollicituds.consultar` | Resum per activitat: sessions, fetes, mitjana i persones per sota del llindar |
+| GET | `/activitats/{id}/assistencia` | `sollicituds.consultar` | Full de l'activitat: sessions, persones (admeses o amb marques) i marques |
+| POST | `/activitats/{id}/sessions/generacio` | `assistencia.registrar` | Crea les sessions a partir dels dies i les dates de l'activitat. No duplica les existents |
+| POST | `/activitats/{id}/sessions` | `assistencia.registrar` | Afegeix una sessió (`data`, `hora_inici` opcional). 409 `sessio_existent` |
+| POST | `/sessions/{id}/cancellacio` | `assistencia.registrar` | `versio` i `motiu`. Només sessions previstes i sense marques |
+| PUT | `/sessions/{id}/assistencia` | `assistencia.registrar` | `marques` (`placa_id`, `estat`, `versio` o `null` si és nova). Modificar una marca exigeix `motiu` (428). 409 si el cicle està bloquejat, la sessió és futura o cancel·lada, o hi ha un canvi concurrent |
+| GET | `/cicles/{cicleId}/exportacions/graelles[?telefon=1]` | `dades.exportar` + `sollicituds.consultar` | Dades de les graelles (el navegador genera l'XLSX). El telèfon només hi és amb permís de dades de contacte. Queda auditada |
+| GET | `/cicles/{cicleId}/exportacions/assistencia` | `dades.exportar` + `sollicituds.consultar` | Taula d'assistència per a XLSX. Queda auditada |
+
+Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`).
+
 ## Previst
-- Fases 5–6: adjudicació, places, llistes d'espera, assistència, estadístiques.
+- Fase 7: estadístiques i quadre de comandament.
 - Es publicarà una especificació OpenAPI quan hi hagi els endpoints de gestió.

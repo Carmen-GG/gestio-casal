@@ -18,6 +18,12 @@ import { Historial } from "./Historial";
 import { Duplicats } from "./Duplicats";
 import { ImportacioExportacio } from "./ImportacioExportacio";
 import { LlistatSollicituds } from "./Sollicituds";
+import { Adjudicacio } from "./Adjudicacio";
+import { Places } from "./Places";
+import { Assistencia } from "./Assistencia";
+
+/** Estats del cicle en què pot existir una adjudicació confirmada. */
+const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat", "finalitzat", "arxivat"];
 
 const ETIQUETES_ESTAT_ACTIVITAT: Record<EstatActivitat, string> = { esborrany: "Esborrany", activa: "Activa", inactiva: "Inactiva", arxivada: "Arxivada" };
 const ACCIONS_ACTIVITAT: Record<EstatActivitat, { estat: EstatActivitat; text: string }[]> = {
@@ -37,14 +43,15 @@ export function DetallCicle() {
   const pot = usePermisos(casalId);
   const [versio, setVersio] = useState(0);
   const recarrega = () => setVersio((v) => v + 1);
-  const detall = useConsulta((s) => serveiGestio.cicle(casalId, cicleId, s), [casalId, cicleId, versio]);
-  const activitats = useConsulta((s) => serveiGestio.activitats(casalId, cicleId, s), [casalId, cicleId, versio]);
+  const detall = useConsulta((s) => serveiGestio.cicle(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
+  const activitats = useConsulta((s) => serveiGestio.activitats(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
   const [editantCicle, setEditantCicle] = useState(false);
   const [editantActivitat, setEditantActivitat] = useState<string | null>(null);
   const [exit, setExit] = useState("");
   const [errorAccio, setErrorAccio] = useState<ErrorClientApi | null>(null);
   const [pendent, setPendent] = useState<Pendent>(null);
   const [enCurs, setEnCurs] = useState(false);
+  const [versioPlaces, setVersioPlaces] = useState(0);
 
   if (detall.tipus === "carregant") return <Carregant text="Carregant el cicle…" />;
   if (detall.tipus === "error") return <MissatgeError error={detall.error} onReintentar={detall.reintentar} />;
@@ -182,7 +189,8 @@ export function DetallCicle() {
 
       {pot("sollicituds.consultar") && (
         <Seccio titol="Sol·licituds rebudes">
-          <LlistatSollicituds casalId={casalId} cicleId={cicleId} activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
+          <LlistatSollicituds casalId={casalId} cicleId={cicleId} activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []}
+            versio={versioPlaces} />
         </Seccio>
       )}
 
@@ -196,6 +204,24 @@ export function DetallCicle() {
         <Seccio titol="Importació i exportació" obertaInicial={false}>
           <ImportacioExportacio casalId={casalId} cicleId={cicleId} pot={pot}
             activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && !["esborrany", "arxivat"].includes(cicle.estat) && (
+        <Seccio titol="Adjudicació" obertaInicial={cicle.estat === "adjudicacio_en_proces"}>
+          <Adjudicacio casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && ESTATS_AMB_PLACES.includes(cicle.estat) && (
+        <Seccio titol="Places i llistes d'espera" obertaInicial={["adjudicat", "publicat"].includes(cicle.estat)}>
+          <Places casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} onCanvi={() => setVersioPlaces((v) => v + 1)} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && ["adjudicat", "publicat", "finalitzat"].includes(cicle.estat) && (
+        <Seccio titol="Assistència" obertaInicial={cicle.estat === "publicat"}>
+          <Assistencia casalId={casalId} cicle={cicle} pot={pot} onCanviCicle={recarrega} />
         </Seccio>
       )}
 

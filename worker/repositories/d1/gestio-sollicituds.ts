@@ -5,7 +5,7 @@ import type {
 } from "../tipus";
 import { assignacionsUpdate, comOperacio, marcadors } from "./util";
 
-const COLUMNES_PARTICIPANT = [...CAMPS_PERSONALS, "codi_participant_intern"] as const;
+export const COLUMNES_PARTICIPANT = [...CAMPS_PERSONALS, "codi_participant_intern"] as const;
 
 /** Columnes comunes de les files de sol·licitud (amb el participant i l'estat d'adjudicació). */
 const SELECT_FILA = `
@@ -13,8 +13,9 @@ const SELECT_FILA = `
     (SELECT COUNT(*) FROM preferencies pr WHERE pr.sollicitud_id = s.id) AS nombre_preferencies,
     CASE
       WHEN ex.id IS NULL THEN 'pendent'
-      WHEN EXISTS (SELECT 1 FROM resultats_adjudicacio r WHERE r.execucio_id = ex.id AND r.sollicitud_id = s.id AND r.resultat = 'admesa') THEN 'admesa'
-      WHEN EXISTS (SELECT 1 FROM resultats_adjudicacio r WHERE r.execucio_id = ex.id AND r.sollicitud_id = s.id AND r.resultat = 'llista_espera') THEN 'llista_espera'
+      -- Després de confirmar, l'estat surt de les places (que recullen renúncies, ofertes i baixes).
+      WHEN EXISTS (SELECT 1 FROM places pl WHERE pl.sollicitud_id = s.id AND pl.estat = 'admesa') THEN 'admesa'
+      WHEN EXISTS (SELECT 1 FROM places pl WHERE pl.sollicitud_id = s.id AND pl.estat IN ('llista_espera', 'oferta_pendent')) THEN 'llista_espera'
       ELSE 'sense_placa'
     END AS estat_adjudicacio,
     p.id AS p_id, p.versio AS p_versio, p.clau_ordenacio AS p_clau_ordenacio, ${COLUMNES_PARTICIPANT.map((c) => `p.${c} AS p_${c}`).join(", ")}
@@ -24,9 +25,17 @@ const SELECT_FILA = `
 
 type FilaBd = Omit<FilaSollicitud, "participant"> & { cicle_id: string; p_id: string; p_versio: number } & Record<string, unknown>;
 
-function mapaFila(f: FilaBd): FilaSollicitud {
+/** Columnes del participant amb prefix «p_», per a consultes amb JOIN a participants p. */
+export const SELECT_PARTICIPANT = `p.id AS p_id, p.versio AS p_versio, ${COLUMNES_PARTICIPANT.map((c) => `p.${c} AS p_${c}`).join(", ")}`;
+
+export function participantDeFila(f: Record<string, unknown>): Participant {
   const participant = { id: f.p_id, versio: f.p_versio } as Participant;
   for (const c of COLUMNES_PARTICIPANT) (participant as Record<string, unknown>)[c] = f[`p_${c}`] ?? null;
+  return participant;
+}
+
+function mapaFila(f: FilaBd): FilaSollicitud {
+  const participant = participantDeFila(f);
   return {
     id: f.id, numero: f.numero, rebuda_el: f.rebuda_el, estat: f.estat, origen: f.origen, versio: f.versio,
     nombre_preferencies: f.nombre_preferencies, estat_adjudicacio: f.estat_adjudicacio, participant,

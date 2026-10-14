@@ -256,7 +256,7 @@ function Exportacio({ casalId, cicleId, activitats }: { casalId: string; cicleId
         </select>
         <button type="button" className="boto boto--secundari" disabled={enCurs || !activitat} onClick={() => void exporta(activitat)}>Exporta</button>
       </div>
-      <p className="text-secundari">Les exportacions de persones admeses, llistes d'espera, resultats i assistència arribaran amb l'adjudicació i el control d'assistència.</p>
+      <p className="text-secundari">Les persones admeses i les llistes d'espera s'exporten des de «Places i llistes d'espera», i els resultats de cada proposta, des de la seva pàgina. Les graelles i les dades d'assistència, des de la secció «Assistència».</p>
     </section>
   );
 }
