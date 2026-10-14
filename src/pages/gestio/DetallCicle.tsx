@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { ETIQUETES_ESTAT_CICLE, type EstatCicle, type TipusTransicio } from "../../../shared/domain/cicles";
-import { CAMPS_PERSONALS, CAMPS_SEMPRE_OBLIGATORIS, ETIQUETES_CAMPS, type ConfiguracioFormulari } from "../../../shared/domain/formulari";
+import { CAMPS_PERSONALS, CAMPS_SEMPRE_OBLIGATORIS, ETIQUETES_CAMPS, MIDA_MAXIMA_PRIVACITAT, type ConfiguracioFormulari } from "../../../shared/domain/formulari";
 import { DialegConfirmacio } from "../../components/DialegConfirmacio";
 import { Carregant, MissatgeError } from "../../components/EstatsConsulta";
-import { AvisExit } from "../../components/Formulari";
+import { AvisExit, CampAreaText } from "../../components/Formulari";
 import { Seccio } from "../../components/Seccio";
 import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
@@ -118,10 +118,10 @@ export function DetallCicle() {
         </Seccio>
       )}
 
-      <Seccio titol="Camps del formulari d'inscripció" obertaInicial={false}>
+      <Seccio titol="Formulari d'inscripció" obertaInicial={!formulari.informacio_privacitat && ["esborrany", "preparacio"].includes(cicle.estat)}>
         <CampsFormulari formulari={formulari} cicle={cicle} editable={pot("cicles.gestionar") && ["esborrany", "preparacio"].includes(cicle.estat)}
           onDesar={(conf) => accio(() => serveiGestio.actualitzarCicle(casalId, cicleId, { versio: cicle.versio, configuracio_formulari: conf }),
-            "S'han desat els camps del formulari.")} />
+            "S'ha desat la configuració del formulari.")} />
       </Seccio>
 
       <Seccio titol="Activitats">
@@ -222,6 +222,7 @@ function CampsFormulari({ formulari, editable, onDesar }: {
   formulari: ConfiguracioFormulari; cicle: Cicle; editable: boolean; onDesar: (c: ConfiguracioFormulari) => void;
 }) {
   const [camps, setCamps] = useState(formulari.camps);
+  const [privacitat, setPrivacitat] = useState(formulari.informacio_privacitat);
   const canvia = (camp: keyof typeof camps, clau: "actiu" | "obligatori", valor: boolean) =>
     setCamps((c) => ({ ...c, [camp]: { ...c[camp], [clau]: valor, ...(clau === "actiu" && !valor ? { obligatori: false } : {}) } }));
   return (
@@ -247,7 +248,15 @@ function CampsFormulari({ formulari, editable, onDesar }: {
           </tbody>
         </table>
       </div>
-      {editable && <button type="button" className="boto" onClick={() => onDesar({ camps })}>Desa els camps del formulari</button>}
+      <h3 className="subseccio">Informació sobre protecció de dades</h3>
+      <p className="text-secundari">
+        Es mostra al formulari públic i la persona l'ha d'acceptar abans d'enviar. L'ha de redactar o validar el responsable
+        del tractament (vegeu docs/validacio-institucional.md). Mentre estigui buida, el formulari públic no accepta sol·licituds.
+      </p>
+      {!formulari.informacio_privacitat && <p className="avis avis--alerta">Aquest cicle encara no té la informació de protecció de dades.</p>}
+      <CampAreaText etiqueta="Text informatiu" value={privacitat} rows={8} maxLength={MIDA_MAXIMA_PRIVACITAT}
+        disabled={!editable} onChange={(e) => setPrivacitat(e.target.value)} />
+      {editable && <button type="button" className="boto" onClick={() => onDesar({ camps, informacio_privacitat: privacitat })}>Desa la configuració del formulari</button>}
     </div>
   );
 }

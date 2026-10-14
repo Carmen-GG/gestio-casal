@@ -10,7 +10,9 @@ INSERT OR IGNORE INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obert
 VALUES ('7a2d3b1f-1c8e-4d66-8b62-3a2a7d1e0001', '6f1c2a0e-0b7d-4c55-9a51-2f1f6c0d0001',
         'Cicle de prova (fictici)', 2027, '2027-01-11', '2027-03-26',
         '2026-10-01T07:00:00.000Z', '2026-12-31T22:59:59.000Z', '2027-01-08',
-        'inscripcions_obertes', '{}', '2026-10-14T00:00:00.000Z', '2026-10-14T00:00:00.000Z');
+        'inscripcions_obertes',
+        '{"informacio_privacitat":"TEXT DE PROVA, NO VÀLID COM A INFORMACIÓ LEGAL. El text definitiu l''ha de redactar o validar el responsable del tractament abans de publicar el formulari."}',
+        '2026-10-14T00:00:00.000Z', '2026-10-14T00:00:00.000Z');
 
 INSERT OR IGNORE INTO activitats (id, casal_id, cicle_id, nom, descripcio, categoria, dies_setmana,
   hora_inici, hora_fi, data_inici, data_fi, capacitat, nombre_sessions, estat, creat_el, actualitzat_el)

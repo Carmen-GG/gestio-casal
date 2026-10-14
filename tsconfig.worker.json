@@ -15,5 +15,7 @@
     "noEmit": true,
     "types": ["@cloudflare/workers-types", "@cloudflare/vitest-plugin/types"]
   },
-  "include": ["worker", "shared", "tests"]
+  "include": ["worker", "shared", "tests"],
+  // Les proves del client importen codi del navegador: es comproven amb tsconfig.app.json.
+  "exclude": ["tests/client"]
 }

@@ -6,6 +6,7 @@ declare global {
       DB: D1Database;
       APP_ENV: string;
       ALLOWED_ORIGINS: string;
+      LIMIT_SOLLICITUDS?: RateLimit;
       TEST_MIGRATIONS: import("cloudflare:test").D1Migration[];
     }
   }

@@ -1,4 +1,4 @@
-import type { RespostaActivitatsPubliques, RespostaCiclesPubliques } from "../../shared/api/public";
+import type { RespostaActivitatsPubliques, RespostaCiclesPubliques, RespostaSollicitudRegistrada } from "../../shared/api/public";
 import { api } from "./api";
 
 const codi = (c: string) => encodeURIComponent(c);
@@ -10,5 +10,15 @@ export const serveiPublic = {
     api.get<RespostaActivitatsPubliques>(
       `/public/casals/${codi(codiCasal)}/cicles/${encodeURIComponent(cicleId)}/activitats`,
       signal,
+    ),
+  /**
+   * Envia una sol·licitud. `clauEnviament` es manté entre reintents: si el servidor
+   * ja l'havia rebuda, retorna la mateixa confirmació en lloc de duplicar-la.
+   */
+  enviarSollicitud: (codiCasal: string, cicleId: string, cos: unknown, clauEnviament: string) =>
+    api.post<RespostaSollicitudRegistrada>(
+      `/public/casals/${codi(codiCasal)}/cicles/${encodeURIComponent(cicleId)}/sollicituds`,
+      cos,
+      { "Idempotency-Key": clauEnviament },
     ),
 };

@@ -6,6 +6,7 @@
  * nova de cada repositori (vegeu docs/adr/0003-capa-de-repositoris.md).
  */
 import type { EstatCicle } from "../../shared/domain/cicles";
+import type { CampPersonal } from "../../shared/domain/formulari";
 
 export interface Casal {
   id: string;
@@ -228,6 +229,48 @@ export interface RepositoriAuditoria {
   >;
 }
 
+/** Dades d'una sol·licitud nova del formulari públic, ja validades i normalitzades. */
+export interface NovaSollicitudPublica {
+  sollicitud_id: string;
+  participant_id: string;
+  casal_id: string;
+  cicle_id: string;
+  codi_confirmacio: string;
+  clau_idempotencia: string;
+  resum_peticio: string;
+  privacitat_resum: string;
+  rebuda_el: string;
+  dades: Record<CampPersonal, string | null>;
+  clau_ordenacio: string;
+  preferencies: { activitat_id: string; ordre: number }[];
+  id_peticio: string | null;
+}
+
+/** Vista mínima d'una sol·licitud ja registrada, sense dades personals. */
+export interface SollicitudRegistrada {
+  id: string;
+  numero: number;
+  codi_confirmacio: string;
+  rebuda_el: string;
+  resum_peticio: string | null;
+  preferencies: { ordre: number; activitat: string }[];
+}
+
+export type ResultatRegistre =
+  | { tipus: "registrada"; sollicitud: SollicitudRegistrada }
+  | { tipus: "cicle_no_accepta" }
+  | { tipus: "activitat_no_disponible" };
+
+export interface RepositoriSollicituds {
+  perClauIdempotencia(casalId: string, cicleId: string, clau: string): Promise<SollicitudRegistrada | null>;
+  /**
+   * Registra participant, sol·licitud, preferències i auditoria en una sola
+   * transacció. Les condicions (cicle obert en l'instant de recepció, activitats
+   * actives del cicle) es comproven dins de la mateixa transacció: o es desa tot o res.
+   */
+  registrarPublica(dades: NovaSollicitudPublica): Promise<ResultatRegistre>;
+}
+
 /** Executa un conjunt d'operacions de manera atòmica (tot o res). */
 export interface UnitatDeTreball {
   executar(operacions: Operacio[]): Promise<{ canvis: number }[]>;
@@ -241,5 +284,6 @@ export interface Repositoris {
   activitats: RepositoriActivitats;
   historial: RepositoriHistorial;
   auditoria: RepositoriAuditoria;
+  sollicituds: RepositoriSollicituds;
   unitat: UnitatDeTreball;
 }
