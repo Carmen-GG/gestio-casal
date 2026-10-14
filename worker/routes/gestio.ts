@@ -399,9 +399,8 @@ export const rutesGestio = new Hono<Entorn>()
     if (!permis) throw errors.noTrobat();
     const casalId = casalAutoritzat(c, permis);
     const entitatId = idRuta(c, "entitatId");
-    const entrades = await c.get("repos").historial.llistar(entitat, entitatId);
-    // Defensa addicional: només entrades del casal de la ruta.
-    return c.json({ historial: entrades.filter((e) => e.casal_id === casalId) });
+    // Només entrades del casal de la ruta, filtrades a la mateixa consulta.
+    return c.json({ historial: await c.get("repos").historial.llistar(entitat, entitatId, casalId) });
   })
 
   // ---------- Persones autoritzades ----------

@@ -83,6 +83,7 @@ una migració nova. Procediment i còpies de seguretat: [`docs/operacions.md`](d
 - [API](docs/api.md)
 - [Autenticació i autorització](docs/autenticacio.md)
 - [Operacions, còpies i recuperació](docs/operacions.md)
+- [Seguretat i protecció de dades](docs/seguretat.md)
 - [Requisits pendents de validació institucional](docs/validacio-institucional.md)
 - [Auditoria de PG-Cartells](docs/auditoria-pg-cartells.md)
 - [PG-Cartells: plantilles i fitxers](docs/cartells.md)
