@@ -283,11 +283,10 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
       </fieldset>
 
       <div className="botonera">
-        <button type="submit" className="boto" disabled={enviant || duplicades.activitats.length > 0} aria-disabled={enviant}>
+        <button type="submit" className="boto" disabled={enviant}>
           {enviant ? "Enviant…" : "Envia la sol·licitud"}
         </button>
       </div>
-      {duplicades.activitats.length > 0 && <p className="text-secundari">Corregiu les preferències repetides per poder enviar.</p>}
     </form>
   );
 }

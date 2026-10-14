@@ -7,7 +7,10 @@ de dades (DPD) validin, com a mínim:
 ## Protecció de dades (RGPD i LOPDGDD)
 - Responsable del tractament, finalitat i base jurídica de les inscripcions.
 - Inscripció al registre d'activitats de tractament.
-- Text de la informació de privacitat del formulari (no n'hi ha prou amb un avís genèric).
+- Text de la informació de privacitat del formulari (no n'hi ha prou amb un avís genèric). El panell
+  permet desar-lo per a cada cicle; mentre sigui buit, el formulari públic no accepta sol·licituds.
+  Es desa la data d'acceptació i un resum (SHA-256) del text exacte acceptat. El text de les dades de
+  prova és fictici i no és vàlid.
 - Llista definitiva de camps personals que es poden recollir (minimització). El formulari
   permet activar-ne o desactivar-ne cadascun; per defecte només nom i primer cognom són obligatoris.
 - Justificació, si escau, per recollir DNI/NIE, data de naixement o lloc de naixement.

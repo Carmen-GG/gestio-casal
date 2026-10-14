@@ -3,6 +3,7 @@ import { Carregant, MissatgeError } from "../components/EstatsConsulta";
 import { useConsulta } from "../hooks/useConsulta";
 import { serveiPublic } from "../services/public";
 import { formataData, formataHorari } from "../utils/format";
+import { FormulariInscripcio } from "./FormulariInscripcio";
 
 export function ActivitatsCicle() {
   const { codiCasal = "", cicleId = "" } = useParams();
@@ -11,7 +12,8 @@ export function ActivitatsCicle() {
   if (consulta.tipus === "carregant") return <Carregant text="Carregant les activitats…" />;
   if (consulta.tipus === "error") return <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />;
 
-  const { casal, cicle, activitats } = consulta.dades;
+  const { casal, cicle, activitats, formulari } = consulta.dades;
+  const formulariDisponible = cicle.accepta_sollicituds && activitats.length > 0 && formulari.informacio_privacitat !== "";
   return (
     <section aria-labelledby="titol-activitats">
       <p className="subtitol">
@@ -22,7 +24,13 @@ export function ActivitatsCicle() {
         Del {formataData(cicle.data_inici)} al {formataData(cicle.data_fi)}. Data prevista de comunicació de la
         resolució: {formataData(cicle.data_resolucio_prevista)}.
       </p>
-      {activitats.length === 0 ? (
+      {formulariDisponible ? (
+        <FormulariInscripcio casal={casal} cicle={cicle} activitats={activitats} formulari={formulari} />
+      ) : cicle.accepta_sollicituds && activitats.length > 0 ? (
+        <p className="avis avis--alerta">El formulari d'inscripció d'aquest cicle encara no està disponible. Adreceu-vos al casal.</p>
+      ) : null}
+      {!cicle.accepta_sollicituds && <p className="avis avis--alerta">Ara mateix no s'accepten sol·licituds per a aquest cicle.</p>}
+      {formulariDisponible ? null : activitats.length === 0 ? (
         <p>Aquest cicle encara no té activitats publicades.</p>
       ) : (
         <ul className="llista-targetes">
