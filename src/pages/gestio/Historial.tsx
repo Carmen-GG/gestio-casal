@@ -3,6 +3,8 @@ import { useConsulta } from "../../hooks/useConsulta";
 import { serveiGestio } from "../../services/gestio";
 import { formataDataHora } from "../../utils/format";
 import { ETIQUETES_ESTAT_CICLE, esEstatCicle } from "../../../shared/domain/cicles";
+import { ETIQUETES_ASSISTENCIA, type EstatAssistencia } from "../../../shared/domain/assistencia";
+import { formataData } from "../../utils/format";
 
 const ESTATS_ACTIVITAT: Record<string, string> = { esborrany: "Esborrany", activa: "Activa", inactiva: "Inactiva", arxivada: "Arxivada" };
 const ESTATS_SOLLICITUD: Record<string, string> = { rebuda: "Rebuda", validada: "Validada", pendent_revisio: "Pendent de revisió", anullada: "Anul·lada" };
@@ -34,7 +36,10 @@ export function Historial({ casalId, entitat, id, versio }: { casalId: string; e
           {(e.accio === "modificacio" || e.accio === "canvi_estat" || e.accio === "arxivat") && (
             <ul>
               {Object.entries(e.canvis).map(([camp, c]) => {
-                const canvi = c as { abans: unknown; despres: unknown; modificat?: boolean };
+                const canvi = c as { abans: unknown; despres: unknown; modificat?: boolean; data?: string };
+                if (camp === "assistencia" && canvi.data) {
+                  return <li key={camp}>Assistència del {formataData(canvi.data)}: {ETIQUETES_ASSISTENCIA[canvi.abans as EstatAssistencia] ?? "—"} → {ETIQUETES_ASSISTENCIA[canvi.despres as EstatAssistencia] ?? "—"}</li>;
+                }
                 // Dades personals: l'historial només desa que el camp ha canviat, no el valor.
                 if (canvi.modificat) return <li key={camp}>{camp}: modificat</li>;
                 return <li key={camp}>{camp}: {valor(canvi.abans, camp)} → {valor(canvi.despres, camp)}</li>;

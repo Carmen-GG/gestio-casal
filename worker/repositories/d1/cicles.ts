@@ -64,7 +64,7 @@ export class D1RepositoriCicles implements RepositoriCicles {
   operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisCicle, ara: string, operacio: string) {
     const { sql, valors } = assignacionsUpdate(canvis, [
       "nom", "any", "data_inici", "data_fi", "obertura_inscripcions", "tancament_inscripcions",
-      "data_resolucio_prevista", "configuracio_formulari",
+      "data_resolucio_prevista", "configuracio_formulari", "llindar_assistencia",
     ]);
     return comOperacio(
       this.db

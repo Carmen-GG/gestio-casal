@@ -16,6 +16,8 @@ import { ServeiUsuaris } from "../services/usuaris";
 import { ServeiGestioSollicituds, filtraParticipant, taulaSollicituds, visibilitat } from "../services/gestio-sollicituds";
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
+import { ServeiAssistencia } from "../services/assistencia";
+import { cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { confirmarProposta, desarParametres, movimentPlaca, novaProposta } from "../../shared/schemas/adjudicacio";
 import {
   consultaSollicituds, importacioConfirmacio, importacioPeticio, revisioDuplicat, sollicitudActualitzarDades,
@@ -32,6 +34,7 @@ const activitats = (c: C) => new ServeiActivitats(c.get("repos"), c.get("rellotg
 const sollicituds = (c: C) => new ServeiGestioSollicituds(c.get("repos"), c.get("rellotge"));
 const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rellotge"));
 const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
+const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
 
 /** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
 async function exportacioAuditada(c: C, casalId: string, tipus: string, entitat: string, entitatId: string, taula: { files: unknown[] }, extra: Record<string, unknown> = {}) {
@@ -297,10 +300,57 @@ export const rutesGestio = new Hono<Entorn>()
       { dades_contacte: vis.contacte });
   })
 
+  // ---------- Assistència ----------
+  .get("/casals/:casalId/cicles/:cicleId/assistencia", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await assistencia(c).resumCicle(casalId, idRuta(c, "cicleId")));
+  })
+  .get("/casals/:casalId/activitats/:activitatId/assistencia", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await assistencia(c).activitat(casalId, idRuta(c, "activitatId"), visibilitat(c.get("usuari"), casalId)));
+  })
+  .post("/casals/:casalId/activitats/:activitatId/sessions/generacio", async (c) => {
+    const casalId = casalAutoritzat(c, "assistencia.registrar");
+    return c.json(await assistencia(c).generarSessions(casalId, idRuta(c, "activitatId"), ctx(c)));
+  })
+  .post("/casals/:casalId/activitats/:activitatId/sessions", async (c) => {
+    const casalId = casalAutoritzat(c, "assistencia.registrar");
+    const cos = await cosValidat(c, novaSessio);
+    return c.json(await assistencia(c).afegirSessio(casalId, idRuta(c, "activitatId"), cos, ctx(c)), 201);
+  })
+  .post("/casals/:casalId/sessions/:sessioId/cancellacio", async (c) => {
+    const casalId = casalAutoritzat(c, "assistencia.registrar");
+    const cos = await cosValidat(c, cancellarSessio);
+    return c.json(await assistencia(c).cancellarSessio(casalId, idRuta(c, "sessioId"), cos, ctx(c)));
+  })
+  .put("/casals/:casalId/sessions/:sessioId/assistencia", async (c) => {
+    const casalId = casalAutoritzat(c, "assistencia.registrar");
+    const cos = await cosValidat(c, registrarAssistencia);
+    return c.json(await assistencia(c).registrar(casalId, idRuta(c, "sessioId"), cos, ctx(c)));
+  })
+  .get("/casals/:casalId/cicles/:cicleId/exportacions/graelles", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.exportar");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    const cicleId = idRuta(c, "cicleId");
+    const vis = visibilitat(c.get("usuari"), casalId);
+    const dades = await assistencia(c).graelles(casalId, cicleId, vis, c.req.query("telefon") === "1");
+    await c.get("repos").auditoria.registrar({
+      casal_id: casalId, usuari_id: c.get("usuari").id, tipus_operacio: "exportacio.graelles", entitat: "cicle", entitat_id: cicleId,
+      resultat: "exit", id_peticio: c.get("idPeticio"), detalls: { ...dades.totals, telefon: dades.telefon },
+    }, new Date(c.get("rellotge").ara()).toISOString());
+    return c.json(dades);
+  })
+  .get("/casals/:casalId/cicles/:cicleId/exportacions/assistencia", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.exportar");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    const cicleId = idRuta(c, "cicleId");
+    return exportacioAuditada(c, casalId, "assistencia", "cicle", cicleId, await assistencia(c).taulaAssistencia(casalId, cicleId));
+  })
+
   // ---------- Historial ----------
   .get("/casals/:casalId/historial/:entitat/:entitatId", async (c) => {
     const entitat = c.req.param("entitat");
-    const permis = { casal: "casal.consultar", cicle: "cicles.consultar", activitat: "activitats.consultar", sollicitud: "sollicituds.consultar" }[entitat];
+    const permis = { casal: "casal.consultar", cicle: "cicles.consultar", activitat: "activitats.consultar", sollicitud: "sollicituds.consultar", placa: "sollicituds.consultar" }[entitat];
     if (!permis) throw errors.noTrobat();
     const casalId = casalAutoritzat(c, permis);
     const entitatId = idRuta(c, "entitatId");

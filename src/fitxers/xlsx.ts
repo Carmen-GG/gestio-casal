@@ -6,8 +6,8 @@
  */
 import type { TaulaExportacio } from "../types/gestio";
 
-type ExcelJS = typeof import("exceljs");
-const carregaExcel = (): Promise<ExcelJS> => import("exceljs").then((m) => ((m as unknown as { default?: ExcelJS }).default ?? m) as ExcelJS);
+export type ExcelJS = typeof import("exceljs");
+export const carregaExcel = (): Promise<ExcelJS> => import("exceljs").then((m) => ((m as unknown as { default?: ExcelJS }).default ?? m) as ExcelJS);
 
 export const TIPUS_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
@@ -33,7 +33,7 @@ export async function generaXlsx(taula: TaulaExportacio, excel?: ExcelJS): Promi
 }
 
 /** Els noms de full d'Excel tenen un màxim de 31 caràcters i no admeten alguns símbols. */
-function nomFull(titol: string) {
+export function nomFull(titol: string) {
   // Només la part principal del títol («Sol·licituds · Cicle…» → «Sol·licituds»).
   const principal = titol.split(/ · | \(/)[0]!;
   return principal.replace(/[\\/?*[\]:]/g, " ").slice(0, 31).trim() || "Dades";

@@ -118,6 +118,23 @@ Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen
 
 Canviar el cicle a «Adjudicat» des de l'API d'estats exigeix que hi hagi una adjudicació confirmada.
 
+## Assistència (Fase 6)
+
+Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen a [assistencia.md](assistencia.md).
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/assistencia` | `sollicituds.consultar` | Resum per activitat: sessions, fetes, mitjana i persones per sota del llindar |
+| GET | `/activitats/{id}/assistencia` | `sollicituds.consultar` | Full de l'activitat: sessions, persones (admeses o amb marques) i marques |
+| POST | `/activitats/{id}/sessions/generacio` | `assistencia.registrar` | Crea les sessions a partir dels dies i les dates de l'activitat. No duplica les existents |
+| POST | `/activitats/{id}/sessions` | `assistencia.registrar` | Afegeix una sessió (`data`, `hora_inici` opcional). 409 `sessio_existent` |
+| POST | `/sessions/{id}/cancellacio` | `assistencia.registrar` | `versio` i `motiu`. Només sessions previstes i sense marques |
+| PUT | `/sessions/{id}/assistencia` | `assistencia.registrar` | `marques` (`placa_id`, `estat`, `versio` o `null` si és nova). Modificar una marca exigeix `motiu` (428). 409 si el cicle està bloquejat, la sessió és futura o cancel·lada, o hi ha un canvi concurrent |
+| GET | `/cicles/{cicleId}/exportacions/graelles[?telefon=1]` | `dades.exportar` + `sollicituds.consultar` | Dades de les graelles (el navegador genera l'XLSX). El telèfon només hi és amb permís de dades de contacte. Queda auditada |
+| GET | `/cicles/{cicleId}/exportacions/assistencia` | `dades.exportar` + `sollicituds.consultar` | Taula d'assistència per a XLSX. Queda auditada |
+
+Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`).
+
 ## Previst
-- Fase 6: assistència i estadístiques.
+- Fase 7: estadístiques i quadre de comandament.
 - Es publicarà una especificació OpenAPI quan hi hagi els endpoints de gestió.

@@ -14,6 +14,7 @@ import { DetallCicle } from "./pages/gestio/DetallCicle";
 import { Usuaris } from "./pages/gestio/Usuaris";
 import { DetallSollicitud } from "./pages/gestio/DetallSollicitud";
 import { DetallAdjudicacio } from "./pages/gestio/DetallAdjudicacio";
+import { AssistenciaActivitat } from "./pages/gestio/AssistenciaActivitat";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -34,6 +35,7 @@ const router = createBrowserRouter([
           { path: ":casalId/usuaris", element: <Usuaris /> },
           { path: ":casalId/sollicituds/:sollicitudId", element: <DetallSollicitud /> },
           { path: ":casalId/adjudicacions/:execucioId", element: <DetallAdjudicacio /> },
+          { path: ":casalId/activitats/:activitatId/assistencia", element: <AssistenciaActivitat /> },
         ],
       },
       { path: "*", element: <NoTrobada /> },
