@@ -65,6 +65,10 @@ No es desa cap secret al repositori. Tot el que comença per `VITE_` és públic
   només per al compte) i `CLOUDFLARE_ACCOUNT_ID`. Mai es posen al repositori.
 - **Primer cop per entorn:** flux `Preparació de Cloudflare` (manual). Crea la base de dades D1 i el
   bucket R2 privat si no existeixen i mostra el `database_id`, que s'ha de posar a `wrangler.jsonc`.
+- **Sense R2:** si R2 no està activat al compte (al token només es pot triar «Read»), es pot preparar i
+  desplegar només Inscripcions: executar la preparació amb «Crea també el bucket R2» desmarcat i treure
+  `r2_buckets` de l'entorn a `wrangler.jsonc`. PG-Cartells respon llavors «emmagatzematge no configurat»
+  (503) fins que s'activi R2 i es torni a afegir el bucket.
 - **Desplegament** (GitHub Actions, recomanat): flux `Desplegament` (manual). Fa proves, marca un punt de
   restauració, aplica migracions, compila, desplega i comprova que `/api/salut` respon amb la base de
   dades connectada. Es recomana protegir l'entorn `production` amb aprovació manual a GitHub.

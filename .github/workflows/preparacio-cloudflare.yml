@@ -1,5 +1,5 @@
 # Preparació d'un entorn de Cloudflare (una sola vegada per entorn).
-# Crea la base de dades D1 i el bucket R2 privat si encara no existeixen i mostra el
+# Crea la base de dades D1 i (opcionalment) el bucket R2 privat si encara no existeixen i mostra el
 # database_id que cal posar a wrangler.jsonc. No esborra ni modifica res que ja existeixi.
 # Requereix els secrets del repositori CLOUDFLARE_API_TOKEN i CLOUDFLARE_ACCOUNT_ID.
 name: Preparació de Cloudflare
@@ -13,6 +13,11 @@ on:
         default: staging
         type: choice
         options: [staging, production]
+      amb_r2:
+        description: "Crea també el bucket R2 (cal R2 activat al compte i permís R2 al token)"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
@@ -44,6 +49,7 @@ jobs:
           echo "database_id de $BD: $ID"
           echo "### database_id de \`$BD\`: \`$ID\`" >> "$GITHUB_STEP_SUMMARY"
       - name: Bucket R2 (privat)
+        if: ${{ inputs.amb_r2 }}
         working-directory: ${{ runner.temp }}
         run: |
           W="$GITHUB_WORKSPACE/node_modules/.bin/wrangler"
