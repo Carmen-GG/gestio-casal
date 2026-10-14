@@ -100,7 +100,7 @@ export class ServeiImportacions {
     const preparades: (Omit<FilaImportacioSollicitud, "numero" | "codi_confirmacio" | "clau_idempotencia"> & { index: number })[] = [];
 
     for (const [i, f] of files.entries()) {
-      const fila = i + 1;
+      const fila = i + 2; // número de fila del full de càlcul (la 1 és la capçalera)
       if (esBuida(f)) {
         resultats.push({ fila, estat: "buida", errors: [], avisos: [], descripcio: "Fila buida (s'ometrà)" });
         continue;
@@ -276,7 +276,7 @@ export class ServeiImportacions {
     const preparades: (NovaActivitat & { id: string })[] = [];
 
     for (const [i, f] of files.entries()) {
-      const fila = i + 1;
+      const fila = i + 2; // número de fila del full de càlcul (la 1 és la capçalera)
       if (esBuida(f)) {
         resultats.push({ fila, estat: "buida", errors: [], avisos: [], descripcio: "Fila buida (s'ometrà)" });
         continue;

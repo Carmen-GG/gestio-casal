@@ -75,4 +75,5 @@ export const api = {
   get: <T>(ruta: string, signal?: AbortSignal) => peticio<T>(ruta, { method: "GET", signal }),
   post: <T>(ruta: string, json: unknown = {}, headers?: Record<string, string>) => peticio<T>(ruta, { method: "POST", json, headers }),
   patch: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PATCH", json }),
+  put: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PUT", json }),
 };

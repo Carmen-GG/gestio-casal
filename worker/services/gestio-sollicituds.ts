@@ -310,7 +310,10 @@ const slug = (s: string) => normalitzaText(s).replace(/ /g, "-").slice(0, 60);
  */
 export async function taulaSollicituds(repos: Repositoris, casalId: string, cicle: Cicle, vis: Visibilitat, activitatId?: string): Promise<TaulaExportacio> {
   const totes = await repos.gestioSollicituds.totes(casalId, cicle.id);
-  const camps: CampPersonal[] = ["nom", "cognom1", "cognom2", ...(vis.contacte ? (["telefon", "email"] as CampPersonal[]) : [])];
+  // Només els camps que el cicle recull i que la persona usuària pot veure.
+  const config = configuracioFormulariEfectiva(cicle.configuracio_formulari);
+  const camps = (["nom", "cognom1", "cognom2", ...(vis.contacte ? ["telefon", "email"] : [])] as CampPersonal[])
+    .filter((c) => config.camps[c].actiu || totes.some((s) => s.participant[c]));
   const etiquetes: Record<string, string> = { nom: "Nom", cognom1: "Primer cognom", cognom2: "Segon cognom", telefon: "Telèfon", email: "Correu electrònic" };
   if (activitatId) {
     const activitat = await repos.activitats.perId(casalId, activitatId);

@@ -47,3 +47,42 @@ export interface EntradaHistorial {
 export interface AssignacioRol {
   id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string; casal_id: string | null; atorgat_el: string;
 }
+
+export type EstatSollicitud = "rebuda" | "validada" | "pendent_revisio" | "anullada";
+export type EstatAdjudicacio = "pendent" | "admesa" | "llista_espera" | "sense_placa";
+
+export interface ParticipantVisible {
+  id: string; versio: number; nom: string; cognom1: string; cognom2: string | null;
+  data_naixement: string | null; document_identitat: string | null; telefon: string | null; email: string | null;
+  adreca: string | null; codi_postal: string | null; municipi: string | null; lloc_naixement: string | null;
+  barri: string | null; codi_participant_intern: string | null;
+}
+
+export interface FilaSollicitud {
+  id: string; numero: number; rebuda_el: string; estat: EstatSollicitud; origen: "formulari_public" | "importacio" | "gestio";
+  versio: number; nombre_preferencies: number; estat_adjudicacio: EstatAdjudicacio; participant: ParticipantVisible;
+  dades_restringides: boolean;
+}
+
+export type RespostaLlistat =
+  | { vista: "inscripcio" | "alfabetic"; total: number; pagina: number; mida: number; files: FilaSollicitud[] }
+  | { vista: "activitat"; grups: { activitat_id: string; activitat: string; capacitat: number; files: (FilaSollicitud & { ordre: number })[] }[] };
+
+export interface DetallSollicitud extends FilaSollicitud {
+  cicle_id: string; codi_confirmacio: string; privacitat_acceptada_el: string | null; importacio_id: string | null;
+  preferencies: { activitat_id: string; activitat: string; estat_activitat: EstatActivitat; ordre: number }[];
+}
+
+export interface ParellaDuplicada {
+  a: FilaSollicitud; b: FilaSollicitud;
+  motius: ("mateix_nom" | "mateix_email" | "mateix_telefon" | "mateix_document" | "mateix_codi_intern" | "mateixa_persona")[];
+  revisio: { decisio: "no_duplicat" | "duplicat"; motiu: string | null; revisat_el: string } | null;
+}
+
+export interface ResultatFilaImportacio { fila: number; estat: "valida" | "avis" | "error" | "buida"; errors: string[]; avisos: string[]; descripcio: string }
+export interface Previsualitzacio {
+  files: ResultatFilaImportacio[];
+  resum: { total: number; valides: number; amb_avisos: number; errors: number; buides: number };
+  columnes_absents: string[];
+}
+export interface TaulaExportacio { titol: string; fitxer: string; columnes: string[]; files: (string | number | null)[][] }
