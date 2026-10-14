@@ -43,4 +43,17 @@ jobs:
       - run: npx wrangler d1 migrations apply DB --remote --env "$CLOUDFLARE_ENV"
       # CLOUDFLARE_ENV fa que el plugin de Vite generi la configuració de l'entorn triat.
       - run: npx vite build
-      - run: npx wrangler deploy
+      - id: desplegament
+        run: |
+          npx wrangler deploy | tee "$RUNNER_TEMP/deploy.log"
+          echo "url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/deploy.log" | head -1)" >> "$GITHUB_OUTPUT"
+      # Comprovació final: el Worker respon i arriba a la base de dades.
+      - name: Comprovació de salut
+        if: steps.desplegament.outputs.url != ''
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS "${{ steps.desplegament.outputs.url }}/api/salut" | tee /dev/stderr | grep -q '"estat":"ok"'; then exit 0; fi
+            sleep 5
+          done
+          echo "El desplegament no respon correctament a /api/salut." >&2
+          exit 1
