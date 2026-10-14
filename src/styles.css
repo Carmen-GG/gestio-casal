@@ -255,6 +255,13 @@ main:focus { outline: none; }
 .etiqueta--arxivada { color: var(--color-text-secundari); }
 .etiqueta--activa { border-color: var(--color-exit); color: var(--color-exit); }
 .fitxa-plantilla { margin: 1rem 0; }
+.tria-plantilla { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start; }
+.tria-plantilla .camp { flex: 1 1 18rem; min-width: 0; }
+.tria-plantilla select { width: 100%; max-width: 100%; }
+.tria-plantilla__imatge { width: min(100%, 12rem); height: auto; border: 1px solid var(--color-vora); }
+.resultat-material { margin: 1rem 0 0; max-width: 36rem; }
+.resultat-material img { display: block; width: 100%; height: auto; border: 1px solid var(--color-vora); }
+.resultat-material figcaption { color: var(--color-text-secundari); font-size: 0.9rem; margin-top: 0.4rem; overflow-wrap: anywhere; }
 .fitxa-plantilla__disseny { margin: 0; max-width: 34rem; }
 .fitxa-plantilla__disseny figcaption { color: var(--color-text-secundari); font-size: 0.9rem; margin-top: 0.4rem; }
 .disseny-camps { position: relative; border: 1px solid var(--color-vora); }
