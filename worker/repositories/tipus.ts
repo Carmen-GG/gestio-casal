@@ -227,7 +227,8 @@ export interface RepositoriActivitats {
 
 export interface RepositoriHistorial {
   operacioAfegir(entrada: EntradaHistorial, ara: string, condicio?: CondicioOperacio): Operacio;
-  llistar(entitat: string, entitatId: string): Promise<(EntradaHistorial & { id: number; creat_el: string })[]>;
+  /** Amb `casalId`, només les entrades d'aquell casal. */
+  llistar(entitat: string, entitatId: string, casalId?: string): Promise<(EntradaHistorial & { id: number; creat_el: string })[]>;
 }
 
 export interface RepositoriAuditoria {

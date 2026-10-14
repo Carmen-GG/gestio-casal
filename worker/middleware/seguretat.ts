@@ -64,11 +64,17 @@ export const politicaOrigen: MiddlewareHandler<Entorn> = async (c, next) => {
   }
 };
 
-/** Limita la mida del cos de les peticions (protecció bàsica contra abusos). */
+/** Mida màxima del cos d'una petició. */
+export const MIDA_MAXIMA_COS = 256 * 1024;
+
+/**
+ * Limita la mida del cos de les peticions (protecció bàsica contra abusos). Si no hi ha
+ * `Content-Length` (enviament fragmentat), el límit s'aplica en llegir el cos (`cosValidat`).
+ */
 export function midaMaximaCos(bytes: number): MiddlewareHandler<Entorn> {
   return async (c, next) => {
     const longitud = Number(c.req.header("Content-Length") ?? "0");
-    if (longitud > bytes) {
+    if (!Number.isFinite(longitud) || longitud > bytes) {
       return respostaError(c, new ErrorAplicacio(413, "peticio_massa_gran", "La petició és massa gran."));
     }
     await next();

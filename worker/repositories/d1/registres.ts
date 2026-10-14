@@ -28,10 +28,10 @@ export class D1RepositoriHistorial implements RepositoriHistorial {
     );
   }
 
-  async llistar(entitat: string, entitatId: string) {
+  async llistar(entitat: string, entitatId: string, casalId?: string) {
     const { results } = await this.db
-      .prepare("SELECT * FROM historial_canvis WHERE entitat = ? AND entitat_id = ? ORDER BY id")
-      .bind(entitat, entitatId)
+      .prepare(`SELECT * FROM historial_canvis WHERE entitat = ? AND entitat_id = ?${casalId ? " AND casal_id = ?" : ""} ORDER BY id`)
+      .bind(entitat, entitatId, ...(casalId ? [casalId] : []))
       .all<EntradaHistorial & { id: number; creat_el: string; canvis: string }>();
     return results.map((f) => ({ ...f, canvis: jsonObjecte(f.canvis) }));
   }
@@ -63,7 +63,7 @@ export class D1RepositoriAuditoria implements RepositoriAuditoria {
     if (filtre.entitat) { condicions.push("entitat = ?"); params.push(filtre.entitat); }
     if (filtre.entitatId) { condicions.push("entitat_id = ?"); params.push(filtre.entitatId); }
     const where = condicions.length ? `WHERE ${condicions.join(" AND ")}` : "";
-    const limit = Math.min(Math.max(filtre.limit ?? 100, 1), 500);
+    const limit = Math.min(Math.max(Math.trunc(filtre.limit ?? 100), 1), 500);
     const { results } = await this.db
       .prepare(`SELECT * FROM registres_auditoria ${where} ORDER BY id DESC LIMIT ${limit}`)
       .bind(...params)
