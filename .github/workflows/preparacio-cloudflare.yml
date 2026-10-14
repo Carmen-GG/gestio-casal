@@ -1,0 +1,55 @@
+# Preparació d'un entorn de Cloudflare (una sola vegada per entorn).
+# Crea la base de dades D1 i el bucket R2 privat si encara no existeixen i mostra el
+# database_id que cal posar a wrangler.jsonc. No esborra ni modifica res que ja existeixi.
+# Requereix els secrets del repositori CLOUDFLARE_API_TOKEN i CLOUDFLARE_ACCOUNT_ID.
+name: Preparació de Cloudflare
+
+on:
+  workflow_dispatch:
+    inputs:
+      entorn:
+        description: "Entorn que es prepara"
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+
+permissions:
+  contents: read
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BD: casal-gestio-${{ inputs.entorn }}
+      BUCKET: casal-gestio-fitxers-${{ inputs.entorn }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Fora del directori del projecte: wrangler.jsonc encara té identificadors provisionals.
+      - name: Base de dades D1
+        working-directory: ${{ runner.temp }}
+        run: |
+          W="$GITHUB_WORKSPACE/node_modules/.bin/wrangler"
+          if ! "$W" d1 list --json | jq -e --arg n "$BD" '.[] | select(.name == $n)' > /dev/null; then
+            "$W" d1 create "$BD"
+          fi
+          ID=$("$W" d1 list --json | jq -r --arg n "$BD" '.[] | select(.name == $n) | .uuid')
+          echo "database_id de $BD: $ID"
+          echo "### database_id de \`$BD\`: \`$ID\`" >> "$GITHUB_STEP_SUMMARY"
+      - name: Bucket R2 (privat)
+        working-directory: ${{ runner.temp }}
+        run: |
+          W="$GITHUB_WORKSPACE/node_modules/.bin/wrangler"
+          if "$W" r2 bucket list | grep -Eq "^name:[[:space:]]+$BUCKET\$"; then
+            echo "El bucket $BUCKET ja existeix."
+          else
+            "$W" r2 bucket create "$BUCKET"
+          fi
+          echo "### Bucket R2: \`$BUCKET\`" >> "$GITHUB_STEP_SUMMARY"

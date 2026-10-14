@@ -60,10 +60,14 @@ No es desa cap secret al repositori. Tot el que comença per `VITE_` és públic
 4. Configurar els secrets amb `npx wrangler secret put … --env <entorn>`.
 
 ## Desplegament
-- **Des de GitHub Actions** (recomanat): flux `Desplegament` (manual), amb els secrets de
-  repositori `CLOUDFLARE_API_TOKEN` (permisos: Workers Scripts i D1, edició) i
-  `CLOUDFLARE_ACCOUNT_ID`. Fa proves, marca un punt de restauració, aplica migracions,
-  compila i desplega. Es recomana protegir l'entorn `production` amb aprovació manual a GitHub.
+- **Secrets del repositori** (GitHub → Settings → Secrets and variables → Actions):
+  `CLOUDFLARE_API_TOKEN` (plantilla «Edit Cloudflare Workers» + D1: Edit + Workers R2 Storage: Edit,
+  només per al compte) i `CLOUDFLARE_ACCOUNT_ID`. Mai es posen al repositori.
+- **Primer cop per entorn:** flux `Preparació de Cloudflare` (manual). Crea la base de dades D1 i el
+  bucket R2 privat si no existeixen i mostra el `database_id`, que s'ha de posar a `wrangler.jsonc`.
+- **Desplegament** (GitHub Actions, recomanat): flux `Desplegament` (manual). Fa proves, marca un punt de
+  restauració, aplica migracions, compila, desplega i comprova que `/api/salut` respon amb la base de
+  dades connectada. Es recomana protegir l'entorn `production` amb aprovació manual a GitHub.
 - **Des d'un terminal** (Linux/macOS): `npm run deploy:staging` o `npm run deploy:production`
   (cal haver iniciat sessió amb `npx wrangler login`).
 - **Domini:** a Cloudflare, Workers & Pages → `casal-gestio` → Settings → Domains & Routes →
