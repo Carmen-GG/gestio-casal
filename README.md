@@ -72,6 +72,11 @@ No es desa cap secret al repositori. Tot el que comença per `VITE_` és públic
 - **Desplegament** (GitHub Actions, recomanat): flux `Desplegament` (manual). Fa proves, marca un punt de
   restauració, aplica migracions, compila, desplega i comprova que `/api/salut` respon amb la base de
   dades connectada. Es recomana protegir l'entorn `production` amb aprovació manual a GitHub.
+- **Primer accés a staging:** el repositori és públic i els registres d'Actions també, així que l'enllaç
+  d'accés no es pot mostrar al registre. Es creen dos secrets del repositori, `ACCES_STAGING_CORREU`
+  (correu de la persona) i `ACCES_STAGING_CODI` (una frase o codi de 20 caràcters o més que només ella
+  coneix), s'executa el flux `Accés a staging` i, a `/gestio/entrar`, s'escriu el mateix codi a
+  «Codi d'accés». Val 60 minuts i un sol ús; per a un accés nou cal canviar el codi del secret.
 - **Des d'un terminal** (Linux/macOS): `npm run deploy:staging` o `npm run deploy:production`
   (cal haver iniciat sessió amb `npx wrangler login`).
 - **Domini:** a Cloudflare, Workers & Pages → `casal-gestio` → Settings → Domains & Routes →

@@ -9,6 +9,10 @@
  *   node scripts/acces-dev.mjs --email admin@exemple.cat --nom "Admin" --rol admin_central
  *   Opcions: --entorn local|staging (per defecte local) · --url https://... (base de l'enllaç)
  *            --minuts 30 (validesa de l'enllaç)
+ *            --codi-de-variable NOM: fa servir com a codi d'accés el valor de la variable d'entorn NOM
+ *              (p. ex. un secret de GitHub) i no l'escriu enlloc. La persona entra escrivint aquest codi
+ *              a «Codi d'accés» de la pàgina d'entrada. Pensat per al flux «Accés a staging».
+ *            --correu-de-variable NOM: el correu es llegeix de la variable d'entorn NOM en lloc de --email.
  *
  * L'enllaç porta el codi al fragment (#testimoni=...), que el navegador no envia al servidor.
  * A la base de dades només es desa el resum SHA-256 del codi.
@@ -24,7 +28,9 @@ if (!["local", "staging"].includes(entorn)) {
   console.error("Aquest script només es pot fer servir als entorns local i staging.");
   process.exit(1);
 }
-const { email, nom, rol } = args;
+const { nom, rol } = args;
+// --correu-de-variable: el correu també pot venir d'una variable d'entorn, perquè no surti als registres.
+const email = args["correu-de-variable"] ? process.env[args["correu-de-variable"]]?.trim() : args.email;
 const casal = args.casal?.toUpperCase();
 const ROLS_CASAL = ["gestor_casal", "consulta_casal", "difusio_casal"];
 if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !nom || !rol || (!ROLS_CASAL.includes(rol) && rol !== "admin_central")) {
@@ -39,7 +45,13 @@ if (ROLS_CASAL.includes(rol) && !/^[A-Z0-9-]{2,40}$/.test(casal ?? "")) {
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const ara = new Date();
 const minuts = Math.min(Math.max(Number(args.minuts ?? 30), 5), 24 * 60);
-const testimoni = randomBytes(32).toString("base64url");
+const variableCodi = args["codi-de-variable"];
+const codiPropi = variableCodi ? process.env[variableCodi]?.trim() : undefined;
+if (variableCodi && (!codiPropi || codiPropi.length < 20)) {
+  console.error(`La variable ${variableCodi} ha de contenir un codi d'almenys 20 caràcters.`);
+  process.exit(1);
+}
+const testimoni = codiPropi ?? randomBytes(32).toString("base64url");
 const resum = createHash("sha256").update(testimoni).digest("hex");
 const usuariId = randomUUID();
 const isoAra = ara.toISOString();
@@ -77,5 +89,9 @@ execFileSync("npx", ["wrangler", "d1", "execute", "DB", entorn === "local" ? "--
   ...(entorn === "staging" ? ["--env", "staging"] : []), "--command", sql],
   { stdio: ["ignore", "ignore", "inherit"], shell: process.platform === "win32" });
 
+if (codiPropi) {
+  console.log(`\nCodi d'accés preparat: vàlid ${minuts} minuts i d'un sol ús.`);
+  process.exit(0);
+}
 const base = (args.url ?? "http://localhost:5173").replace(/\/$/, "");
 console.log(`\nEnllaç d'accés per a ${nom} (vàlid ${minuts} minuts, un sol ús):\n\n  ${base}/gestio/entrar#testimoni=${testimoni}\n`);
