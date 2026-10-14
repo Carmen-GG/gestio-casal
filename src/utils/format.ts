@@ -25,3 +25,30 @@ export function formataHorari(a: {
   const hores = a.hora_inici && a.hora_fi ? `de ${a.hora_inici} a ${a.hora_fi}` : (a.hora_inici ?? "");
   return [llistaDies, hores].filter(Boolean).join(", ") || "Horari pendent de publicar";
 }
+
+const ZONA = "Europe/Madrid";
+
+/** Desplaçament (minuts) de la zona del casal respecte d'UTC en un instant. */
+function desplacamentMinuts(instant: Date): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONA, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).formatToParts(instant);
+  const v = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const comLocal = Date.UTC(v("year"), v("month") - 1, v("day"), v("hour"), v("minute"));
+  return Math.round((comLocal - instant.getTime()) / 60000);
+}
+
+/** ISO UTC → valor per a <input type="datetime-local"> en hora del casal. */
+export function isoAInputLocal(iso: string): string {
+  const d = new Date(iso);
+  const local = new Date(d.getTime() + desplacamentMinuts(d) * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+/** Valor de <input type="datetime-local"> (hora del casal) → ISO UTC. */
+export function inputLocalAIso(valor: string): string {
+  const comUtc = new Date(`${valor}:00Z`);
+  const primer = new Date(comUtc.getTime() - desplacamentMinuts(comUtc) * 60000);
+  // Segona passada per als canvis d'horari d'estiu/hivern.
+  return new Date(comUtc.getTime() - desplacamentMinuts(primer) * 60000).toISOString();
+}

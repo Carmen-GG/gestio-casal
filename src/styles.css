@@ -73,3 +73,60 @@ main:focus { outline: none; }
 }
 @keyframes gir { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .carregant__indicador { animation: none; } }
+
+/* ---------- Panell de gestió ---------- */
+.estret { max-width: 36rem; }
+.visualment-amagat { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.barra-gestio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.5rem 0 1rem; border-bottom: 1px solid var(--color-vora); margin-bottom: 1rem; }
+.barra-gestio__titol { font-weight: 700; text-decoration: none; }
+.barra-gestio__casal { display: flex; gap: 0.4rem; align-items: center; }
+.barra-gestio__usuari { margin-left: auto; color: var(--color-text-secundari); }
+
+.seccio { background: var(--color-superficie); border: 1px solid var(--color-vora); border-radius: var(--radi); margin-bottom: var(--espai); }
+.seccio__capcalera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.25rem 0.75rem; }
+.seccio__titol { margin: 0; font-size: 1.1rem; }
+.seccio__commutador { background: none; border: 0; font: inherit; font-weight: 700; color: var(--color-text); cursor: pointer; padding: 0.5rem 0.25rem; display: flex; gap: 0.5rem; align-items: center; }
+.seccio__icona { width: 1em; display: inline-block; }
+.seccio__cos { padding: 0 var(--espai) var(--espai); }
+
+.taula-contenidor { overflow-x: auto; max-width: 100%; }
+.taula { border-collapse: collapse; width: 100%; min-width: 36rem; }
+.taula th, .taula td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--color-vora); vertical-align: top; }
+.taula thead th { background: var(--color-fons); font-size: 0.9rem; }
+.accions-fila { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+
+.formulari { margin-top: 0.5rem; }
+.graella-camps { display: grid; gap: 0 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }
+.camp { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.9rem; border: 0; padding: 0; }
+.camp--ample { grid-column: 1 / -1; }
+.camp label, .camp legend { font-weight: 600; }
+.camp input, .camp select, .camp textarea, .barra-gestio select {
+  font: inherit; padding: 0.5rem; border: 1px solid #8a949e; border-radius: 6px; background: #fff; color: var(--color-text);
+}
+.camp--error input, .camp--error select, .camp--error textarea { border: 2px solid var(--color-error); background: var(--color-error-fons); }
+.camp__obligatori { font-weight: 400; color: var(--color-error); font-size: 0.85rem; }
+.camp__opcional { font-weight: 400; color: var(--color-text-secundari); font-size: 0.85rem; }
+.camp__ajuda { margin: 0; color: var(--color-text-secundari); font-size: 0.85rem; }
+.camp__missatge { margin: 0; color: var(--color-error); font-weight: 600; font-size: 0.9rem; }
+.dies { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.dies__dia { display: flex; align-items: center; gap: 0.25rem; font-weight: 400; }
+
+.botonera { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.boto--petit { padding: 0.3rem 0.7rem; font-size: 0.9rem; }
+.boto--perill { background: var(--color-error); border-color: var(--color-error); }
+.boto--perill:hover { background: #7d1013; }
+.boto:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.avis--exit { border-color: var(--color-exit); background: var(--color-exit-fons); color: var(--color-exit); font-weight: 600; }
+.avis--alerta { border-color: #8a5a00; background: #fff4d6; color: #5c3c00; }
+
+.dades { display: grid; gap: 0.5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); margin: 0; }
+.dades dt { font-weight: 600; color: var(--color-text-secundari); font-size: 0.9rem; }
+.dades dd { margin: 0; }
+.historial { padding-left: 1.2rem; }
+.historial > li { margin-bottom: 0.6rem; }
+
+.dialeg { border: 1px solid var(--color-vora); border-radius: var(--radi); padding: 1.25rem; max-width: min(32rem, calc(100vw - 2rem)); }
+.dialeg::backdrop { background: rgb(0 0 0 / 0.45); }
+.dialeg h2 { margin-top: 0; }
+.dialeg__botons { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
