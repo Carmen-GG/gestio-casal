@@ -99,6 +99,25 @@ contacte si la persona no té `sollicituds.dades_contacte`; el DNI/NIE no surt m
 | POST | `/cicles/{cicleId}/importacions/{sollicituds\|activitats}` | igual | Confirma: `clau`, `confirmacio: true` i `files_esperades` (les vàlides vistes). Només desa les vàlides |
 | GET | `/cicles/{cicleId}/exportacions/sollicituds[?activitat=]` | `dades.exportar` + `sollicituds.consultar` | Taula per a XLSX (el navegador genera el fitxer). Queda auditada |
 
+## Adjudicació i places (Fase 5)
+
+Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen a [adjudicacio.md](adjudicacio.md).
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/adjudicacio` | `sollicituds.consultar` | Paràmetres vigents, versions anteriors i execucions |
+| PUT | `/cicles/{cicleId}/adjudicacio/parametres` | `adjudicacio.executar` | Desa una versió nova. Cal `versio_actual` (la vigent o `null`) |
+| POST | `/cicles/{cicleId}/adjudicacio/propostes` | `adjudicacio.executar` | Calcula una proposta (cicle en procés d'adjudicació). `lletra` opcional amb el sorteig de lletra |
+| GET | `/adjudicacions/{id}` | `sollicituds.consultar` | Proposta o adjudicació amb els resultats per activitat |
+| POST | `/adjudicacions/{id}/confirmar` | `adjudicacio.confirmar` | `confirmacio: true`. Si substitueix una confirmada, cal `motiu` (428 si no hi és). 409 `proposta_obsoleta` si les dades han canviat |
+| GET | `/adjudicacions/{id}/exportacio` | `dades.exportar` + `sollicituds.consultar` | Taula de resultats per a XLSX. Queda auditada |
+| GET | `/cicles/{cicleId}/places` | `sollicituds.consultar` | Places per activitat amb ocupació |
+| POST | `/places/{id}/moviments` | `places.gestionar` | `accio` (`renunciar`, `donar_baixa`, `oferir`, `acceptar_oferta`, `retornar_espera`, `admetre`), `versio` i `motiu`. 409 `sense_places_lliures` si no hi ha capacitat |
+| GET | `/places/{id}/moviments` | `sollicituds.consultar` | Moviments de la plaça |
+| GET | `/cicles/{cicleId}/exportacions/places?tipus=admesos\|espera` | `dades.exportar` + `sollicituds.consultar` | Taula per a XLSX. Queda auditada |
+
+Canviar el cicle a «Adjudicat» des de l'API d'estats exigeix que hi hagi una adjudicació confirmada.
+
 ## Previst
-- Fases 5–6: adjudicació, places, llistes d'espera, assistència, estadístiques.
+- Fase 6: assistència i estadístiques.
 - Es publicarà una especificació OpenAPI quan hi hagi els endpoints de gestió.
