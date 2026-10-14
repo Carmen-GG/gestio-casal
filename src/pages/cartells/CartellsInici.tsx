@@ -34,6 +34,12 @@ export function CartellsInici() {
         );
       })()}
       <ul className="llista-seccions">
+        {pot("cartells.generar") && (
+          <li>
+            <Link to={`/gestio/${casalId}/cartells/nou`}>Nou material</Link>
+            <span> · Cartell en PDF o imatge per a Instagram a partir d'una activitat, amb codi QR al formulari d'inscripció.</span>
+          </li>
+        )}
         <li>
           <Link to={`/gestio/${casalId}/cartells/plantilles`}>Plantilles</Link>
           <span> · Cartells i publicacions d'Instagram disponibles{pot("cartells.plantilles") ? ", i càrrega de plantilles noves" : ""}.</span>

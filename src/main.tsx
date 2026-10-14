@@ -19,6 +19,7 @@ import { PantallaSorteig } from "./pages/gestio/PantallaSorteig";
 import { CartellsInici } from "./pages/cartells/CartellsInici";
 import { Plantilles } from "./pages/cartells/Plantilles";
 import { DetallPlantilla } from "./pages/cartells/DetallPlantilla";
+import { NouMaterial } from "./pages/cartells/NouMaterial";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
           { path: ":casalId/cartells", element: <CartellsInici /> },
           { path: ":casalId/cartells/plantilles", element: <Plantilles /> },
           { path: ":casalId/cartells/plantilles/:plantillaId", element: <DetallPlantilla /> },
+          { path: ":casalId/cartells/nou", element: <NouMaterial /> },
         ],
       },
       { path: "*", element: <NoTrobada /> },
