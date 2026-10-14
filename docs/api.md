@@ -118,6 +118,19 @@ Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen
 
 Canviar el cicle a «Adjudicat» des de l'API d'estats exigeix que hi hagi una adjudicació confirmada.
 
+### Sorteig per activitat
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/sorteig` | `sollicituds.consultar` | Activitats que necessiten sorteig, sortejos vigents i anul·lats, i números assignats |
+| POST | `/cicles/{cicleId}/sorteig/numeros` | `adjudicacio.executar` | Assigna un número aleatori a les sol·licituds que no en tenen. Els existents no canvien |
+| POST | `/cicles/{cicleId}/activitats/{id}/sorteig` | `adjudicacio.executar` | Fa el sorteig al servidor o, amb `valor_manual`, en registra un de fet a mà (`motiu` opcional). 409 `sorteig_existent` si ja n'hi ha un de vigent |
+| POST | `/cicles/{cicleId}/sortejos/{id}/anullacio` | `adjudicacio.executar` | Anul·la un sorteig amb `motiu`. No s'esborra |
+| GET | `/cicles/{cicleId}/exportacions/numeros-sorteig` | `dades.exportar` + `sollicituds.consultar` | Llista de números per publicar-la. Queda auditada |
+| GET | `/adjudicacions/{id}/exportacions/sense-activitat` | `dades.exportar` + `sollicituds.consultar` | Persones sense cap activitat. Queda auditada |
+
+Calcular una proposta amb sorteig per activitat retorna 409 `sortejos_pendents` si falta el sorteig d'alguna activitat amb més sol·licituds que places, o `numeros_pendents` si falten números aleatoris.
+
 ## Assistència (Fase 6)
 
 Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen a [assistencia.md](assistencia.md).

@@ -1,8 +1,11 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import { PARAMETRES_INICIALS } from "../../shared/domain/adjudicacio";
+import { PARAMETRES_INICIALS, type ParametresAdjudicacio } from "../../shared/domain/adjudicacio";
 import { crearEscenari } from "../setup/dades";
 import { client, clientAutenticat } from "../setup/sessio";
+
+/** Regles generals (un sol ordre per al cicle), com abans del sorteig per activitat. */
+const GENERALS: ParametresAdjudicacio = { ...PARAMETRES_INICIALS, criteri_ordre: "inscripcio", prioritat_espera_anterior: false };
 
 const CONFIG = { informacio_privacitat: "Text de prova fictici.", camps: { telefon: { actiu: true, obligatori: false } } };
 
@@ -32,7 +35,7 @@ async function escenari() {
   const base = `/api/gestio/casals/${e.casal.id}`;
   const g = await clientAutenticat("gestor_casal", e.casal.id);
   const adj = `${base}/cicles/${e.cicle.id}/adjudicacio`;
-  const desa = (parametres = PARAMETRES_INICIALS, versio_actual: number | null = null) =>
+  const desa = (parametres = GENERALS, versio_actual: number | null = null) =>
     g.json(`${adj}/parametres`, { method: "PUT", json: { parametres, versio_actual } });
   const proposa = (json: Record<string, unknown> = {}) => g.json(`${adj}/propostes`, { method: "POST", json });
   const confirma = (id: string, json: Record<string, unknown> = {}) =>
@@ -57,17 +60,17 @@ describe("adjudicació: paràmetres versionats", () => {
     expect(v1.status).toBe(200);
     expect(v1.cos.configuracio.versio).toBe(1);
     // Algú altre ja ha desat la versió 1: no se sobreescriu.
-    expect((await desa(PARAMETRES_INICIALS, null)).status).toBe(409);
-    const v2 = await desa({ ...PARAMETRES_INICIALS, maxim_activitats_per_persona: 1 }, 1);
+    expect((await desa(GENERALS, null)).status).toBe(409);
+    const v2 = await desa({ ...GENERALS, maxim_activitats_per_persona: 1 }, 1);
     expect(v2.cos.configuracio.versio).toBe(2);
     const ara = await g.json(adj);
     expect(ara.cos.versions_configuracio.map((c: { versio: number }) => c.versio)).toEqual([2, 1]);
     expect(ara.cos.pot_calcular).toBe(true);
 
-    expect((await desa({ ...PARAMETRES_INICIALS, metode: "qualsevol" } as never, 2)).status).toBe(400);
-    expect((await desa({ ...PARAMETRES_INICIALS, estats_sollicitud: ["anullada"] } as never, 2)).status).toBe(400);
+    expect((await desa({ ...GENERALS, metode: "qualsevol" } as never, 2)).status).toBe(400);
+    expect((await desa({ ...GENERALS, estats_sollicitud: ["anullada"] } as never, 2)).status).toBe(400);
     const consulta = await clientAutenticat("consulta_casal", casal.id);
-    expect((await consulta.json(`${adj}/parametres`, { method: "PUT", json: { parametres: PARAMETRES_INICIALS, versio_actual: 2 } })).status).toBe(403);
+    expect((await consulta.json(`${adj}/parametres`, { method: "PUT", json: { parametres: GENERALS, versio_actual: 2 } })).status).toBe(403);
     expect((await consulta.json(adj)).status).toBe(200);
   });
 
@@ -86,7 +89,7 @@ describe("adjudicació: proposta, confirmació i substitució", () => {
     const p = await proposa();
     expect(p.status).toBe(201);
     expect(p.cos.execucio).toMatchObject({ versio: 1, estat: "proposta", configuracio_versio: 1 });
-    expect(p.cos.execucio.resum).toMatchObject({ sollicituds: 3, places_adjudicades: 2, versio_motor: 1 });
+    expect(p.cos.execucio.resum).toMatchObject({ sollicituds: 3, places_adjudicades: 2, versio_motor: 2 });
 
     const det = await g.json(`${base}/adjudicacions/${p.cos.execucio.id}`);
     expect(resum(det.cos.grups, A.id)).toEqual(["Zapata:admesa", "Àvila:llista_espera1"]);
@@ -122,7 +125,7 @@ describe("adjudicació: proposta, confirmació i substitució", () => {
 
   it("una proposta nova descarta l'anterior i la lletra del sorteig queda registrada", async () => {
     const { adj, g, desa, proposa } = await escenari();
-    await desa({ ...PARAMETRES_INICIALS, criteri_ordre: "lletra" });
+    await desa({ ...GENERALS, criteri_ordre: "lletra" });
     const p1 = await proposa({ lletra: "b" });
     expect(p1.cos.execucio.lletra_sorteig).toBe("B");
     const p2 = await proposa();

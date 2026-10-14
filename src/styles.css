@@ -199,7 +199,7 @@ main:focus { outline: none; }
 
 /* Adjudicació i places */
 .etiqueta--confirmada, .etiqueta--admesa { border-color: var(--color-exit); color: var(--color-exit); background: var(--color-exit-fons); }
-.etiqueta--proposta, .etiqueta--oferta_pendent { border-color: #8a5a00; color: #5c3c00; }
+.etiqueta--proposta, .etiqueta--oferta_pendent, .etiqueta--alerta { border-color: #8a5a00; color: #5c3c00; }
 .etiqueta--llista_espera { border-color: var(--color-primari); color: var(--color-primari); }
 .etiqueta--substituida, .etiqueta--descartada, .etiqueta--baixa { color: var(--color-text-secundari); }
 .etiqueta--renuncia { border-color: var(--color-error); color: var(--color-error); }
@@ -208,3 +208,24 @@ main:focus { outline: none; }
 .llista-sessions { list-style: none; padding: 0; margin: 0.5rem 0; }
 .llista-sessions li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; align-items: center; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--color-vora); }
 .llista-sessions__activa { background: var(--color-exit-fons); }
+.llista-neta { list-style: none; margin: 0; padding: 0; }
+
+/* Pantalla de sorteig (per projectar o emetre en directe). */
+.pantalla-sorteig {
+  margin: 1rem 0; padding: clamp(1.5rem, 4vw, 3rem) 1rem; border-radius: 12px; text-align: center;
+  background: #12304f; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+}
+.pantalla-sorteig:fullscreen { justify-content: center; border-radius: 0; margin: 0; }
+.pantalla-sorteig__cicle { margin: 0; opacity: 0.8; font-size: clamp(0.9rem, 2vw, 1.3rem); }
+.pantalla-sorteig__activitat { margin: 0; color: #fff; font-size: clamp(1.6rem, 5vw, 3.4rem); line-height: 1.15; }
+.pantalla-sorteig__dades, .pantalla-sorteig__regla { margin: 0; font-size: clamp(1rem, 2.2vw, 1.5rem); }
+.pantalla-sorteig__regla { opacity: 0.85; max-width: 46rem; }
+.pantalla-sorteig__valor {
+  margin: 0.5rem 0; min-width: 2.2ch; padding: 0 0.3em; border-radius: 0.15em; background: #fff; color: #12304f;
+  font-size: clamp(5rem, 22vw, 14rem); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums;
+}
+.pantalla-sorteig__valor--girant { opacity: 0.75; }
+.pantalla-sorteig__registre { margin: 0; font-size: clamp(0.9rem, 1.8vw, 1.2rem); }
+.pantalla-sorteig__boto { font-size: clamp(1rem, 2.4vw, 1.5rem); padding: 0.6em 1.4em; }
+.pantalla-sorteig .boto--secundari { background: transparent; color: #fff; border-color: #fff; }
+.camp--compacte.camp--mitja { max-width: 22rem; }

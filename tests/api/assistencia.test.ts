@@ -27,7 +27,7 @@ async function escenari() {
   const base = `/api/gestio/casals/${e.casal.id}`;
   const g = await clientAutenticat("gestor_casal", e.casal.id);
   const adj = `${base}/cicles/${e.cicle.id}/adjudicacio`;
-  await g.json(`${adj}/parametres`, { method: "PUT", json: { parametres: PARAMETRES_INICIALS, versio_actual: null } });
+  await g.json(`${adj}/parametres`, { method: "PUT", json: { parametres: { ...PARAMETRES_INICIALS, criteri_ordre: "inscripcio", prioritat_espera_anterior: false }, versio_actual: null } });
   const p = await g.json(`${adj}/propostes`, { method: "POST", json: {} });
   await g.json(`${base}/adjudicacions/${p.cos.execucio.id}/confirmar`, { method: "POST", json: { confirmacio: true } });
   const full = () => g.json(`${base}/activitats/${A.id}/assistencia`);

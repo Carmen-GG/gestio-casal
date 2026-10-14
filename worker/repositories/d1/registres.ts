@@ -1,7 +1,7 @@
 import type { CondicioOperacio, EntradaAuditoria, EntradaHistorial, RepositoriAuditoria, RepositoriHistorial, UnitatDeTreball, Operacio } from "../tipus";
 import { comOperacio, comStatement, jsonObjecte } from "./util";
 
-const TAULES_CONDICIO = new Set(["casals", "cicles", "activitats", "participants", "sollicituds", "execucions_adjudicacio", "places", "sessions_activitat"]);
+const TAULES_CONDICIO = new Set(["casals", "cicles", "activitats", "participants", "sollicituds", "execucions_adjudicacio", "places", "sessions_activitat", "sortejos_adjudicacio"]);
 
 /** Converteix un INSERT ... VALUES en INSERT ... SELECT condicionat al testimoni d'operació. */
 function condicionar(columnes: string, n: number, condicio?: CondicioOperacio) {

@@ -31,5 +31,6 @@ de dades (DPD) validin, com a mínim:
 - Procediment de còpies de seguretat i proves de restauració.
 
 ## Regles de negoci
-- Regles oficials d'adjudicació, continuïtat, desempat i llista d'espera: el motor és configurable i els paràmetres disponibles i pendents de decidir són a [adjudicacio.md](adjudicacio.md).
+- Regles d'adjudicació: el casal va indicar la seva regla el 14/10/2026 (llista d'espera anterior, preferència i sorteig per activitat). Està implementada com a valors per defecte configurables; cal deixar-la per escrit i validar el criteri per reconèixer la mateixa persona entre cicles ([adjudicacio.md](adjudicacio.md)).
+- Mínim de participants per activitat (habitualment 15 adults, 8 infantil i juvenil): només genera avisos.
 - Llindar d'assistència i conseqüències: el llindar és configurable per cicle i només serveix per identificar persones. L'aplicació no aplica cap baixa ni pèrdua de plaça automàtica; si hi ha una regla oficial, es fa amb una acció explícita (vegeu [assistencia.md](assistencia.md)).

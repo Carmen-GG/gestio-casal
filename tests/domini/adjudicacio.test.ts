@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { adjudica, ordenaSollicituds, PARAMETRES_INICIALS, type ParametresAdjudicacio, type SollicitudMotor } from "../../shared/domain/adjudicacio";
+import {
+  activitatsAmbSorteig, adjudica, normalitzaParametres, ordenaSollicituds, PARAMETRES_INICIALS,
+  type ParametresAdjudicacio, type Sorteig, type SollicitudMotor,
+} from "../../shared/domain/adjudicacio";
 import { clauOrdenacioPersona } from "../../shared/domain/ordenacio";
+
+/** Regles generals (un sol ordre per al cicle), com abans del sorteig per activitat. */
+const GENERALS: ParametresAdjudicacio = { ...PARAMETRES_INICIALS, criteri_ordre: "inscripcio", prioritat_espera_anterior: false };
 
 /** Sol·licitud fictícia: el número fixa l'ordre d'arribada. */
 const s = (numero: number, cognom: string, prefs: string[], participant = `p${numero}`): SollicitudMotor => ({
@@ -10,7 +16,7 @@ const s = (numero: number, cognom: string, prefs: string[], participant = `p${nu
   preferencies: prefs.map((activitat_id, i) => ({ activitat_id, ordre: i + 1 })),
 });
 const act = (id: string, capacitat: number, disponible = true) => ({ id, capacitat, disponible });
-const params = (canvis: Partial<ParametresAdjudicacio> = {}): ParametresAdjudicacio => ({ ...PARAMETRES_INICIALS, ...canvis });
+const params = (canvis: Partial<ParametresAdjudicacio> = {}): ParametresAdjudicacio => ({ ...GENERALS, ...canvis });
 
 /** Resultat compacte: "sollicitud/activitat" → resultat (amb la posició d'espera). */
 const mapa = (r: ReturnType<typeof adjudica>) => Object.fromEntries(r.resultats.map((x) =>
@@ -89,5 +95,102 @@ describe("motor d'adjudicació", () => {
       expect([...posicions].sort((x, y) => x! - y!)).toEqual(posicions.map((_, i) => i + 1));
     }
     expect(r.resultats).toHaveLength(molts.reduce((n, x) => n + x.preferencies.length, 0));
+  });
+});
+
+describe("regla del casal: espera anterior, preferència i sorteig per activitat", () => {
+  const regla = (canvis: Partial<ParametresAdjudicacio> = {}): ParametresAdjudicacio => ({ ...PARAMETRES_INICIALS, ...canvis });
+  const sortejos = (m: Record<string, Sorteig>) => new Map(Object.entries(m));
+  const ordreAdmeses = (r: ReturnType<typeof adjudica>, activitat: string) => r.resultats
+    .filter((x) => x.activitat_id === activitat && x.resultat !== "no_adjudicada")
+    .sort((a, b) => (a.resultat === b.resultat ? (a.posicio_espera ?? 0) - (b.posicio_espera ?? 0) : a.resultat === "admesa" ? -1 : 1))
+    .map((x) => `${x.sollicitud_id}:${x.resultat === "admesa" ? "A" : `E${x.posicio_espera}`}`);
+
+  it("els valors inicials són la regla del casal", () => {
+    expect(PARAMETRES_INICIALS).toMatchObject({
+      criteri_ordre: "sorteig_activitat", metode: "per_rondes", prioritat_espera_anterior: true, preferencia_maxima_espera_anterior: 2,
+    });
+  });
+
+  it("sorteig de número: es comença pel número sortejat i es torna a començar per l'1", () => {
+    const cinc = [1, 2, 3, 4, 5].map((n) => s(n, `C${n}`, ["A"]));
+    const r = adjudica({ sollicituds: cinc, activitats: [act("A", 2)], parametres: regla(), sortejos: sortejos({ A: { tipus: "numero", valor: "4" } }) });
+    expect(ordreAdmeses(r, "A")).toEqual(["s4:A", "s5:A", "s1:E1", "s2:E2", "s3:E3"]);
+  });
+
+  it("cada activitat té el seu sorteig", () => {
+    const tres = [1, 2, 3].map((n) => s(n, `C${n}`, n === 3 ? ["B", "A"] : ["A", "B"]));
+    const r = adjudica({
+      sollicituds: [...tres, s(4, "D", ["B"])], activitats: [act("A", 1), act("B", 1)], parametres: regla(),
+      sortejos: sortejos({ A: { tipus: "numero", valor: "2" }, B: { tipus: "numero", valor: "4" } }),
+    });
+    expect(ordreAdmeses(r, "A")).toEqual(["s2:A", "s1:E1", "s3:E2"]);
+    // A B, la 1a preferència (s3, s4) passa davant de la 2a (s1, s2); entre s3 i s4, el sorteig (4) dona la plaça a s4.
+    expect(ordreAdmeses(r, "B")).toEqual(["s4:A", "s3:E1", "s1:E2", "s2:E3"]);
+  });
+
+  it("sorteig de lletra: per la inicial del primer cognom, tornant a començar per l'A", () => {
+    const persones = [s(1, "Abril", ["A"]), s(2, "Martí", ["A"]), s(3, "Pons", ["A"]), s(4, "Riera", ["A"])];
+    const r = adjudica({
+      sollicituds: persones, activitats: [act("A", 2)], parametres: regla({ tipus_sorteig: "lletra" }),
+      sortejos: sortejos({ A: { tipus: "lletra", valor: "P" } }),
+    });
+    expect(ordreAdmeses(r, "A")).toEqual(["s3:A", "s4:A", "s1:E1", "s2:E2"]);
+  });
+
+  it("numeració aleatòria: s'usa el número de sorteig de cada sol·licitud", () => {
+    const amb = [s(1, "A", ["A"]), s(2, "B", ["A"]), s(3, "C", ["A"])].map((x, i) => ({ ...x, numero_sorteig: [3, 1, 2][i] }));
+    const r = adjudica({
+      sollicituds: amb, activitats: [act("A", 1)], parametres: regla({ numeracio_sorteig: "aleatoria" }),
+      sortejos: sortejos({ A: { tipus: "numero", valor: "2" } }),
+    });
+    // Números: s1=3, s2=1, s3=2. Sorteig 2 → s3 (2), s1 (3), s2 (1).
+    expect(ordreAdmeses(r, "A")).toEqual(["s3:A", "s1:E1", "s2:E2"]);
+  });
+
+  it("la llista d'espera anterior té prioritat absoluta, encara que sigui la 2a preferència", () => {
+    const persones = [s(1, "A", ["A"]), s(2, "B", ["A"]), s(3, "C", ["B", "A"]), s(4, "D", ["A"])];
+    const r = adjudica({
+      sollicituds: persones, activitats: [act("A", 1), act("B", 5)], parametres: regla(),
+      sortejos: sortejos({ A: { tipus: "numero", valor: "1" } }), espera_anterior: new Set(["s3:A", "s4:A"]),
+    });
+    // s3 i s4 tenen prioritat a A i passen davant de tothom. Entre elles, també primer la preferència:
+    // s4 (1a) davant de s3 (2a), encara que el sorteig (1) afavoreixi s3. La resta, darrere.
+    expect(ordreAdmeses(r, "A")).toEqual(["s4:A", "s3:E1", "s1:E2", "s2:E3"]);
+    expect(r.resultats.find((x) => x.sollicitud_id === "s3" && x.activitat_id === "A")).toMatchObject({ per_espera_anterior: true, posicio_espera: 1 });
+    expect(r.resum.activitats.A).toMatchObject({ per_espera_anterior: 2, admeses: 1 });
+    // Sense la regla activada, la llista anterior no compta.
+    const sense = adjudica({
+      sollicituds: persones, activitats: [act("A", 1), act("B", 5)], parametres: regla({ prioritat_espera_anterior: false }),
+      sortejos: sortejos({ A: { tipus: "numero", valor: "1" } }), espera_anterior: new Set(["s3:A", "s4:A"]),
+    });
+    expect(ordreAdmeses(sense, "A")[0]).toBe("s1:A");
+  });
+
+  it("respecta el màxim d'activitats per persona també amb prioritat", () => {
+    const persones = [s(1, "A", ["B", "A"]), s(2, "B", ["A"])];
+    const r = adjudica({
+      sollicituds: persones, activitats: [act("A", 1), act("B", 1)], parametres: regla({ maxim_activitats_per_persona: 1 }),
+      espera_anterior: new Set(["s1:A"]),
+    });
+    // s1 té prioritat a A (2a preferència): l'obté, i ja no pot tenir B.
+    expect(mapa(r)).toEqual({ "s1/B": "no (maxim_activitats)", "s1/A": "admesa", "s2/A": "espera 1" });
+  });
+
+  it("indica quines activitats necessiten sorteig (més sol·licituds que places)", () => {
+    const persones = [s(1, "A", ["A", "B"]), s(2, "B", ["A"]), s(3, "C", ["A", "C"])];
+    expect(activitatsAmbSorteig({ sollicituds: persones, activitats: [act("A", 2), act("B", 1), act("C", 0, false)] })).toEqual(["A"]);
+    expect(activitatsAmbSorteig({ sollicituds: persones, activitats: [act("A", 2)], excloses: new Set(["s3:A"]) })).toEqual([]);
+  });
+
+  it("el sorteig per activitat exigeix el mètode per rondes", () => {
+    expect(() => adjudica({ sollicituds: [s(1, "A", ["A"])], activitats: [act("A", 1)], parametres: regla({ metode: "per_persona" }) }))
+      .toThrow("sorteig_activitat_requereix_rondes");
+  });
+
+  it("els paràmetres desats abans conserven el comportament anterior", () => {
+    const antics = { ...GENERALS } as Partial<ParametresAdjudicacio>;
+    delete antics.prioritat_espera_anterior; delete antics.tipus_sorteig; delete antics.numeracio_sorteig; delete antics.preferencia_maxima_espera_anterior;
+    expect(normalitzaParametres(antics as ParametresAdjudicacio)).toMatchObject({ prioritat_espera_anterior: false, criteri_ordre: "inscripcio" });
   });
 });

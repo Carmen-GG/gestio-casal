@@ -11,7 +11,7 @@ const NOMS_DIES = ["", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", 
 
 type Valors = {
   nom: string; descripcio: string; categoria: string; dies_setmana: number[]; hora_inici: string; hora_fi: string;
-  horari_text: string; data_inici: string; data_fi: string; espai: string; capacitat: string; nombre_sessions: string; codi_extern: string;
+  horari_text: string; data_inici: string; data_fi: string; espai: string; capacitat: string; nombre_sessions: string; minim_participants: string; codi_extern: string;
 };
 
 const desDe = (a?: Activitat): Valors => ({
@@ -19,6 +19,7 @@ const desDe = (a?: Activitat): Valors => ({
   hora_inici: a?.hora_inici ?? "", hora_fi: a?.hora_fi ?? "", horari_text: a?.horari_text ?? "",
   data_inici: a?.data_inici ?? "", data_fi: a?.data_fi ?? "", espai: a?.espai ?? "",
   capacitat: a ? String(a.capacitat) : "", nombre_sessions: a?.nombre_sessions != null ? String(a.nombre_sessions) : "",
+  minim_participants: a?.minim_participants != null ? String(a.minim_participants) : "",
   codi_extern: a?.codi_extern ?? "",
 });
 
@@ -43,7 +44,8 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
       hora_inici: nul(v.hora_inici), hora_fi: nul(v.hora_fi), horari_text: nul(v.horari_text),
       data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai),
       capacitat: v.capacitat === "" ? Number.NaN : Number(v.capacitat),
-      nombre_sessions: v.nombre_sessions === "" ? null : Number(v.nombre_sessions), codi_extern: nul(v.codi_extern),
+      nombre_sessions: v.nombre_sessions === "" ? null : Number(v.nombre_sessions),
+      minim_participants: v.minim_participants === "" ? null : Number(v.minim_participants), codi_extern: nul(v.codi_extern),
     };
     const r = activitatCrear.safeParse(dades);
     if (!r.success) { setErrors(errorsPerCamp(r.error)); return; }
@@ -68,6 +70,8 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
         <CampText etiqueta="Categoria" value={v.categoria} onChange={canvia("categoria")} error={errors.categoria} maxLength={80} />
         <CampText etiqueta="Capacitat (places)" obligatori type="number" min={0} value={v.capacitat} onChange={canvia("capacitat")} error={errors.capacitat} />
         <CampText etiqueta="Nombre de sessions" type="number" min={0} value={v.nombre_sessions} onChange={canvia("nombre_sessions")} error={errors.nombre_sessions} />
+        <CampText etiqueta="Mínim de participants" type="number" min={0} value={v.minim_participants} onChange={canvia("minim_participants")}
+          error={errors.minim_participants} ajuda="Habitualment 15 en activitats d'adults i 8 en infantils i juvenils. Només serveix per avisar." />
         <fieldset className="camp camp--ample">
           <legend>Dies de la setmana <span className="camp__opcional">(opcional)</span></legend>
           <div className="dies">

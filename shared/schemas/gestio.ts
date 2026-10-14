@@ -93,6 +93,7 @@ const campsActivitat = {
   espai: textOpcional(120).optional(),
   capacitat: z.number().int().min(0).max(10000),
   nombre_sessions: z.number().int().min(0).max(1000).nullable().optional(),
+  minim_participants: z.number().int().min(0).max(10000).nullable().optional(),
   codi_extern: textOpcional(80).optional(),
   informacio_difusio: z.record(z.string(), z.string().max(4000)).optional(),
 };
