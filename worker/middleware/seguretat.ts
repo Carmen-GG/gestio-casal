@@ -16,7 +16,8 @@ export const capcaleresSeguretat: MiddlewareHandler<Entorn> = async (c, next) =>
   c.header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "no-referrer");
-  c.header("Cache-Control", "no-store");
+  // Una ruta pot permetre la memòria cau privada (p. ex. fitxers immutables sense dades personals).
+  if (!c.res.headers.has("Cache-Control")) c.header("Cache-Control", "no-store");
   c.header("Cross-Origin-Resource-Policy", "same-origin");
 };
 
@@ -71,8 +72,10 @@ export const MIDA_MAXIMA_COS = 256 * 1024;
  * Limita la mida del cos de les peticions (protecció bàsica contra abusos). Si no hi ha
  * `Content-Length` (enviament fragmentat), el límit s'aplica en llegir el cos (`cosValidat`).
  */
-export function midaMaximaCos(bytes: number): MiddlewareHandler<Entorn> {
+export function midaMaximaCos(bytes: number, excepcio?: (c: Parameters<MiddlewareHandler<Entorn>>[0]) => boolean): MiddlewareHandler<Entorn> {
   return async (c, next) => {
+    // Les rutes exceptuades (pujada de fitxers) apliquen el seu propi límit en llegir el cos.
+    if (excepcio?.(c)) return next();
     const longitud = Number(c.req.header("Content-Length") ?? "0");
     if (!Number.isFinite(longitud) || longitud > bytes) {
       return respostaError(c, new ErrorAplicacio(413, "peticio_massa_gran", "La petició és massa gran."));

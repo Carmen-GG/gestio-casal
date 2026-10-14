@@ -27,10 +27,13 @@ export class ErrorClientApi extends Error {
 
 const TEMPS_MAXIM_MS = 15_000;
 
-async function peticio<T>(ruta: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-  const { json, ...resta } = init;
+/** Els fitxers grans (plantilles de diversos MB) poden trigar més que una consulta. */
+const TEMPS_MAXIM_FITXERS_MS = 120_000;
+
+async function enviar(ruta: string, init: RequestInit & { json?: unknown; tempsMaxim?: number }): Promise<Response> {
+  const { json, tempsMaxim, ...resta } = init;
   const control = new AbortController();
-  const temporitzador = setTimeout(() => control.abort(), TEMPS_MAXIM_MS);
+  const temporitzador = setTimeout(() => control.abort(), tempsMaxim ?? TEMPS_MAXIM_MS);
   const extern = resta.signal;
   extern?.addEventListener("abort", () => control.abort());
   let resposta: Response;
@@ -51,24 +54,40 @@ async function peticio<T>(ruta: string, init: RequestInit & { json?: unknown } =
   } finally {
     clearTimeout(temporitzador);
   }
+  return resposta;
+}
 
+async function peticio<T>(ruta: string, init: RequestInit & { json?: unknown; tempsMaxim?: number } = {}): Promise<T> {
+  const resposta = await enviar(ruta, init);
   const esJson = resposta.headers.get("Content-Type")?.includes("application/json");
   const cos: unknown = esJson ? await resposta.json().catch(() => null) : null;
 
-  if (!resposta.ok) {
-    const err = (cos as ErrorApi | null)?.error;
-    throw new ErrorClientApi(
-      resposta.status,
-      err?.codi ?? "error_desconegut",
-      err?.missatge ?? "S'ha produït un error inesperat. Torneu-ho a provar més tard.",
-      err?.id_peticio,
-      err?.detalls,
-    );
-  }
+  if (!resposta.ok) throw errorDeResposta(resposta, cos);
   if (!esJson) {
     throw new ErrorClientApi(resposta.status, "resposta_invalida", "El servidor ha retornat una resposta inesperada.");
   }
   return cos as T;
+}
+
+function errorDeResposta(resposta: Response, cos: unknown) {
+  const err = (cos as ErrorApi | null)?.error;
+  return new ErrorClientApi(
+    resposta.status,
+    err?.codi ?? "error_desconegut",
+    err?.missatge ?? "S'ha produït un error inesperat. Torneu-ho a provar més tard.",
+    err?.id_peticio,
+    err?.detalls,
+  );
+}
+
+/** Descarrega un fitxer binari de l'API (amb la mateixa gestió d'errors). */
+async function descarregar(ruta: string, signal?: AbortSignal): Promise<ArrayBuffer> {
+  const resposta = await enviar(ruta, { method: "GET", signal, tempsMaxim: TEMPS_MAXIM_FITXERS_MS, headers: { Accept: "*/*" } });
+  if (!resposta.ok) {
+    const esJson = resposta.headers.get("Content-Type")?.includes("application/json");
+    throw errorDeResposta(resposta, esJson ? await resposta.json().catch(() => null) : null);
+  }
+  return resposta.arrayBuffer();
 }
 
 export const api = {
@@ -76,4 +95,8 @@ export const api = {
   post: <T>(ruta: string, json: unknown = {}, headers?: Record<string, string>) => peticio<T>(ruta, { method: "POST", json, headers }),
   patch: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PATCH", json }),
   put: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PUT", json }),
+  /** Puja un fitxer tal qual: el tipus va a Content-Type (cal preflight des d'un altre origen). */
+  pujar: <T>(ruta: string, fitxer: Blob, tipus: string) =>
+    peticio<T>(ruta, { method: "POST", body: fitxer, headers: { "Content-Type": tipus }, tempsMaxim: TEMPS_MAXIM_FITXERS_MS }),
+  descarregar,
 };

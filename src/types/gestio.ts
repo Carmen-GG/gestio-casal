@@ -17,6 +17,8 @@ export interface Jo {
   usuari: { id: string; nom_visible: string; email: string };
   administracio_central: boolean;
   pot_crear_casals: boolean;
+  /** Pot carregar i modificar les plantilles comunes a tots els casals (administració central). */
+  pot_gestionar_plantilles_comunes: boolean;
   casals: CasalAccessible[];
 }
 
@@ -214,4 +216,20 @@ export interface IndicadorsCicle {
     id: string; nom: string; capacitat: number; minim_participants: number | null; sollicituds: number; primera_preferencia: number;
     admeses: number; ofertes: number; espera: number; lliures: number; sense_inscripcions: boolean; mes_demanda: boolean;
   }[];
+}
+
+// ---------- PG-Cartells ----------
+export type { CampPlantilla, EstatPlantilla, TipusPlantilla } from "../../shared/domain/cartells";
+import type { CampPlantilla, Estacio, EstatPlantilla, FormatSortida, TipusPlantilla, UsFitxer } from "../../shared/domain/cartells";
+
+export interface FitxerCartells {
+  id: string; casal_id: string | null; us: UsFitxer; tipus_mime: string; mida: number; sha256: string;
+  nom_original: string; pujat_per: string; pujat_el: string;
+}
+
+export interface PlantillaCartells {
+  id: string; casal_id: string | null; fitxer_id: string; previsualitzacio_id: string | null; nom: string; tipus: TipusPlantilla; estacio: Estacio | null;
+  linies_titol: number; amb_qr: boolean; tematica: string | null; identitat_grafica: string | null; estat: EstatPlantilla;
+  pagina_amplada: number; pagina_alcada: number; format_sortida: FormatSortida; camps: CampPlantilla[];
+  versio: number; creat_per: string; creat_el: string; actualitzat_el: string;
 }

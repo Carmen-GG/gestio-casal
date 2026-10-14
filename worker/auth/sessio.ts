@@ -67,6 +67,8 @@ async function usuariDeSessio(c: Context<Entorn>): Promise<UsuariAutenticat | nu
 
 /** Exigeix una sessió vàlida. Es comprova al servidor a cada petició. */
 export const requereixSessio: MiddlewareHandler<Entorn> = async (c, next) => {
+  // Si un altre grup de rutes ja ha validat la sessió en aquesta petició, no cal repetir-ho.
+  if (c.get("usuari")) return next();
   const usuari = await usuariDeSessio(c);
   if (!usuari) throw errors.noAutenticat();
   c.set("usuari", usuari);

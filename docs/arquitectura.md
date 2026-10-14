@@ -36,8 +36,8 @@ Cloudflare Worker «casal-gestio»
 | Atomicitat | Lots de D1 (`batch`) + testimoni d'operació | Dada, historial i auditoria s'escriuen junts; si hi ha un conflicte de concurrència no queda historial fals. |
 | Proves | Vitest dins del runtime de Workers amb D1 local (`@cloudflare/vitest-plugin`) | Les proves executen les migracions reals i el mateix motor SQL que producció. |
 | Validació | Esquemes compartits a `shared/` per al frontend i el servidor | La validació del navegador és ajuda; el servidor torna a validar-ho tot. |
-| Fitxers (PG-Cartells) | R2 per a fotografies, plantilles i materials; D1 només desa metadades | Evita blocs grans a la base de dades. S'activarà quan s'implementi el mòdul. |
-| PDF i imatges | A decidir després d'auditar PG-Cartells (vegeu `auditoria-pg-cartells.md`) | Algunes biblioteques no funcionen a Workers; cal veure les plantilles originals. |
+| Fitxers (PG-Cartells) | R2 privat (binding `FITXERS`) per a fotografies, plantilles i materials; D1 només desa metadades | Evita blocs grans a la base de dades. |
+| PDF i imatges | Al navegador: pdf-lib omple els formularis PDF originals i pdf.js en fa imatges ([cartells.md](cartells.md)) | Les plantilles són formularis PDF; processar PDF de diversos MB supera la CPU d'un Worker per petició. |
 
 ## Estructura del repositori
 

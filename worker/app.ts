@@ -8,6 +8,7 @@ import { capcaleresSeguretat, idPeticio, MIDA_MAXIMA_COS, midaMaximaCos, politic
 import { rutesPubliques } from "./routes/public";
 import { rutesAuth } from "./routes/auth";
 import { rutesGestio } from "./routes/gestio";
+import { esPujadaFitxer, rutesCartells } from "./routes/cartells";
 import type { UsuariAutenticat } from "./auth/permisos";
 
 export type Entorn = {
@@ -27,7 +28,7 @@ export function crearApp(deps: DependenciesApp = {}) {
 
   const app = new Hono<Entorn>().basePath("/api");
 
-  app.use("*", idPeticio, capcaleresSeguretat, politicaOrigen, midaMaximaCos(MIDA_MAXIMA_COS));
+  app.use("*", idPeticio, capcaleresSeguretat, politicaOrigen, midaMaximaCos(MIDA_MAXIMA_COS, esPujadaFitxer));
   app.use("*", async (c, next) => {
     c.set("rellotge", rellotge);
     c.set("repos", fabricaRepos(c.env, rellotge));
@@ -47,6 +48,7 @@ export function crearApp(deps: DependenciesApp = {}) {
   app.route("/public", rutesPubliques);
   app.route("/auth", rutesAuth);
   app.route("/gestio", rutesGestio);
+  app.route("/gestio", rutesCartells);
 
   app.notFound((c) => respostaError(c, errors.noTrobat("Ruta no trobada.")));
 
