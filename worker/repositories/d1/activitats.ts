@@ -1,5 +1,5 @@
-import type { Activitat, EstatActivitat, NovaActivitat, RepositoriActivitats } from "../tipus";
-import { jsonLlistaNumeros, jsonObjecte, marcadors } from "./util";
+import type { Activitat, CanvisActivitat, EstatActivitat, NovaActivitat, RepositoriActivitats } from "../tipus";
+import { assignacionsUpdate, comOperacio, comStatement, jsonLlistaNumeros, jsonObjecte, marcadors } from "./util";
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
 
@@ -37,22 +37,42 @@ export class D1RepositoriActivitats implements RepositoriActivitats {
     return results.map(mapa);
   }
 
+  operacioCrear(id: string, d: NovaActivitat, ara: string, operacio: string) {
+    return comOperacio(
+      this.db
+        .prepare(
+          `INSERT INTO activitats (id, casal_id, cicle_id, nom, descripcio, categoria, dies_setmana, hora_inici,
+             hora_fi, horari_text, data_inici, data_fi, espai, capacitat, nombre_sessions, estat,
+             informacio_difusio, configuracio_continuitat, codi_extern, darrera_operacio, creat_el, actualitzat_el)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(id, d.casal_id, d.cicle_id, d.nom, d.descripcio ?? null, d.categoria ?? null,
+          JSON.stringify(d.dies_setmana ?? []), d.hora_inici ?? null, d.hora_fi ?? null, d.horari_text ?? null,
+          d.data_inici ?? null, d.data_fi ?? null, d.espai ?? null, d.capacitat, d.nombre_sessions ?? null,
+          d.estat ?? "esborrany", JSON.stringify(d.informacio_difusio ?? {}),
+          JSON.stringify(d.configuracio_continuitat ?? {}), d.codi_extern ?? null, operacio, ara, ara),
+    );
+  }
+
   async crear(d: NovaActivitat) {
-    const ara = isoAra(this.rellotge);
     const id = nouId();
-    await this.db
-      .prepare(
-        `INSERT INTO activitats (id, casal_id, cicle_id, nom, descripcio, categoria, dies_setmana, hora_inici,
-           hora_fi, horari_text, data_inici, data_fi, espai, capacitat, nombre_sessions, estat,
-           informacio_difusio, configuracio_continuitat, codi_extern, creat_el, actualitzat_el)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(id, d.casal_id, d.cicle_id, d.nom, d.descripcio ?? null, d.categoria ?? null,
-        JSON.stringify(d.dies_setmana ?? []), d.hora_inici ?? null, d.hora_fi ?? null, d.horari_text ?? null,
-        d.data_inici ?? null, d.data_fi ?? null, d.espai ?? null, d.capacitat, d.nombre_sessions ?? null,
-        d.estat ?? "esborrany", JSON.stringify(d.informacio_difusio ?? {}),
-        JSON.stringify(d.configuracio_continuitat ?? {}), d.codi_extern ?? null, ara, ara)
-      .run();
+    await comStatement(this.operacioCrear(id, d, isoAra(this.rellotge), nouId())).run();
     return (await this.perId(d.casal_id, id))!;
+  }
+
+  operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisActivitat, ara: string, operacio: string) {
+    const { sql, valors } = assignacionsUpdate(canvis, [
+      "nom", "descripcio", "categoria", "dies_setmana", "hora_inici", "hora_fi", "horari_text", "data_inici",
+      "data_fi", "espai", "capacitat", "nombre_sessions", "estat", "informacio_difusio",
+      "configuracio_continuitat", "codi_extern",
+    ]);
+    return comOperacio(
+      this.db
+        .prepare(
+          `UPDATE activitats SET ${sql}, actualitzat_el = ?, versio = versio + 1, darrera_operacio = ?
+           WHERE id = ? AND casal_id = ? AND versio = ?`,
+        )
+        .bind(...valors, ara, operacio, id, casalId, versioActual),
+    );
   }
 }

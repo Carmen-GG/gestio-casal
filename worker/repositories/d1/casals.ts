@@ -1,5 +1,5 @@
-import type { Casal, NouCasal, RepositoriCasals } from "../tipus";
-import { jsonObjecte } from "./util";
+import type { CanvisCasal, Casal, NouCasal, RepositoriCasals } from "../tipus";
+import { assignacionsUpdate, comOperacio, comStatement, jsonObjecte, marcadors } from "./util";
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
 
@@ -20,25 +20,47 @@ export class D1RepositoriCasals implements RepositoriCasals {
     return f ? mapa(f) : null;
   }
 
-  async llistar(opcions: { nomesActius?: boolean } = {}) {
-    const sql = opcions.nomesActius
-      ? "SELECT * FROM casals WHERE actiu = 1 ORDER BY nom"
-      : "SELECT * FROM casals ORDER BY nom";
-    const { results } = await this.db.prepare(sql).all<Fila>();
+  async llistar(opcions: { nomesActius?: boolean; ids?: string[] } = {}) {
+    const condicions: string[] = [];
+    const params: unknown[] = [];
+    if (opcions.nomesActius) condicions.push("actiu = 1");
+    if (opcions.ids) {
+      if (opcions.ids.length === 0) return [];
+      condicions.push(`id IN (${marcadors(opcions.ids.length)})`);
+      params.push(...opcions.ids);
+    }
+    const where = condicions.length ? `WHERE ${condicions.join(" AND ")}` : "";
+    const { results } = await this.db.prepare(`SELECT * FROM casals ${where} ORDER BY nom`).bind(...params).all<Fila>();
     return results.map(mapa);
   }
 
+  operacioActualitzar(id: string, versioActual: number, canvis: CanvisCasal, ara: string, operacio: string) {
+    const { sql, valors } = assignacionsUpdate(canvis, ["nom", "municipi", "adreca", "actiu", "configuracio"]);
+    return comOperacio(
+      this.db
+        .prepare(
+          `UPDATE casals SET ${sql}, actualitzat_el = ?, versio = versio + 1, darrera_operacio = ?
+           WHERE id = ? AND versio = ?`,
+        )
+        .bind(...valors, ara, operacio, id, versioActual),
+    );
+  }
+
+  operacioCrear(id: string, dades: NouCasal, ara: string, operacio: string) {
+    return comOperacio(
+      this.db
+        .prepare(
+          `INSERT INTO casals (id, codi, nom, municipi, adreca, actiu, configuracio, darrera_operacio, creat_el, actualitzat_el)
+           VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+        )
+        .bind(id, dades.codi, dades.nom, dades.municipi, dades.adreca ?? null,
+          JSON.stringify(dades.configuracio ?? {}), operacio, ara, ara),
+    );
+  }
+
   async crear(dades: NouCasal) {
-    const ara = isoAra(this.rellotge);
     const id = nouId();
-    await this.db
-      .prepare(
-        `INSERT INTO casals (id, codi, nom, municipi, adreca, actiu, configuracio, creat_el, actualitzat_el)
-         VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
-      )
-      .bind(id, dades.codi, dades.nom, dades.municipi, dades.adreca ?? null,
-        JSON.stringify(dades.configuracio ?? {}), ara, ara)
-      .run();
+    await comStatement(this.operacioCrear(id, dades, isoAra(this.rellotge), nouId())).run();
     return (await this.perId(id))!;
   }
 }

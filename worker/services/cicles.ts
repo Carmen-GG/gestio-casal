@@ -1,22 +1,89 @@
-import { acceptaSollicituds, tipusTransicioCicle, type EstatCicle, ETIQUETES_ESTAT_CICLE } from "../../shared/domain/cicles";
+import {
+  acceptaSollicituds, ETIQUETES_ESTAT_CICLE, tipusTransicioCicle, type EstatCicle,
+} from "../../shared/domain/cicles";
 import { ErrorAplicacio, errors } from "../http/errors";
-import type { Cicle, Repositoris } from "../repositories/tipus";
+import type { CanvisCicle, Cicle, NouCicle, Repositoris } from "../repositories/tipus";
 import { isoAra, type Rellotge } from "../lib/rellotge";
 import { nouId } from "../lib/ids";
+import { diferencies, escriuAmbTraca, type ContextOperacio } from "./traca";
 
-export interface ContextOperacio {
-  usuariId: string | null;
-  idPeticio?: string | null;
-}
+export type { ContextOperacio };
+
+/** Estats en què encara es pot canviar quines dades personals demana el formulari. */
+const ESTATS_FORMULARI_EDITABLE: EstatCicle[] = ["esborrany", "preparacio"];
 
 export class ServeiCicles {
   constructor(private readonly repos: Repositoris, private readonly rellotge: Rellotge) {}
 
+  async obtenir(casalId: string, cicleId: string): Promise<Cicle> {
+    const cicle = await this.repos.cicles.perId(casalId, cicleId);
+    if (!cicle) throw errors.noTrobat("No s'ha trobat el cicle.");
+    return cicle;
+  }
+
+  async crear(casalId: string, dades: Omit<NouCicle, "casal_id">, ctx: ContextOperacio): Promise<Cicle> {
+    const casal = await this.repos.casals.perId(casalId);
+    if (!casal) throw errors.noTrobat("No s'ha trobat el casal.");
+    const ara = isoAra(this.rellotge);
+    const id = nouId();
+    const operacio = nouId();
+    await escriuAmbTraca(this.repos, ara, {
+      principal: this.repos.cicles.operacioCrear(id, { ...dades, casal_id: casalId }, ara, operacio),
+      condicio: { taula: "cicles", id, operacio },
+      historial: { casal_id: casalId, entitat: "cicle", entitat_id: id, accio: "creacio", canvis: { nom: dades.nom }, motiu: null },
+      auditoria: { casal_id: casalId, tipus_operacio: "cicle.creacio", entitat: "cicle", entitat_id: id },
+      ctx,
+    });
+    return this.obtenir(casalId, id);
+  }
+
+  async actualitzar(
+    casalId: string,
+    cicleId: string,
+    canvis: CanvisCicle,
+    opcions: ContextOperacio & { versio: number; motiu?: string | null },
+  ): Promise<Cicle> {
+    const cicle = await this.obtenir(casalId, cicleId);
+    if (cicle.versio !== opcions.versio) {
+      throw errors.conflicte("conflicte_concurrencia", "El cicle s'ha modificat mentrestant. Recarregueu-lo.");
+    }
+    if (cicle.estat === "arxivat") throw errors.conflicte("cicle_arxivat", "Un cicle arxivat no es pot modificar.");
+
+    const diff = diferencies(cicle, canvis);
+    if (Object.keys(diff).length === 0) return cicle;
+
+    if ("configuracio_formulari" in diff && !ESTATS_FORMULARI_EDITABLE.includes(cicle.estat)) {
+      throw errors.conflicte(
+        "formulari_bloquejat",
+        "Els camps del formulari només es poden canviar mentre el cicle és en esborrany o preparació.",
+      );
+    }
+
+    // Validació de coherència sobre l'estat final, no només sobre els camps enviats.
+    const final = { ...cicle, ...canvis };
+    if (final.data_fi < final.data_inici) {
+      throw errors.peticioInvalida("Dades no vàlides.", { data_fi: "La data de finalització ha de ser posterior a la d'inici." });
+    }
+    if (final.tancament_inscripcions <= final.obertura_inscripcions) {
+      throw errors.peticioInvalida("Dades no vàlides.", { tancament_inscripcions: "El tancament ha de ser posterior a l'obertura." });
+    }
+
+    const ara = isoAra(this.rellotge);
+    const operacio = nouId();
+    const canvisEfectius = Object.fromEntries(Object.keys(diff).map((k) => [k, (canvis as Record<string, unknown>)[k]]));
+    await escriuAmbTraca(this.repos, ara, {
+      principal: this.repos.cicles.operacioActualitzar(casalId, cicleId, cicle.versio, canvisEfectius, ara, operacio),
+      condicio: { taula: "cicles", id: cicleId, operacio },
+      historial: { casal_id: casalId, entitat: "cicle", entitat_id: cicleId, accio: "modificacio", canvis: diff, motiu: opcions.motiu?.trim() || null },
+      auditoria: { casal_id: casalId, tipus_operacio: "cicle.modificacio", entitat: "cicle", entitat_id: cicleId, detalls: { camps: Object.keys(diff) } },
+      ctx: opcions,
+    });
+    return this.obtenir(casalId, cicleId);
+  }
+
   /**
    * Canvia l'estat d'un cicle aplicant les regles de transició.
    * Les transicions sensibles exigeixen `confirmacio: true` i un motiu.
-   * El canvi, l'historial i l'auditoria es desen en un sol lot atòmic; l'historial
-   * i l'auditoria només s'insereixen si l'actualització ha tingut efecte.
    */
   async canviarEstat(
     casalId: string,
@@ -24,8 +91,7 @@ export class ServeiCicles {
     cap: EstatCicle,
     opcions: ContextOperacio & { confirmacio?: boolean; motiu?: string | null; versioEsperada?: number },
   ): Promise<Cicle> {
-    const cicle = await this.repos.cicles.perId(casalId, cicleId);
-    if (!cicle) throw errors.noTrobat("No s'ha trobat el cicle.");
+    const cicle = await this.obtenir(casalId, cicleId);
     if (opcions.versioEsperada !== undefined && opcions.versioEsperada !== cicle.versio) {
       throw errors.conflicte("conflicte_concurrencia", "El cicle s'ha modificat mentrestant. Recarregueu-lo.");
     }
@@ -39,51 +105,26 @@ export class ServeiCicles {
     }
     const motiu = opcions.motiu?.trim() || null;
     if (tipus === "requereix_confirmacio" && (opcions.confirmacio !== true || !motiu)) {
-      throw new ErrorAplicacio(
-        428,
-        "confirmacio_requerida",
-        "Aquest canvi d'estat requereix una confirmació explícita i un motiu.",
-      );
+      throw new ErrorAplicacio(428, "confirmacio_requerida", "Aquest canvi d'estat requereix una confirmació explícita i un motiu.");
     }
 
     const ara = isoAra(this.rellotge);
-    const condicio = { taula: "cicles" as const, id: cicleId, operacio: nouId() };
-    const [actualitzacio] = await this.repos.unitat.executar([
-      this.repos.cicles.operacioCanviEstat(casalId, cicleId, cicle.versio, cap, ara, condicio.operacio),
-      this.repos.historial.operacioAfegir(
-        {
-          casal_id: casalId,
-          entitat: "cicle",
-          entitat_id: cicleId,
-          accio: "canvi_estat",
-          canvis: { estat: { abans: cicle.estat, despres: cap } },
-          usuari_id: opcions.usuariId,
-          motiu,
-        },
-        ara,
-        condicio,
-      ),
-      this.repos.auditoria.operacioRegistrar(
-        {
-          casal_id: casalId,
-          usuari_id: opcions.usuariId,
-          tipus_operacio: "cicle.canvi_estat",
-          entitat: "cicle",
-          entitat_id: cicleId,
-          resultat: "exit",
-          motiu,
-          detalls: { des: cicle.estat, cap, confirmacio: tipus === "requereix_confirmacio" },
-          id_peticio: opcions.idPeticio ?? null,
-        },
-        ara,
-        condicio,
-      ),
-    ]);
-
-    if (!actualitzacio || actualitzacio.canvis !== 1) {
-      throw errors.conflicte("conflicte_concurrencia", "El cicle s'ha modificat mentrestant. Torneu-ho a provar.");
-    }
-    return (await this.repos.cicles.perId(casalId, cicleId))!;
+    const operacio = nouId();
+    await escriuAmbTraca(this.repos, ara, {
+      principal: this.repos.cicles.operacioCanviEstat(casalId, cicleId, cicle.versio, cap, ara, operacio),
+      condicio: { taula: "cicles", id: cicleId, operacio },
+      historial: {
+        casal_id: casalId, entitat: "cicle", entitat_id: cicleId, accio: "canvi_estat",
+        canvis: { estat: { abans: cicle.estat, despres: cap } }, motiu,
+      },
+      auditoria: {
+        casal_id: casalId, tipus_operacio: "cicle.canvi_estat", entitat: "cicle", entitat_id: cicleId, motiu,
+        detalls: { des: cicle.estat, cap, confirmacio: tipus === "requereix_confirmacio" },
+      },
+      ctx: opcions,
+      missatgeConflicte: "El cicle s'ha modificat mentrestant. Torneu-ho a provar.",
+    });
+    return this.obtenir(casalId, cicleId);
   }
 
   acceptaSollicituds(cicle: Cicle): boolean {

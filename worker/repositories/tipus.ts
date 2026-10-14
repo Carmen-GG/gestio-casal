@@ -15,6 +15,7 @@ export interface Casal {
   adreca: string | null;
   actiu: boolean;
   configuracio: Record<string, unknown>;
+  versio: number;
   creat_el: string;
   actualitzat_el: string;
 }
@@ -115,7 +116,7 @@ export interface EntradaAuditoria {
  * `taula` ha de portar el testimoni aleatori `operacio` que aquella escriptura hi desa.
  */
 export interface CondicioOperacio {
-  taula: "cicles" | "activitats";
+  taula: "casals" | "cicles" | "activitats";
   id: string;
   operacio: string;
 }
@@ -126,18 +127,73 @@ export interface CondicioOperacio {
  */
 export type Operacio = { readonly __marca: "Operacio" };
 
+export type CanvisCasal = Partial<Pick<Casal, "nom" | "municipi" | "adreca" | "actiu" | "configuracio">>;
+
 export interface RepositoriCasals {
   perId(id: string): Promise<Casal | null>;
   perCodi(codi: string): Promise<Casal | null>;
-  llistar(opcions?: { nomesActius?: boolean }): Promise<Casal[]>;
+  llistar(opcions?: { nomesActius?: boolean; ids?: string[] }): Promise<Casal[]>;
   crear(dades: NouCasal): Promise<Casal>;
+  operacioCrear(id: string, dades: NouCasal, ara: string, operacio: string): Operacio;
+  operacioActualitzar(id: string, versioActual: number, canvis: CanvisCasal, ara: string, operacio: string): Operacio;
 }
+
+export interface Usuari {
+  id: string;
+  email: string;
+  nom_visible: string;
+  proveidor_identitat: "dev" | "entra_id";
+  actiu: boolean;
+}
+
+/** Permisos efectius d'un usuari: globals (administració central) i per casal. */
+export interface PermisosUsuari {
+  globals: string[];
+  perCasal: Record<string, string[]>;
+}
+
+export interface AssignacioRol {
+  id: string;
+  usuari_id: string;
+  email: string;
+  nom_visible: string;
+  rol_codi: string;
+  casal_id: string | null;
+  atorgat_el: string;
+}
+
+export interface RepositoriUsuaris {
+  perId(id: string): Promise<Usuari | null>;
+  perEmail(email: string): Promise<Usuari | null>;
+  crear(dades: { email: string; nom_visible: string; proveidor_identitat: Usuari["proveidor_identitat"] }): Promise<Usuari>;
+  permisos(usuariId: string): Promise<PermisosUsuari>;
+  assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
+  assignacioPerId(id: string): Promise<AssignacioRol | null>;
+  rolExisteix(codi: string): Promise<{ abast: "casal" | "global" } | null>;
+  operacioAssignar(dades: { id: string; usuari_id: string; rol_codi: string; casal_id: string | null; atorgat_per: string; motiu: string | null }, ara: string): Operacio;
+  operacioRevocar(id: string, revocatPer: string, motiu: string | null, ara: string): Operacio;
+}
+
+export interface RepositoriSessions {
+  crearTestimoni(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
+  /** Marca el testimoni com a usat si és vàlid i retorna l'usuari. Un testimoni només serveix una vegada. */
+  consumirTestimoni(resum: string, ara: string): Promise<string | null>;
+  crearSessio(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
+  sessioVigent(resum: string, ara: string): Promise<{ usuari_id: string; darrer_us_el: string } | null>;
+  tocarSessio(resum: string, ara: string): Promise<void>;
+  revocarSessio(resum: string, ara: string): Promise<void>;
+}
+
+export type CanvisCicle = Partial<Pick<Cicle,
+  | "nom" | "any" | "data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions"
+  | "data_resolucio_prevista" | "configuracio_formulari">>;
 
 export interface RepositoriCicles {
   /** Sempre filtra per casal per evitar accessos horitzontals. */
   perId(casalId: string, id: string): Promise<Cicle | null>;
   llistarPerCasal(casalId: string, opcions?: { estats?: EstatCicle[] }): Promise<Cicle[]>;
   crear(dades: NouCicle): Promise<Cicle>;
+  operacioCrear(id: string, dades: NouCicle, ara: string, operacio: string): Operacio;
   /**
    * Operació de canvi d'estat condicionada a la versió actual (bloqueig optimista).
    * Si té efecte, incrementa la versió i desa el testimoni `operacio`.
@@ -145,12 +201,18 @@ export interface RepositoriCicles {
   operacioCanviEstat(
     casalId: string, id: string, versioActual: number, cap: EstatCicle, ara: string, operacio: string,
   ): Operacio;
+  operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisCicle, ara: string, operacio: string): Operacio;
 }
+
+export type CanvisActivitat = Partial<Omit<NovaActivitat, "casal_id" | "cicle_id">>;
 
 export interface RepositoriActivitats {
   perId(casalId: string, id: string): Promise<Activitat | null>;
   llistarPerCicle(casalId: string, cicleId: string, opcions?: { estats?: EstatActivitat[] }): Promise<Activitat[]>;
   crear(dades: NovaActivitat): Promise<Activitat>;
+  /** Inserció preparada per agrupar-la amb historial i auditoria. */
+  operacioCrear(id: string, dades: NovaActivitat, ara: string, operacio: string): Operacio;
+  operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisActivitat, ara: string, operacio: string): Operacio;
 }
 
 export interface RepositoriHistorial {
@@ -173,6 +235,8 @@ export interface UnitatDeTreball {
 
 export interface Repositoris {
   casals: RepositoriCasals;
+  usuaris: RepositoriUsuaris;
+  sessions: RepositoriSessions;
   cicles: RepositoriCicles;
   activitats: RepositoriActivitats;
   historial: RepositoriHistorial;

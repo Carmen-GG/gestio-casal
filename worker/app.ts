@@ -6,10 +6,13 @@ import { rellotgeSistema, type Rellotge } from "./lib/rellotge";
 import { ErrorAplicacio, errors, respostaError } from "./http/errors";
 import { capcaleresSeguretat, idPeticio, midaMaximaCos, politicaOrigen } from "./middleware/seguretat";
 import { rutesPubliques } from "./routes/public";
+import { rutesAuth } from "./routes/auth";
+import { rutesGestio } from "./routes/gestio";
+import type { UsuariAutenticat } from "./auth/permisos";
 
 export type Entorn = {
   Bindings: Env;
-  Variables: { idPeticio: string; repos: Repositoris; rellotge: Rellotge };
+  Variables: { idPeticio: string; repos: Repositoris; rellotge: Rellotge; usuari: UsuariAutenticat };
 };
 
 export interface DependenciesApp {
@@ -42,11 +45,17 @@ export function crearApp(deps: DependenciesApp = {}) {
   });
 
   app.route("/public", rutesPubliques);
+  app.route("/auth", rutesAuth);
+  app.route("/gestio", rutesGestio);
 
   app.notFound((c) => respostaError(c, errors.noTrobat("Ruta no trobada.")));
 
   app.onError((err, c) => {
     if (err instanceof ErrorAplicacio) return respostaError(c, err);
+    // Restriccions d'unicitat de la base de dades: conflicte comprensible, sense detalls interns.
+    if (/UNIQUE constraint failed/i.test(err.message)) {
+      return respostaError(c, errors.conflicte("duplicat", "Ja existeix un registre amb aquestes dades."));
+    }
     // Error inesperat: es registra només el tipus i l'id de petició, sense dades de la petició.
     console.error(JSON.stringify({ nivell: "error", id_peticio: c.get("idPeticio"), tipus: err.name, missatge: err.message }));
     return respostaError(

@@ -15,6 +15,8 @@ CREATE TABLE casals (
   adreca          TEXT,
   actiu           INTEGER NOT NULL DEFAULT 1 CHECK (actiu IN (0, 1)),
   configuracio    TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(configuracio)),
+  versio          INTEGER NOT NULL DEFAULT 1 CHECK (versio >= 1),
+  darrera_operacio TEXT,
   creat_el        TEXT NOT NULL,
   actualitzat_el  TEXT NOT NULL
 );

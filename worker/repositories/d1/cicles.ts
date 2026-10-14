@@ -1,6 +1,6 @@
 import type { EstatCicle } from "../../../shared/domain/cicles";
-import type { Cicle, NouCicle, RepositoriCicles } from "../tipus";
-import { comOperacio, jsonObjecte, marcadors } from "./util";
+import type { CanvisCicle, Cicle, NouCicle, RepositoriCicles } from "../tipus";
+import { assignacionsUpdate, comOperacio, comStatement, jsonObjecte, marcadors } from "./util";
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
 
@@ -29,19 +29,24 @@ export class D1RepositoriCicles implements RepositoriCicles {
     return results.map(mapa);
   }
 
+  operacioCrear(id: string, dades: NouCicle, ara: string, operacio: string) {
+    return comOperacio(
+      this.db
+        .prepare(
+          `INSERT INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obertura_inscripcions,
+             tancament_inscripcions, data_resolucio_prevista, estat, configuracio_formulari, darrera_operacio,
+             creat_el, actualitzat_el)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'esborrany', ?, ?, ?, ?)`,
+        )
+        .bind(id, dades.casal_id, dades.nom, dades.any, dades.data_inici, dades.data_fi,
+          dades.obertura_inscripcions, dades.tancament_inscripcions, dades.data_resolucio_prevista,
+          JSON.stringify(dades.configuracio_formulari ?? {}), operacio, ara, ara),
+    );
+  }
+
   async crear(dades: NouCicle) {
-    const ara = isoAra(this.rellotge);
     const id = nouId();
-    await this.db
-      .prepare(
-        `INSERT INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obertura_inscripcions,
-           tancament_inscripcions, data_resolucio_prevista, estat, configuracio_formulari, creat_el, actualitzat_el)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'esborrany', ?, ?, ?)`,
-      )
-      .bind(id, dades.casal_id, dades.nom, dades.any, dades.data_inici, dades.data_fi,
-        dades.obertura_inscripcions, dades.tancament_inscripcions, dades.data_resolucio_prevista,
-        JSON.stringify(dades.configuracio_formulari ?? {}), ara, ara)
-      .run();
+    await comStatement(this.operacioCrear(id, dades, isoAra(this.rellotge), nouId())).run();
     return (await this.perId(dades.casal_id, id))!;
   }
 
@@ -53,6 +58,21 @@ export class D1RepositoriCicles implements RepositoriCicles {
            WHERE id = ? AND casal_id = ? AND versio = ?`,
         )
         .bind(cap, ara, operacio, id, casalId, versioActual),
+    );
+  }
+
+  operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisCicle, ara: string, operacio: string) {
+    const { sql, valors } = assignacionsUpdate(canvis, [
+      "nom", "any", "data_inici", "data_fi", "obertura_inscripcions", "tancament_inscripcions",
+      "data_resolucio_prevista", "configuracio_formulari",
+    ]);
+    return comOperacio(
+      this.db
+        .prepare(
+          `UPDATE cicles SET ${sql}, actualitzat_el = ?, versio = versio + 1, darrera_operacio = ?
+           WHERE id = ? AND casal_id = ? AND versio = ?`,
+        )
+        .bind(...valors, ara, operacio, id, casalId, versioActual),
     );
   }
 }
