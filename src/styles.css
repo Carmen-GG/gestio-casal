@@ -89,7 +89,8 @@ main:focus { outline: none; }
 .seccio__icona { width: 1em; display: inline-block; }
 .seccio__cos { padding: 0 var(--espai) var(--espai); }
 
-.taula-contenidor { overflow-x: auto; max-width: 100%; }
+/* position: relative perquè els textos amagats (position: absolute) de dins no eixamplin la pàgina. */
+.taula-contenidor { overflow-x: auto; max-width: 100%; position: relative; }
 .taula { border-collapse: collapse; width: 100%; min-width: 36rem; }
 .taula th, .taula td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--color-vora); vertical-align: top; }
 .taula thead th { background: var(--color-fons); font-size: 0.9rem; }
@@ -229,3 +230,9 @@ main:focus { outline: none; }
 .pantalla-sorteig__boto { font-size: clamp(1rem, 2.4vw, 1.5rem); padding: 0.6em 1.4em; }
 .pantalla-sorteig .boto--secundari { background: transparent; color: #fff; border-color: #fff; }
 .camp--compacte.camp--mitja { max-width: 22rem; }
+
+/* Quadre de comandament */
+.xifres { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); margin: 1rem 0 0.5rem; }
+.xifres > div { border: 1px solid var(--color-vora); border-radius: 0.5rem; padding: 0.6rem 0.8rem; }
+.xifres dt { font-size: 0.85rem; color: var(--color-text-secundari); }
+.xifres dd { margin: 0.2rem 0 0; font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }

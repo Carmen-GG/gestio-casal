@@ -1,7 +1,7 @@
 import type {
   Activitat, AssignacioRol, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, TaulaExportacio,
-  EstatSorteig, SorteigActivitat,
+  EstatSorteig, IndicadorsCicle, SorteigActivitat,
 } from "../types/gestio";
 import { api } from "./api";
 
@@ -77,6 +77,7 @@ export const serveiGestio = {
   exportacioPlaces: (casalId: string, cicleId: string, tipus: "admesos" | "espera") =>
     api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/places?tipus=${tipus}`),
 
+  indicadors: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<IndicadorsCicle>(`${g(casalId)}/cicles/${cicleId}/indicadors`, s),
   resumAssistencia: (casalId: string, cicleId: string, s?: AbortSignal) =>
     api.get<ResumAssistenciaCicle>(`${g(casalId)}/cicles/${cicleId}/assistencia`, s),
   fullAssistencia: (casalId: string, activitatId: string, s?: AbortSignal) =>

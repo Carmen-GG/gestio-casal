@@ -198,3 +198,20 @@ export interface DadesGraelles {
     espera: { posicio: number | null; numero: number; persona: string; telefon: string | null; oferta_pendent: boolean }[];
   }[];
 }
+
+export interface IndicadorsCicle {
+  cicle: { id: string; nom: string; estat: EstatCicle };
+  calculat_el: string;
+  inscripcions: { estat: "pendents" | "obertes" | "fora_de_termini" | "tancades"; obertura: string; tancament: string };
+  adjudicacio: { estat: "sense_proposta" | "proposta" | "confirmada"; versio: number | null; data: string | null };
+  totals: {
+    activitats: number; activitats_no_actives: number; sollicituds: number;
+    sollicituds_per_estat: { rebuda: number; validada: number; pendent_revisio: number; anullada: number };
+    persones: number; places_disponibles: number; places_ocupades: number; places_lliures: number; admeses: number; espera: number;
+    activitats_sense_inscripcions: number; activitats_mes_demanda: number;
+  };
+  activitats: {
+    id: string; nom: string; capacitat: number; minim_participants: number | null; sollicituds: number; primera_preferencia: number;
+    admeses: number; ofertes: number; espera: number; lliures: number; sense_inscripcions: boolean; mes_demanda: boolean;
+  }[];
+}
