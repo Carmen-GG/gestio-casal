@@ -1,0 +1,61 @@
+// Configuració de Cloudflare Workers per a «Casal · Gestió integral».
+// Un sol Worker serveix el frontend (Static Assets) i l'API (/api/*).
+// Cap secret en aquest fitxer: els secrets es configuren amb `wrangler secret put`
+// o des del tauler de Cloudflare. Els database_id no són secrets.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "casal-gestio",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  // Entorn local (per defecte). D1 local amb Miniflare; l'id és un marcador.
+  "vars": {
+    "APP_ENV": "local",
+    "ALLOWED_ORIGINS": "http://localhost:5173"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "casal-gestio-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "db/migrations"
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "casal-gestio-staging",
+      "vars": {
+        "APP_ENV": "staging",
+        "ALLOWED_ORIGINS": ""
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "casal-gestio-staging",
+          "database_id": "SUBSTITUIR-PER-ID-D1-STAGING",
+          "migrations_dir": "db/migrations"
+        }
+      ]
+    },
+    "production": {
+      "name": "casal-gestio",
+      "vars": {
+        "APP_ENV": "production",
+        "ALLOWED_ORIGINS": ""
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "casal-gestio-production",
+          "database_id": "SUBSTITUIR-PER-ID-D1-PRODUCCIO",
+          "migrations_dir": "db/migrations"
+        }
+      ]
+    }
+  }
+}

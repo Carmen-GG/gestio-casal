@@ -1,0 +1,43 @@
+{
+  "name": "casal-gestio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Casal · Gestió integral d'inscripcions i activitats",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:seed:local": "wrangler d1 execute DB --local --file=db/seeds/dev.sql",
+    "db:migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
+    "db:migrate:production": "wrangler d1 migrations apply DB --remote --env production",
+    "deploy:staging": "CLOUDFLARE_ENV=staging vite build && wrangler deploy",
+    "deploy:production": "CLOUDFLARE_ENV=production vite build && wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.13.13",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router": "^8.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.64.0",
+    "@cloudflare/vitest-plugin": "^1.4.2",
+    "@cloudflare/workers-types": "^5.20261014.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.151.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
