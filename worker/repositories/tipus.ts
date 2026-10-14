@@ -52,6 +52,8 @@ export interface Cicle {
 
 export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia"> & {
   configuracio_formulari?: Record<string, unknown>;
+  /** Sense valor: el llindar per defecte de la regla del casal. Null: sense llindar. */
+  llindar_assistencia?: number | null;
 };
 
 export const ESTATS_ACTIVITAT = ["esborrany", "activa", "inactiva", "arxivada"] as const;
@@ -73,6 +75,8 @@ export interface Activitat {
   espai: string | null;
   capacitat: number;
   nombre_sessions: number | null;
+  /** Mínim de participants perquè es faci. Només genera avisos. */
+  minim_participants: number | null;
   estat: EstatActivitat;
   informacio_difusio: Record<string, unknown>;
   configuracio_continuitat: Record<string, unknown>;
@@ -87,7 +91,7 @@ export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "c
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "nombre_sessions" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;
@@ -121,7 +125,8 @@ export interface EntradaAuditoria {
  * `taula` ha de portar el testimoni aleatori `operacio` que aquella escriptura hi desa.
  */
 export interface CondicioOperacio {
-  taula: "casals" | "cicles" | "activitats" | "participants" | "sollicituds" | "execucions_adjudicacio" | "places" | "sessions_activitat";
+  taula: "casals" | "cicles" | "activitats" | "participants" | "sollicituds" | "execucions_adjudicacio" | "places" | "sessions_activitat"
+    | "sortejos_adjudicacio";
   id: string;
   operacio: string;
 }
@@ -448,7 +453,29 @@ export interface MovimentPlaca {
 /** Dades d'entrada del motor llegides de la base de dades. */
 export interface DadesMotor {
   sollicituds: (SollicitudMotor & { estat: EstatSollicitud })[];
-  activitats: (ActivitatMotor & { nom: string; estat: EstatActivitat })[];
+  activitats: (ActivitatMotor & { nom: string; estat: EstatActivitat; minim_participants: number | null })[];
+}
+
+/** Sorteig d'una activitat (número o lletra). No s'esborra: s'anul·la amb motiu. */
+export interface SorteigActivitat {
+  id: string;
+  casal_id: string;
+  cicle_id: string;
+  activitat_id: string;
+  activitat: string;
+  tipus: "numero" | "lletra";
+  valor: string;
+  rang_maxim: number | null;
+  numeracio: "inscripcio" | "aleatoria" | null;
+  origen: "aplicacio" | "manual";
+  motiu: string | null;
+  estat: "vigent" | "anullat";
+  realitzat_per: string | null;
+  realitzat_per_nom: string | null;
+  realitzat_el: string;
+  anullat_per: string | null;
+  anullat_el: string | null;
+  motiu_anullacio: string | null;
 }
 
 export interface RepositoriAdjudicacio {
@@ -459,8 +486,20 @@ export interface RepositoriAdjudicacio {
   dadesMotor(casalId: string, cicleId: string): Promise<DadesMotor>;
   /** Parelles "sollicitud:activitat" amb plaça admesa en el cicle anterior del casal (mateixa persona, activitat equivalent). */
   continuitat(casalId: string, cicleId: string): Promise<{ parelles: Set<string>; cicle_anterior: { id: string; nom: string } | null }>;
+  /**
+   * Parelles "sollicitud:activitat" de persones que el cicle anterior van quedar en llista d'espera
+   * de l'activitat equivalent havent-la triat com a preferència 1..`preferenciaMaxima`.
+   */
+  esperaAnterior(casalId: string, cicleId: string, preferenciaMaxima: number): Promise<{ parelles: Set<string>; cicle_anterior: { id: string; nom: string } | null }>;
   /** Parelles amb renúncia o baixa en les places actuals del cicle. */
   parellesExcloses(cicleId: string): Promise<Set<string>>;
+  numerosSorteig(cicleId: string): Promise<{ sollicitud_id: string; numero: number; assignat_el: string }[]>;
+  llistaNumerosSorteig(casalId: string, cicleId: string): Promise<{ numero: number; numero_sollicitud: number; participant: Participant }[]>;
+  /** Insereix números de sorteig nous (inscripcions tancades o adjudicació en procés). Són immutables. */
+  operacionsAssignarNumeros(d: { casal_id: string; cicle_id: string; assignacions: { sollicitud_id: string; numero: number }[]; usuari_id: string }, ara: string): Operacio[];
+  sortejos(cicleId: string): Promise<SorteigActivitat[]>;
+  operacioNouSorteig(d: Omit<SorteigActivitat, "estat" | "anullat_per" | "anullat_el" | "motiu_anullacio" | "activitat" | "realitzat_per_nom"> & { operacio: string }): Operacio;
+  operacioAnullarSorteig(d: { id: string; casal_id: string; cicle_id: string; motiu: string; usuari_id: string; operacio: string }, ara: string): Operacio;
   execucions(casalId: string, cicleId: string): Promise<Execucio[]>;
   execucio(casalId: string, id: string): Promise<Execucio | null>;
   execucioConfirmada(cicleId: string): Promise<Execucio | null>;

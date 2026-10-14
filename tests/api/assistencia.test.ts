@@ -27,14 +27,14 @@ async function escenari() {
   const base = `/api/gestio/casals/${e.casal.id}`;
   const g = await clientAutenticat("gestor_casal", e.casal.id);
   const adj = `${base}/cicles/${e.cicle.id}/adjudicacio`;
-  await g.json(`${adj}/parametres`, { method: "PUT", json: { parametres: PARAMETRES_INICIALS, versio_actual: null } });
+  await g.json(`${adj}/parametres`, { method: "PUT", json: { parametres: { ...PARAMETRES_INICIALS, criteri_ordre: "inscripcio", prioritat_espera_anterior: false }, versio_actual: null } });
   const p = await g.json(`${adj}/propostes`, { method: "POST", json: {} });
   await g.json(`${base}/adjudicacions/${p.cos.execucio.id}/confirmar`, { method: "POST", json: { confirmacio: true } });
   const full = () => g.json(`${base}/activitats/${A.id}/assistencia`);
   return { ...e, A, base, g, full };
 }
 
-type Persona = { id: string; participant: { cognom1: string; telefon: string | null }; marques: Record<string, { estat: string; versio: number }>; resum: { percentatge: number | null }; sota_llindar: boolean };
+type Persona = { id: string; versio: number; participant: { cognom1: string; telefon: string | null }; marques: Record<string, { estat: string; versio: number }>; resum: { percentatge: number | null }; sota_llindar: boolean };
 
 describe("assistència: sessions", () => {
   it("genera el calendari sense duplicar sessions i permet afegir-ne i cancel·lar-ne", async () => {
@@ -148,6 +148,42 @@ describe("assistència: registre", () => {
     expect(exp.cos.files).toEqual([["Taller fictici", 2, "Àvila, Jordi", 1, 3, 0, 25, "Sí"], ["Taller fictici", 1, "Zapata, Marta", 4, 0, 0, 100, "No"]]);
     const consulta = await clientAutenticat("consulta_casal", casal.id);
     expect((await consulta.json(`${base}/cicles/${cicle.id}/exportacions/assistencia`)).status).toBe(403);
+  });
+
+  it("dona de baixa per assistència només si es confirma i la persona és per sota del llindar", async () => {
+    const { base, cicle, g, sessions, persona, desa, casal } = await ambSessions();
+    const z = persona("Zapata"), a = persona("Àvila");
+    const baixa = (id: string, versio: number, client = g) =>
+      client.json(`${base}/places/${id}/baixa-assistencia`, { method: "POST", json: { versio } });
+    await env.DB.prepare("UPDATE cicles SET llindar_assistencia = NULL WHERE id = ?").bind(cicle.id).run();
+    expect((await baixa(a.id, a.versio)).cos.error.codi).toBe("sense_llindar");
+
+    await env.DB.prepare("UPDATE cicles SET llindar_assistencia = 80 WHERE id = ?").bind(cicle.id).run();
+    for (const [i, s] of sessions.slice(0, 2).entries()) {
+      await desa(s.id, [{ placa_id: z.id, estat: "present", versio: null }, { placa_id: a.id, estat: i === 0 ? "present" : "absent", versio: null }]);
+    }
+    // Encara no hi ha prou sessions per calcular el percentatge.
+    expect((await baixa(a.id, a.versio)).cos.error.codi).toBe("no_sota_llindar");
+    for (const s of sessions.slice(2, 5)) {
+      await desa(s.id, [{ placa_id: z.id, estat: "present", versio: null }, { placa_id: a.id, estat: "absent", versio: null }]);
+    }
+    expect((await baixa(z.id, z.versio)).cos.error.codi).toBe("no_sota_llindar"); // 100 %
+    const consulta = await clientAutenticat("consulta_casal", casal.id);
+    expect((await baixa(a.id, a.versio, consulta)).status).toBe(403);
+
+    // Sense confirmació explícita no canvia res: la plaça continua admesa.
+    const places = async () => (await g.json(`${base}/cicles/${cicle.id}/places`)).cos.grups[0].places as { id: string; estat: string }[];
+    expect((await places()).find((p) => p.id === a.id)?.estat).toBe("admesa");
+
+    const r = await baixa(a.id, a.versio);
+    expect(r.status).toBe(200);
+    expect((await places()).find((p) => p.id === a.id)?.estat).toBe("baixa");
+    const moviments = (await g.json(`${base}/places/${a.id}/moviments`)).cos.moviments as { estat_nou: string; motiu: string }[];
+    expect(moviments.at(-1)).toMatchObject({ estat_nou: "baixa", motiu: "Assistència del 20%, inferior al llindar del 80%." });
+    const audit = await env.DB.prepare("SELECT detalls FROM registres_auditoria WHERE tipus_operacio = 'places.baixa_assistencia' AND entitat_id = ?").bind(a.id).first<{ detalls: string }>();
+    expect(JSON.parse(audit!.detalls)).toMatchObject({ percentatge: 20, llindar: 80, des: "admesa", cap: "baixa" });
+    // No es pot repetir.
+    expect((await baixa(a.id, a.versio + 1)).status).toBe(409);
   });
 });
 

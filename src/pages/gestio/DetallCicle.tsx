@@ -21,6 +21,7 @@ import { LlistatSollicituds } from "./Sollicituds";
 import { Adjudicacio } from "./Adjudicacio";
 import { Places } from "./Places";
 import { Assistencia } from "./Assistencia";
+import { Sorteig } from "./Sorteig";
 
 /** Estats del cicle en què pot existir una adjudicació confirmada. */
 const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat", "finalitzat", "arxivat"];
@@ -204,6 +205,12 @@ export function DetallCicle() {
         <Seccio titol="Importació i exportació" obertaInicial={false}>
           <ImportacioExportacio casalId={casalId} cicleId={cicleId} pot={pot}
             activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && ["inscripcions_tancades", "adjudicacio_en_proces", "adjudicat", "publicat"].includes(cicle.estat) && (
+        <Seccio titol="Sorteig per activitat" obertaInicial={["inscripcions_tancades", "adjudicacio_en_proces"].includes(cicle.estat)}>
+          <Sorteig casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} />
         </Seccio>
       )}
 

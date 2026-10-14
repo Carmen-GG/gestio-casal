@@ -1,6 +1,7 @@
 import type {
   Activitat, AssignacioRol, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, TaulaExportacio,
+  EstatSorteig, SorteigActivitat,
 } from "../types/gestio";
 import { api } from "./api";
 
@@ -56,8 +57,21 @@ export const serveiGestio = {
   execucio: (casalId: string, id: string, s?: AbortSignal) => api.get<DetallExecucio>(`${g(casalId)}/adjudicacions/${id}`, s),
   confirmarExecucio: (casalId: string, id: string, dades: unknown) => api.post<{ execucio: Execucio }>(`${g(casalId)}/adjudicacions/${id}/confirmar`, dades),
   exportacioAdjudicacio: (casalId: string, id: string) => api.get<TaulaExportacio>(`${g(casalId)}/adjudicacions/${id}/exportacio`),
+  exportacioSenseActivitat: (casalId: string, id: string) =>
+    api.get<TaulaExportacio>(`${g(casalId)}/adjudicacions/${id}/exportacions/sense-activitat`),
+  sorteig: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<EstatSorteig>(`${g(casalId)}/cicles/${cicleId}/sorteig`, s),
+  assignarNumeros: (casalId: string, cicleId: string) =>
+    api.post<{ assignats: number; total: number }>(`${g(casalId)}/cicles/${cicleId}/sorteig/numeros`, {}),
+  ferSorteig: (casalId: string, cicleId: string, activitatId: string, dades: { valor_manual?: string; motiu?: string }) =>
+    api.post<{ sorteig: SorteigActivitat }>(`${g(casalId)}/cicles/${cicleId}/activitats/${activitatId}/sorteig`, dades),
+  anullarSorteig: (casalId: string, cicleId: string, sorteigId: string, motiu: string) =>
+    api.post<unknown>(`${g(casalId)}/cicles/${cicleId}/sortejos/${sorteigId}/anullacio`, { motiu }),
+  exportacioNumeros: (casalId: string, cicleId: string) =>
+    api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/numeros-sorteig`),
   places: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<RespostaPlaces>(`${g(casalId)}/cicles/${cicleId}/places`, s),
   mourePlaca: (casalId: string, placaId: string, dades: unknown) => api.post<unknown>(`${g(casalId)}/places/${placaId}/moviments`, dades),
+  baixaPerAssistencia: (casalId: string, placaId: string, dades: { versio: number; motiu?: string }) =>
+    api.post<unknown>(`${g(casalId)}/places/${placaId}/baixa-assistencia`, dades),
   movimentsPlaca: (casalId: string, placaId: string, s?: AbortSignal) =>
     api.get<{ moviments: MovimentPlaca[] }>(`${g(casalId)}/places/${placaId}/moviments`, s),
   exportacioPlaces: (casalId: string, cicleId: string, tipus: "admesos" | "espera") =>

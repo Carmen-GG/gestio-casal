@@ -6,7 +6,7 @@ import { ErrorAplicacio, errors } from "../http/errors";
 import { nouId } from "../lib/ids";
 import { isoAra, type Rellotge } from "../lib/rellotge";
 import type { Activitat, Cicle, FilaPlaca, Marca, Operacio, Repositoris, Sessio } from "../repositories/tipus";
-import { ESTATS_PLACES } from "./adjudicacio";
+import { ESTATS_PLACES, ServeiAdjudicacio } from "./adjudicacio";
 import { filtraParticipant, type TaulaExportacio, type Visibilitat } from "./gestio-sollicituds";
 import type { ContextOperacio } from "./traca";
 
@@ -74,6 +74,29 @@ export class ServeiAssistencia {
       pot_registrar: ESTATS_PLACES.includes(cicle.estat),
       pot_crear_sessions: ESTATS_SESSIONS.includes(cicle.estat),
     };
+  }
+
+  /**
+   * Regla del casal: baixa d'una plaça admesa per assistència inferior al llindar del cicle.
+   * No és automàtica: la confirma una persona autoritzada, plaça per plaça. El servidor
+   * recalcula el percentatge i només la permet si hi ha llindar i la persona hi és per sota.
+   */
+  async baixaPerAssistencia(casalId: string, placaId: string, d: { versio: number; motiu?: string }, ctx: ContextOperacio) {
+    const placa = await this.repos.adjudicacio.placa(casalId, placaId);
+    if (!placa) throw errors.noTrobat("No s'ha trobat la plaça.");
+    const cicle = (await this.repos.cicles.perId(casalId, placa.cicle_id))!;
+    const llindar = cicle.llindar_assistencia;
+    if (llindar === null) throw errors.conflicte("sense_llindar", "El cicle no té llindar d'assistència.");
+    const marques = (await this.repos.assistencia.marquesActivitat(placa.activitat_id)).filter((m) => m.placa_id === placaId);
+    const { percentatge } = resumAssistencia(marques.map((m) => m.estat));
+    if (!sotaLlindar(percentatge, llindar)) {
+      throw errors.conflicte("no_sota_llindar", percentatge === null
+        ? "Encara no hi ha prou sessions registrades per calcular el percentatge d'assistència."
+        : `L'assistència és del ${percentatge}%, no és inferior al llindar del ${llindar}%.`);
+    }
+    const motiu = `Assistència del ${percentatge}%, inferior al llindar del ${llindar}%.${d.motiu ? ` ${d.motiu}` : ""}`;
+    return new ServeiAdjudicacio(this.repos, this.rellotge).moviment(casalId, placaId, { accio: "donar_baixa", versio: d.versio, motiu }, ctx,
+      { tipus_operacio: "places.baixa_assistencia", detalls: { percentatge, llindar } });
   }
 
   /** Genera les sessions previstes segons els dies i les dates de l'activitat (o del cicle). No duplica les existents. */

@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router";
-import { CRITERIS_ORDRE, ESTATS_PARTICIPANTS, METODES, type ParametresAdjudicacio } from "../../../shared/domain/adjudicacio";
-import { ETIQUETES_CRITERI, ETIQUETES_ESTAT_EXECUCIO, ETIQUETES_METODE } from "../../../shared/schemas/adjudicacio";
+import {
+  CRITERIS_ORDRE, ESTATS_PARTICIPANTS, METODES, NUMERACIONS_SORTEIG, TIPUS_SORTEIG, type ParametresAdjudicacio,
+} from "../../../shared/domain/adjudicacio";
+import {
+  ETIQUETES_CRITERI, ETIQUETES_ESTAT_EXECUCIO, ETIQUETES_METODE, ETIQUETES_NUMERACIO, ETIQUETES_TIPUS_SORTEIG,
+} from "../../../shared/schemas/adjudicacio";
 import { ETIQUETES_ESTAT_SOLLICITUD } from "../../../shared/schemas/sollicituds";
 import { Carregant, MissatgeError } from "../../components/EstatsConsulta";
 import { AvisExit } from "../../components/Formulari";
@@ -61,8 +65,9 @@ export function Adjudicacio({ casalId, cicleId, pot, versioCicle }: {
 
       <h3 className="subseccio">Paràmetres</h3>
       <p className="avis avis--alerta">
-        Aquests paràmetres no reprodueixen cap normativa oficial: el casal ha de validar quines regles s'apliquen.
-        Cada canvi es desa com una versió nova i cada proposta indica amb quina versió s'ha calculat.
+        Els valors inicials segueixen la regla indicada pel casal: prioritat per a qui va quedar en llista d'espera el cicle anterior
+        (1a o 2a preferència), després per preferència i, si no hi ha places per a tothom, sorteig a cada activitat.
+        Reviseu-los abans de desar-los. Cada canvi es desa com una versió nova i cada proposta indica amb quina versió s'ha calculat.
       </p>
       {d.pot_desar_parametres && pot("adjudicacio.executar") ? (
         <FormParametres resum={d} enCurs={enCurs} onDesar={(parametres) => accio(
@@ -74,6 +79,9 @@ export function Adjudicacio({ casalId, cicleId, pot, versioCicle }: {
       )}
 
       <h3 className="subseccio">Propostes d'adjudicació</h3>
+      {p?.criteri_ordre === "sorteig_activitat" && (
+        <p className="text-secundari">Abans de calcular, feu el sorteig de cada activitat que té més sol·licituds que places (secció «Sorteig per activitat»).</p>
+      )}
       {pot("adjudicacio.executar") && (d.pot_calcular ? (
         <form onSubmit={calcula} className="botonera">
           {p?.criteri_ordre === "lletra" && (
@@ -122,7 +130,13 @@ export function Adjudicacio({ casalId, cicleId, pot, versioCicle }: {
 function ResumParametres({ parametres: p }: { parametres: ParametresAdjudicacio }) {
   return (
     <dl className="dades">
+      {p.prioritat_espera_anterior && (
+        <div><dt>Prioritat absoluta</dt><dd>Llista d'espera del cicle anterior, en preferències 1 a {p.preferencia_maxima_espera_anterior}</dd></div>
+      )}
       <div><dt>Ordre de prioritat</dt><dd>{ETIQUETES_CRITERI[p.criteri_ordre]}</dd></div>
+      {p.criteri_ordre === "sorteig_activitat" && (
+        <div><dt>Sorteig</dt><dd>{ETIQUETES_TIPUS_SORTEIG[p.tipus_sorteig]}{p.tipus_sorteig === "numero" ? ` · ${ETIQUETES_NUMERACIO[p.numeracio_sorteig]}` : ""}</dd></div>
+      )}
       <div><dt>Mètode</dt><dd>{ETIQUETES_METODE[p.metode]}</dd></div>
       <div><dt>Màxim d'activitats per persona</dt><dd>{p.maxim_activitats_per_persona ?? "Sense límit"}</dd></div>
       <div><dt>Prioritat per continuïtat</dt><dd>{p.prioritat_continuitat ? "Sí" : "No"}</dd></div>
@@ -137,34 +151,81 @@ function FormParametres({ resum, enCurs, onDesar }: {
 }) {
   const [p, setP] = useState<ParametresAdjudicacio>(resum.configuracio?.parametres ?? resum.parametres_inicials);
   const [maxim, setMaxim] = useState(p.maxim_activitats_per_persona?.toString() ?? "");
-  const canvia = (c: Partial<ParametresAdjudicacio>) => setP((x) => ({ ...x, ...c }));
+  const [prefEspera, setPrefEspera] = useState(String(p.preferencia_maxima_espera_anterior));
+  // Amb sorteig per activitat, el mètode és sempre per rondes.
+  const canvia = (c: Partial<ParametresAdjudicacio>) => setP((x) => {
+    const nou = { ...x, ...c };
+    return nou.criteri_ordre === "sorteig_activitat" ? { ...nou, metode: "per_rondes" } : nou;
+  });
   const maximValid = maxim === "" || (/^\d+$/.test(maxim) && Number(maxim) >= 1 && Number(maxim) <= 30);
+  const prefValid = /^\d+$/.test(prefEspera) && Number(prefEspera) >= 1 && Number(prefEspera) <= 30;
+  const perActivitat = p.criteri_ordre === "sorteig_activitat";
 
   const desa = (e: FormEvent) => {
     e.preventDefault();
-    if (!maximValid || p.estats_sollicitud.length === 0) return;
-    onDesar({ ...p, maxim_activitats_per_persona: maxim === "" ? null : Number(maxim) });
+    if (!maximValid || !prefValid || p.estats_sollicitud.length === 0) return;
+    onDesar({ ...p, maxim_activitats_per_persona: maxim === "" ? null : Number(maxim), preferencia_maxima_espera_anterior: Number(prefEspera) });
   };
 
   return (
     <form onSubmit={desa} className="formulari">
       <fieldset className="camp">
-        <legend>Ordre de prioritat de les persones</legend>
+        <legend>1. Prioritat absoluta</legend>
+        <label className="casella">
+          <input type="checkbox" checked={p.prioritat_espera_anterior} onChange={(e) => canvia({ prioritat_espera_anterior: e.target.checked })} />
+          Qui va quedar en llista d'espera de l'activitat el cicle anterior passa davant de tothom en aquella activitat
+        </label>
+        {p.prioritat_espera_anterior && (
+          <div className={`camp camp--compacte camp--mitja ${prefValid ? "" : "camp--error"}`}>
+            <label htmlFor="pref-espera">Si l'havia triat com a preferència fins a la</label>
+            <input id="pref-espera" inputMode="numeric" value={prefEspera} onChange={(e) => setPrefEspera(e.target.value.trim())} aria-describedby="pref-espera-ajuda" />
+            <p id="pref-espera-ajuda" className="camp__ajuda">Per exemple, 2: només compta si era la 1a o la 2a opció.</p>
+            {!prefValid && <p className="camp__missatge" role="alert">Ha de ser un número entre 1 i 30.</p>}
+          </div>
+        )}
+        <p className="camp__ajuda">
+          Es reconeix la mateixa persona pel nom i cognoms més la data de naixement o el telèfon (o el codi intern o el document, si n'hi ha).
+        </p>
+      </fieldset>
+      <fieldset className="camp">
+        <legend>2. Ordre entre persones</legend>
         {CRITERIS_ORDRE.map((c) => (
           <label key={c} className="casella">
             <input type="radio" name="criteri" checked={p.criteri_ordre === c} onChange={() => canvia({ criteri_ordre: c })} /> {ETIQUETES_CRITERI[c]}
           </label>
         ))}
       </fieldset>
+      {perActivitat && (
+        <fieldset className="camp">
+          <legend>Tipus de sorteig (un per activitat)</legend>
+          {TIPUS_SORTEIG.map((t) => (
+            <label key={t} className="casella">
+              <input type="radio" name="tipus-sorteig" checked={p.tipus_sorteig === t} onChange={() => canvia({ tipus_sorteig: t })} /> {ETIQUETES_TIPUS_SORTEIG[t]}
+            </label>
+          ))}
+          {p.tipus_sorteig === "numero" && (
+            <fieldset className="camp">
+              <legend>Número de cada persona</legend>
+              {NUMERACIONS_SORTEIG.map((n) => (
+                <label key={n} className="casella">
+                  <input type="radio" name="numeracio" checked={p.numeracio_sorteig === n} onChange={() => canvia({ numeracio_sorteig: n })} /> {ETIQUETES_NUMERACIO[n]}
+                </label>
+              ))}
+            </fieldset>
+          )}
+        </fieldset>
+      )}
       <fieldset className="camp">
         <legend>Mètode d'assignació</legend>
         {METODES.map((m) => (
           <label key={m} className="casella">
-            <input type="radio" name="metode" checked={p.metode === m} onChange={() => canvia({ metode: m })} /> {ETIQUETES_METODE[m]}
+            <input type="radio" name="metode" checked={p.metode === m} disabled={perActivitat && m !== "per_rondes"}
+              onChange={() => canvia({ metode: m })} /> {ETIQUETES_METODE[m]}
           </label>
         ))}
+        {perActivitat && <p className="camp__ajuda">Amb sorteig per activitat, primer s'assignen les 1es preferències de tothom, després les 2es, etc.</p>}
       </fieldset>
-      <div className={`camp camp--compacte ${maximValid ? "" : "camp--error"}`}>
+      <div className={`camp camp--compacte camp--mitja ${maximValid ? "" : "camp--error"}`}>
         <label htmlFor="maxim-activitats">Màxim d'activitats admeses per persona</label>
         <input id="maxim-activitats" inputMode="numeric" value={maxim} onChange={(e) => setMaxim(e.target.value.trim())} aria-describedby="maxim-ajuda" />
         <p id="maxim-ajuda" className="camp__ajuda">Deixeu-lo buit si no hi ha límit.</p>

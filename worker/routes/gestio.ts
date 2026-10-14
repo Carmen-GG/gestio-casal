@@ -17,8 +17,8 @@ import { ServeiGestioSollicituds, filtraParticipant, taulaSollicituds, visibilit
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
-import { cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
-import { confirmarProposta, desarParametres, movimentPlaca, novaProposta } from "../../shared/schemas/adjudicacio";
+import { baixaAssistencia, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
+import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
   consultaSollicituds, importacioConfirmacio, importacioPeticio, revisioDuplicat, sollicitudActualitzarDades,
   sollicitudCanviEstat, sollicitudPreferencies,
@@ -274,6 +274,40 @@ export const rutesGestio = new Hono<Entorn>()
     const vis = visibilitat(c.get("usuari"), casalId);
     return exportacioAuditada(c, casalId, "adjudicacio", "execucio_adjudicacio", id, await adjudicacio(c).taulaResultats(casalId, id, vis));
   })
+  .get("/casals/:casalId/adjudicacions/:execucioId/exportacions/sense-activitat", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.exportar");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    const id = idRuta(c, "execucioId");
+    const vis = visibilitat(c.get("usuari"), casalId);
+    return exportacioAuditada(c, casalId, "adjudicacio.sense_activitat", "execucio_adjudicacio", id, await adjudicacio(c).taulaSenseActivitat(casalId, id, vis));
+  })
+
+  // ---------- Sorteig per activitat ----------
+  .get("/casals/:casalId/cicles/:cicleId/sorteig", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await adjudicacio(c).estatSorteig(casalId, idRuta(c, "cicleId")));
+  })
+  .post("/casals/:casalId/cicles/:cicleId/sorteig/numeros", async (c) => {
+    const casalId = casalAutoritzat(c, "adjudicacio.executar");
+    return c.json(await adjudicacio(c).assignarNumeros(casalId, idRuta(c, "cicleId"), ctx(c)));
+  })
+  .post("/casals/:casalId/cicles/:cicleId/activitats/:activitatId/sorteig", async (c) => {
+    const casalId = casalAutoritzat(c, "adjudicacio.executar");
+    const cos = await cosValidat(c, nouSorteig);
+    return c.json({ sorteig: await adjudicacio(c).ferSorteig(casalId, idRuta(c, "cicleId"), idRuta(c, "activitatId"), cos, ctx(c)) }, 201);
+  })
+  .post("/casals/:casalId/cicles/:cicleId/sortejos/:sorteigId/anullacio", async (c) => {
+    const casalId = casalAutoritzat(c, "adjudicacio.executar");
+    const cos = await cosValidat(c, anullarSorteig);
+    return c.json(await adjudicacio(c).anullarSorteig(casalId, idRuta(c, "cicleId"), idRuta(c, "sorteigId"), cos, ctx(c)));
+  })
+  .get("/casals/:casalId/cicles/:cicleId/exportacions/numeros-sorteig", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.exportar");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    const cicleId = idRuta(c, "cicleId");
+    const vis = visibilitat(c.get("usuari"), casalId);
+    return exportacioAuditada(c, casalId, "numeros_sorteig", "cicle", cicleId, await adjudicacio(c).taulaNumeros(casalId, cicleId, vis));
+  })
 
   // ---------- Places i llistes d'espera ----------
   .get("/casals/:casalId/cicles/:cicleId/places", async (c) => {
@@ -284,6 +318,11 @@ export const rutesGestio = new Hono<Entorn>()
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, movimentPlaca);
     return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  .post("/casals/:casalId/places/:placaId/baixa-assistencia", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    const cos = await cosValidat(c, baixaAssistencia);
+    return c.json(await assistencia(c).baixaPerAssistencia(casalId, idRuta(c, "placaId"), cos, ctx(c)));
   })
   .get("/casals/:casalId/places/:placaId/moviments", async (c) => {
     const casalId = casalAutoritzat(c, "sollicituds.consultar");

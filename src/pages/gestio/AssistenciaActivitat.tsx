@@ -8,7 +8,7 @@ import { Seccio } from "../../components/Seccio";
 import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
-import type { FullAssistencia, Sessio } from "../../types/gestio";
+import type { FullAssistencia, PersonaAssistencia, Sessio } from "../../types/gestio";
 import { formataData } from "../../utils/format";
 import { usePermisos } from "./context";
 import { Historial } from "./Historial";
@@ -29,6 +29,7 @@ export function AssistenciaActivitat() {
   const [sessioOberta, setSessioOberta] = useState<string | null>(null);
   const [cancellant, setCancellant] = useState<Sessio | null>(null);
   const [historial, setHistorial] = useState<string | null>(null);
+  const [baixa, setBaixa] = useState<PersonaAssistencia | null>(null);
 
   if (consulta.tipus === "carregant") return <Carregant text="Carregant l'assistència…" />;
   if (consulta.tipus === "error") return <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />;
@@ -53,6 +54,7 @@ export function AssistenciaActivitat() {
     } finally {
       setEnCurs(false);
       setCancellant(null);
+      setBaixa(null);
     }
   }
 
@@ -114,9 +116,25 @@ export function AssistenciaActivitat() {
       )}
 
       <Seccio titol="Resum per persona">
-        <ResumPersones full={f} onHistorial={(id) => setHistorial(historial === id ? null : id)} />
+        <ResumPersones full={f} onHistorial={(id) => setHistorial(historial === id ? null : id)}
+          onBaixa={f.pot_registrar && pot("places.gestionar") ? setBaixa : undefined} enCurs={enCurs} />
         {historial && <><h3 className="subseccio">Canvis en l'assistència</h3><Historial casalId={casalId} entitat="placa" id={historial} versio={versio} /></>}
       </Seccio>
+
+      <DialegConfirmacio obert={baixa !== null} enCurs={enCurs} titol="Pèrdua de plaça per assistència" textConfirmar="Dona de baixa"
+        onCancelar={() => setBaixa(null)}
+        onConfirmar={() => baixa && void accio(() => serveiGestio.baixaPerAssistencia(casalId, baixa.id, { versio: baixa.versio }),
+          `${nomComplet(baixa.participant)}, ${baixa.participant.nom} ha perdut la plaça per assistència.`)}>
+        {baixa && (
+          <>
+            <p>
+              <strong>{nomComplet(baixa.participant)}, {baixa.participant.nom}</strong> té una assistència del {baixa.resum.percentatge}%,
+              inferior al llindar del {f.cicle.llindar_assistencia}%. Segons la regla del casal, perd la plaça.
+            </p>
+            <p>La plaça passarà a «Baixa» i quedarà lliure per oferir-la a la llista d'espera des de «Places». El motiu queda a l'historial.</p>
+          </>
+        )}
+      </DialegConfirmacio>
 
       <DialegConfirmacio obert={cancellant !== null} enCurs={enCurs} titol="Cancel·lar la sessió" textConfirmar="Cancel·la la sessió" demanaMotiu
         onCancelar={() => setCancellant(null)}
@@ -206,7 +224,9 @@ function RegistreSessio({ full, sessio, editable, enCurs, onDesar }: {
   );
 }
 
-function ResumPersones({ full, onHistorial }: { full: FullAssistencia; onHistorial: (placaId: string) => void }) {
+function ResumPersones({ full, onHistorial, onBaixa, enCurs }: {
+  full: FullAssistencia; onHistorial: (placaId: string) => void; onBaixa?: (p: PersonaAssistencia) => void; enCurs: boolean;
+}) {
   const sessions = full.sessions.filter((s) => s.estat !== "cancellada");
   if (full.persones.length === 0) return <p>No hi ha cap persona admesa en aquesta activitat.</p>;
   return (
@@ -217,7 +237,7 @@ function ResumPersones({ full, onHistorial }: { full: FullAssistencia; onHistori
             <tr>
               <th scope="col">Persona</th>
               {sessions.map((s) => <th key={s.id} scope="col" className="nowrap">{s.data.slice(8, 10)}/{s.data.slice(5, 7)}</th>)}
-              <th scope="col">P</th><th scope="col">A</th><th scope="col">J</th><th scope="col">%</th><th scope="col"><span className="visualment-amagat">Historial</span></th>
+              <th scope="col">P</th><th scope="col">A</th><th scope="col">J</th><th scope="col">%</th><th scope="col"><span className="visualment-amagat">Accions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -226,8 +246,18 @@ function ResumPersones({ full, onHistorial }: { full: FullAssistencia; onHistori
                 <th scope="row">{nomComplet(p.participant)}, {p.participant.nom}</th>
                 {sessions.map((s) => <td key={s.id}>{p.marques[s.id] ? ABREV[p.marques[s.id]!.estat] : ""}</td>)}
                 <td>{p.resum.presents}</td><td>{p.resum.absents}</td><td>{p.resum.justificades}</td>
-                <td>{p.resum.percentatge === null ? "—" : `${p.resum.percentatge}%`}{p.sota_llindar ? " · per sota del llindar" : ""}</td>
-                <td><button type="button" className="boto boto--secundari boto--petit" onClick={() => onHistorial(p.id)}>Canvis</button></td>
+                <td>
+                  {p.resum.percentatge === null ? "—" : `${p.resum.percentatge}%`}{p.sota_llindar ? " · per sota del llindar" : ""}
+                  {p.estat !== "admesa" && <div className="text-secundari">Ja no té plaça ({p.estat === "baixa" ? "baixa" : "renúncia"})</div>}
+                </td>
+                <td>
+                  <div className="botonera">
+                    <button type="button" className="boto boto--secundari boto--petit" onClick={() => onHistorial(p.id)}>Canvis</button>
+                    {onBaixa && p.sota_llindar && p.estat === "admesa" && (
+                      <button type="button" className="boto boto--secundari boto--petit" disabled={enCurs} onClick={() => onBaixa(p)}>Dona de baixa</button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -235,7 +265,9 @@ function ResumPersones({ full, onHistorial }: { full: FullAssistencia; onHistori
       </div>
       <p className="text-secundari">
         P: present · A: absent · J: absència justificada.
-        {full.cicle.llindar_assistencia ? ` Llindar del cicle: ${full.cicle.llindar_assistencia}%.` : " El cicle no té llindar d'assistència."}
+        {full.cicle.llindar_assistencia
+          ? ` Llindar del cicle: ${full.cicle.llindar_assistencia}%. Per sota, la persona perd la plaça, però només quan algú ho confirma amb «Dona de baixa».`
+          : " El cicle no té llindar d'assistència."}
       </p>
     </>
   );

@@ -141,7 +141,7 @@ export class ServeiActivitats {
     return this.crear(casalId, cicleDesti, {
       nom, descripcio: o.descripcio, categoria: o.categoria, dies_setmana: o.dies_setmana, hora_inici: o.hora_inici,
       hora_fi: o.hora_fi, horari_text: o.horari_text, data_inici: o.data_inici, data_fi: o.data_fi, espai: o.espai,
-      capacitat: o.capacitat, nombre_sessions: o.nombre_sessions, informacio_difusio: o.informacio_difusio,
+      capacitat: o.capacitat, nombre_sessions: o.nombre_sessions, minim_participants: o.minim_participants, informacio_difusio: o.informacio_difusio,
       configuracio_continuitat: o.configuracio_continuitat, codi_extern: null,
     }, opcions, "duplicacio", o.id);
   }

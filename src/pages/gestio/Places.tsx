@@ -80,6 +80,9 @@ export function Places({ casalId, cicleId, pot, versioCicle, onCanvi }: {
             <summary>
               <strong>{g.activitat}</strong>{" "}
               <span className="text-secundari">· {g.ocupades} de {g.capacitat} places ocupades · {g.lliures} lliures · {g.espera} en espera</span>
+              {g.minim_participants !== null && g.ocupades < g.minim_participants && (
+                <span className="etiqueta etiqueta--alerta">Per sota del mínim ({g.minim_participants})</span>
+              )}
             </summary>
             <TaulaPlaces casalId={casalId} grup={g} gestiona={gestiona} onAccio={(placa, a) => setPendent({ placa, accio: a })}
               moviments={moviments} onMoviments={(id) => setMoviments((m) => (m === id ? null : id))} />

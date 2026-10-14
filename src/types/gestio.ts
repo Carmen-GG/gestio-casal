@@ -40,7 +40,7 @@ export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
   data_inici: string | null; data_fi: string | null; espai: string | null; capacitat: number;
-  nombre_sessions: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
+  nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 
 export interface EntradaHistorial {
@@ -95,13 +95,20 @@ export type { EstatPlaca, ParametresAdjudicacio };
 
 export interface ConfiguracioAdjudicacio { id: string; versio: number; parametres: ParametresAdjudicacio; creat_el: string }
 export type EstatExecucio = "proposta" | "confirmada" | "substituida" | "descartada";
-export interface ResumActivitatAdjudicacio { capacitat: number; sollicituds: number; admeses: number; llista_espera: number; per_continuitat: number }
+export interface ResumActivitatAdjudicacio {
+  capacitat: number; sollicituds: number; admeses: number; llista_espera: number; per_continuitat: number; per_espera_anterior?: number;
+}
+export interface SorteigAplicat {
+  id: string; activitat_id: string; tipus: "numero" | "lletra"; valor: string; numeracio: "inscripcio" | "aleatoria" | null;
+  origen: "aplicacio" | "manual"; realitzat_el: string;
+}
 export interface Execucio {
   id: string; cicle_id: string; versio: number; configuracio_versio: number; estat: EstatExecucio;
   lletra_sorteig: string | null; llavor_desempat: string | null; motiu: string | null;
   resum: {
     sollicituds?: number; sollicituds_amb_placa?: number; sollicituds_sense_placa?: number; places_adjudicades?: number;
-    sollicituds_fora_adjudicacio?: number; parelles_excloses?: number; parelles_continuitat?: number;
+    sollicituds_fora_adjudicacio?: number; parelles_excloses?: number; parelles_continuitat?: number; parelles_espera_anterior?: number;
+    sortejos?: SorteigAplicat[]; noms_activitats?: Record<string, string>;
     cicle_anterior?: { id: string; nom: string } | null; parametres?: ParametresAdjudicacio;
     activitats?: Record<string, ResumActivitatAdjudicacio>;
   };
@@ -113,11 +120,20 @@ export interface ResumAdjudicacio {
 }
 export interface FilaResultat {
   sollicitud_id: string; activitat_id: string; preferencia: number; resultat: "admesa" | "llista_espera" | "no_adjudicada";
-  posicio_espera: number | null; per_continuitat: boolean; motiu: string | null; numero: number; participant: ParticipantVisible;
+  posicio_espera: number | null; per_continuitat: boolean; per_espera_anterior: boolean; motiu: string | null; numero: number;
+  participant: ParticipantVisible;
+}
+export interface PersonaSenseActivitat {
+  sollicitud_id: string; numero: number; participant: ParticipantVisible; activitats_demanades: number; en_llista_espera: number;
+  detall: { preferencia: number; activitat: string; resultat: FilaResultat["resultat"]; posicio_espera: number | null; motiu: string | null }[];
 }
 export interface DetallExecucio {
   execucio: Execucio; cicle: { id: string; nom: string; estat: string };
-  grups: { activitat_id: string; activitat: string; capacitat: number; estat: EstatActivitat; resultats: FilaResultat[] }[];
+  grups: {
+    activitat_id: string; activitat: string; capacitat: number; estat: EstatActivitat; minim_participants: number | null; sota_minim: boolean;
+    resultats: FilaResultat[];
+  }[];
+  sense_activitat: PersonaSenseActivitat[];
   substitueix: { id: string; versio: number } | null; pot_confirmar: boolean;
 }
 export interface FilaPlaca {
@@ -127,7 +143,26 @@ export interface FilaPlaca {
 export interface RespostaPlaces {
   estat_cicle: string; gestionable: boolean;
   execucio_confirmada: { id: string; versio: number; confirmada_el: string } | null;
-  grups: { activitat_id: string; activitat: string; capacitat: number; ocupades: number; lliures: number; espera: number; places: FilaPlaca[] }[];
+  grups: {
+    activitat_id: string; activitat: string; capacitat: number; ocupades: number; lliures: number; espera: number;
+    minim_participants: number | null; places: FilaPlaca[];
+  }[];
+}
+
+export interface SorteigActivitat {
+  id: string; activitat_id: string; activitat: string; tipus: "numero" | "lletra"; valor: string; rang_maxim: number | null;
+  numeracio: "inscripcio" | "aleatoria" | null; origen: "aplicacio" | "manual"; motiu: string | null; estat: "vigent" | "anullat";
+  realitzat_per_nom: string | null; realitzat_el: string; anullat_el: string | null; motiu_anullacio: string | null;
+}
+export interface EstatSorteig {
+  estat_cicle: string; cicle: { id: string; nom: string };
+  parametres: { criteri_ordre: ParametresAdjudicacio["criteri_ordre"]; tipus_sorteig: "numero" | "lletra"; numeracio_sorteig: "inscripcio" | "aleatoria" } | null;
+  pot_sortejar: boolean; rang_numeros: number | null; numeros: { assignats: number; sense_numero: number };
+  activitats: {
+    id: string; nom: string; capacitat: number; sollicituds: number; necessita_sorteig: boolean;
+    sorteig: SorteigActivitat | null; sorteig_altre_tipus: boolean;
+  }[];
+  historial: SorteigActivitat[];
 }
 export interface MovimentPlaca {
   id: number; estat_anterior: EstatPlaca | null; estat_nou: EstatPlaca; motiu: string | null; execucio_id: string | null; creat_el: string;

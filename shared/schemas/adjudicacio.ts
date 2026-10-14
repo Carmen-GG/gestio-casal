@@ -3,7 +3,7 @@
  * de places. Compartits entre el panell i el servidor. Objectes estrictes.
  */
 import { z } from "zod";
-import { CRITERIS_ORDRE, ESTATS_PARTICIPANTS, METODES } from "../domain/adjudicacio";
+import { CRITERIS_ORDRE, ESTATS_PARTICIPANTS, METODES, NUMERACIONS_SORTEIG, TIPUS_SORTEIG } from "../domain/adjudicacio";
 import { versio } from "./comuns";
 import { motiuObligatori } from "./sollicituds";
 
@@ -15,7 +15,22 @@ export const parametresAdjudicacio = z.strictObject({
   llista_espera: z.boolean(),
   estats_sollicitud: z.array(z.enum(ESTATS_PARTICIPANTS)).min(1, "Trieu almenys un estat de sol·licitud.")
     .refine((l) => new Set(l).size === l.length, "Estats repetits."),
+  prioritat_espera_anterior: z.boolean(),
+  preferencia_maxima_espera_anterior: z.number().int().min(1).max(30),
+  tipus_sorteig: z.enum(TIPUS_SORTEIG),
+  numeracio_sorteig: z.enum(NUMERACIONS_SORTEIG),
+}).refine((p) => p.criteri_ordre !== "sorteig_activitat" || p.metode === "per_rondes", {
+  message: "El sorteig per activitat s'aplica amb el mètode per rondes.", path: ["metode"],
 });
+
+/** Sorteig d'una activitat: el fa el sistema o es registra el resultat d'un sorteig fet a mà (amb bombo, en directe…). */
+export const nouSorteig = z.strictObject({
+  /** Valor d'un sorteig fet fora de l'aplicació. Si no s'indica, el sorteja el servidor. */
+  valor_manual: z.string().trim().regex(/^([A-Za-z]|[1-9]\d{0,5})$/, "Indiqueu una lletra (A-Z) o un número.").optional(),
+  motiu: z.string().trim().max(500).optional(),
+});
+
+export const anullarSorteig = z.strictObject({ motiu: motiuObligatori });
 
 export const desarParametres = z.strictObject({
   parametres: parametresAdjudicacio,
@@ -83,9 +98,20 @@ export const ETIQUETES_MOTIU_NO_ADJUDICADA = {
 } as const;
 
 export const ETIQUETES_CRITERI = {
+  sorteig_activitat: "Sorteig a cada activitat (de número o de lletra)",
   inscripcio: "Ordre d'inscripció (data i hora de registre)",
   lletra: "Sorteig de lletra (ordre alfabètic a partir de la lletra)",
   aleatori: "Sorteig amb llavor registrada",
+} as const;
+
+export const ETIQUETES_TIPUS_SORTEIG = {
+  numero: "Número: es comença per la persona amb el número sortejat",
+  lletra: "Lletra: es comença pel primer cognom que comença per la lletra sortejada",
+} as const;
+
+export const ETIQUETES_NUMERACIO = {
+  inscripcio: "Número d'ordre d'inscripció (número de sol·licitud)",
+  aleatoria: "Número aleatori assignat a cada sol·licitud en tancar les inscripcions",
 } as const;
 
 export const ETIQUETES_METODE = {

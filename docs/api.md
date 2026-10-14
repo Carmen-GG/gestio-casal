@@ -118,6 +118,19 @@ Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen
 
 Canviar el cicle a «Adjudicat» des de l'API d'estats exigeix que hi hagi una adjudicació confirmada.
 
+### Sorteig per activitat
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/sorteig` | `sollicituds.consultar` | Activitats que necessiten sorteig, sortejos vigents i anul·lats, i números assignats |
+| POST | `/cicles/{cicleId}/sorteig/numeros` | `adjudicacio.executar` | Assigna un número aleatori a les sol·licituds que no en tenen. Els existents no canvien |
+| POST | `/cicles/{cicleId}/activitats/{id}/sorteig` | `adjudicacio.executar` | Fa el sorteig al servidor o, amb `valor_manual`, en registra un de fet a mà (`motiu` opcional). 409 `sorteig_existent` si ja n'hi ha un de vigent |
+| POST | `/cicles/{cicleId}/sortejos/{id}/anullacio` | `adjudicacio.executar` | Anul·la un sorteig amb `motiu`. No s'esborra |
+| GET | `/cicles/{cicleId}/exportacions/numeros-sorteig` | `dades.exportar` + `sollicituds.consultar` | Llista de números per publicar-la. Queda auditada |
+| GET | `/adjudicacions/{id}/exportacions/sense-activitat` | `dades.exportar` + `sollicituds.consultar` | Persones sense cap activitat. Queda auditada |
+
+Calcular una proposta amb sorteig per activitat retorna 409 `sortejos_pendents` si falta el sorteig d'alguna activitat amb més sol·licituds que places, o `numeros_pendents` si falten números aleatoris.
+
 ## Assistència (Fase 6)
 
 Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen a [assistencia.md](assistencia.md).
@@ -130,10 +143,11 @@ Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen
 | POST | `/activitats/{id}/sessions` | `assistencia.registrar` | Afegeix una sessió (`data`, `hora_inici` opcional). 409 `sessio_existent` |
 | POST | `/sessions/{id}/cancellacio` | `assistencia.registrar` | `versio` i `motiu`. Només sessions previstes i sense marques |
 | PUT | `/sessions/{id}/assistencia` | `assistencia.registrar` | `marques` (`placa_id`, `estat`, `versio` o `null` si és nova). Modificar una marca exigeix `motiu` (428). 409 si el cicle està bloquejat, la sessió és futura o cancel·lada, o hi ha un canvi concurrent |
+| POST | `/places/{placaId}/baixa-assistencia` | `places.gestionar` | `versio` i `motiu` opcional. Baixa per assistència inferior al llindar; el servidor recalcula el percentatge. 409 `sense_llindar`, `no_sota_llindar`, `cicle_bloquejat`, `transicio_no_permesa` o `conflicte_concurrencia` |
 | GET | `/cicles/{cicleId}/exportacions/graelles[?telefon=1]` | `dades.exportar` + `sollicituds.consultar` | Dades de les graelles (el navegador genera l'XLSX). El telèfon només hi és amb permís de dades de contacte. Queda auditada |
 | GET | `/cicles/{cicleId}/exportacions/assistencia` | `dades.exportar` + `sollicituds.consultar` | Taula d'assistència per a XLSX. Queda auditada |
 
-Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`).
+Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`). En crear un cicle, si no s'indica, és 80.
 
 ## Previst
 - Fase 7: estadístiques i quadre de comandament.
