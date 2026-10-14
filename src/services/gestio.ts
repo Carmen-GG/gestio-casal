@@ -70,6 +70,8 @@ export const serveiGestio = {
     api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/numeros-sorteig`),
   places: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<RespostaPlaces>(`${g(casalId)}/cicles/${cicleId}/places`, s),
   mourePlaca: (casalId: string, placaId: string, dades: unknown) => api.post<unknown>(`${g(casalId)}/places/${placaId}/moviments`, dades),
+  baixaPerAssistencia: (casalId: string, placaId: string, dades: { versio: number; motiu?: string }) =>
+    api.post<unknown>(`${g(casalId)}/places/${placaId}/baixa-assistencia`, dades),
   movimentsPlaca: (casalId: string, placaId: string, s?: AbortSignal) =>
     api.get<{ moviments: MovimentPlaca[] }>(`${g(casalId)}/places/${placaId}/moviments`, s),
   exportacioPlaces: (casalId: string, cicleId: string, tipus: "admesos" | "espera") =>

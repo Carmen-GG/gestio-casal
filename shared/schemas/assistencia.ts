@@ -28,3 +28,9 @@ export const registrarAssistencia = z.strictObject({
   /** Obligatori si es modifica alguna marca ja registrada. */
   motiu: z.string().trim().max(500).optional(),
 });
+
+/** Baixa d'una plaça per assistència inferior al llindar. El motiu de la regla l'afegeix el servidor. */
+export const baixaAssistencia = z.strictObject({
+  versio,
+  motiu: z.string().trim().max(400).optional(),
+});

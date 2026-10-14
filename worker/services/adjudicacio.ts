@@ -532,7 +532,12 @@ export class ServeiAdjudicacio {
     };
   }
 
-  async moviment(casalId: string, placaId: string, d: { accio: AccioPlaca; versio: number; motiu: string }, ctx: ContextOperacio) {
+  /**
+   * Acció sobre una plaça. `origen` permet que una altra regla (per exemple, la baixa per
+   * assistència) quedi a l'auditoria amb el seu propi tipus d'operació i les seves dades.
+   */
+  async moviment(casalId: string, placaId: string, d: { accio: AccioPlaca; versio: number; motiu: string }, ctx: ContextOperacio,
+    origen?: { tipus_operacio: string; detalls: Record<string, unknown> }) {
     const placa = await this.repos.adjudicacio.placa(casalId, placaId);
     if (!placa) throw errors.noTrobat("No s'ha trobat la plaça.");
     const cicle = await this.cicle(casalId, placa.cicle_id);
@@ -552,9 +557,9 @@ export class ServeiAdjudicacio {
       this.repos.adjudicacio.operacioMoviment({ placa_id: placaId, versio: d.versio, des: placa.estat, cap: accio.cap, ocupa, operacio }, ara),
       this.repos.adjudicacio.operacioRegistreMoviment({ placa_id: placaId, des: placa.estat, cap: accio.cap, motiu: d.motiu, usuari_id: ctx.usuariId!, operacio }, ara),
       this.repos.auditoria.operacioRegistrar({
-        casal_id: casalId, usuari_id: ctx.usuariId, tipus_operacio: `places.${d.accio}`, entitat: "placa", entitat_id: placaId,
+        casal_id: casalId, usuari_id: ctx.usuariId, tipus_operacio: origen?.tipus_operacio ?? `places.${d.accio}`, entitat: "placa", entitat_id: placaId,
         resultat: "exit", motiu: d.motiu, id_peticio: ctx.idPeticio ?? null,
-        detalls: { activitat_id: placa.activitat_id, sollicitud_id: placa.sollicitud_id, des: placa.estat, cap: accio.cap },
+        detalls: { activitat_id: placa.activitat_id, sollicitud_id: placa.sollicitud_id, des: placa.estat, cap: accio.cap, ...origen?.detalls },
       }, ara, condicio),
     ]);
     if (!r || r.canvis !== 1) {

@@ -18,8 +18,16 @@ Funcionament del registre d'assistència (Fase 6) i regles que cal validar insti
 ## Percentatge i llindar
 - Percentatge = presències / (presències + absències). Les absències justificades no compten.
 - Només es calcula a partir de **3 sessions** computables, per no assenyalar ningú amb dades insuficients.
-- Cada cicle pot tenir un **llindar** (1–100 %). Les persones per sota apareixen marcades al resum.
-- **El llindar no comporta cap acció automàtica.** Cap baixa ni pèrdua de plaça es fa sense una regla oficial validada i una acció explícita d'una persona autoritzada (des de «Places i llistes d'espera», amb motiu).
+- Cada cicle té un **llindar** (1–100 %). Les persones per sota apareixen marcades al resum.
+
+### Regla del casal: pèrdua de plaça per assistència
+Confirmada per la coordinació del casal (14/10/2026): **una assistència inferior al 80 % de les sessions implica la pèrdua de la plaça.**
+- Els cicles nous es creen amb un llindar del **80 %**. Es pot canviar o deixar buit a cada cicle (secció «Assistència»). Els cicles que ja existien no es modifiquen.
+- **Mai és automàtica.** Al resum per persona de l'activitat, les persones admeses per sota del llindar tenen el botó «Dona de baixa». Cal confirmar-ho persona per persona.
+- El servidor ho comprova de nou: hi ha d'haver llindar, prou sessions per calcular el percentatge i un percentatge inferior al llindar. Si no, ho rebutja (409 `sense_llindar` o `no_sota_llindar`).
+- Cal el permís `places.gestionar` i el cicle adjudicat o publicat.
+- La plaça passa a «Baixa». El motiu («Assistència del X %, inferior al llindar del Y %») queda als moviments de la plaça, i l'auditoria registra `places.baixa_assistencia` amb el percentatge i el llindar.
+- La plaça alliberada s'ofereix a la llista d'espera des de «Places i llistes d'espera», com qualsevol altra baixa.
 
 ## Graelles i exportacions
 - **Graelles XLSX**: un full per activitat, amb la capçalera de l'activitat, les persones admeses per ordre alfabètic, una columna per sessió (o columnes en blanc si encara no hi ha sessions, per escriure-hi la data a mà) i, separada a sota, la llista d'espera per ordre de posició. Format per imprimir en A4 (horitzontal si hi ha moltes columnes).
@@ -29,6 +37,5 @@ Funcionament del registre d'assistència (Fase 6) i regles que cal validar insti
 - Totes les exportacions queden a l'auditoria.
 
 ## Pendent de validar
-- Si hi ha un llindar oficial d'assistència i quin és.
-- Quines conseqüències té quedar-hi per sota i qui les decideix.
+- Si les absències justificades han de comptar com a sessions (ara no compten: «80 % de les sessions» es calcula sobre presències + absències).
 - Si cal un mínim de sessions diferent de 3 per calcular el percentatge.

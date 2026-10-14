@@ -143,10 +143,11 @@ Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen
 | POST | `/activitats/{id}/sessions` | `assistencia.registrar` | Afegeix una sessió (`data`, `hora_inici` opcional). 409 `sessio_existent` |
 | POST | `/sessions/{id}/cancellacio` | `assistencia.registrar` | `versio` i `motiu`. Només sessions previstes i sense marques |
 | PUT | `/sessions/{id}/assistencia` | `assistencia.registrar` | `marques` (`placa_id`, `estat`, `versio` o `null` si és nova). Modificar una marca exigeix `motiu` (428). 409 si el cicle està bloquejat, la sessió és futura o cancel·lada, o hi ha un canvi concurrent |
+| POST | `/places/{placaId}/baixa-assistencia` | `places.gestionar` | `versio` i `motiu` opcional. Baixa per assistència inferior al llindar; el servidor recalcula el percentatge. 409 `sense_llindar`, `no_sota_llindar`, `cicle_bloquejat`, `transicio_no_permesa` o `conflicte_concurrencia` |
 | GET | `/cicles/{cicleId}/exportacions/graelles[?telefon=1]` | `dades.exportar` + `sollicituds.consultar` | Dades de les graelles (el navegador genera l'XLSX). El telèfon només hi és amb permís de dades de contacte. Queda auditada |
 | GET | `/cicles/{cicleId}/exportacions/assistencia` | `dades.exportar` + `sollicituds.consultar` | Taula d'assistència per a XLSX. Queda auditada |
 
-Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`).
+Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`). En crear un cicle, si no s'indica, és 80.
 
 ## Previst
 - Fase 7: estadístiques i quadre de comandament.

@@ -136,7 +136,7 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
           <div className={`camp camp--compacte ${llindarValid ? "" : "camp--error"}`}>
             <label htmlFor="llindar">Llindar d'assistència (%)</label>
             <input id="llindar" inputMode="numeric" value={llindar} onChange={(e) => setLlindar(e.target.value.trim())} aria-describedby="llindar-ajuda" />
-            <p id="llindar-ajuda" className="camp__ajuda">Deixeu-lo buit si no n'hi ha. Només serveix per identificar persones.</p>
+            <p id="llindar-ajuda" className="camp__ajuda">Regla del casal: per sota del llindar (per defecte, 80%) es perd la plaça. Mai és automàtic: cal confirmar-ho persona per persona. Deixeu-lo buit si no n'hi ha.</p>
             {!llindarValid && <p className="camp__missatge" role="alert">Ha de ser un número entre 1 i 100.</p>}
           </div>
           <button type="submit" className="boto boto--secundari" disabled={enCurs}>Desa el llindar</button>

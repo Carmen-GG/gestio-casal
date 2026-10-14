@@ -2,8 +2,9 @@
  * Regles de domini del control d'assistència: calendari de sessions, resum i
  * percentatges. Funcions pures, compartides entre el panell i el servidor.
  *
- * El percentatge i el llindar només serveixen per identificar persones: no
- * comporten cap pèrdua de plaça automàtica (cal una regla oficial i una acció autoritzada).
+ * Regla del casal: una assistència inferior al llindar (per defecte, el 80 %)
+ * implica la pèrdua de la plaça. Mai s'aplica automàticament: cal que una persona
+ * autoritzada ho confirmi plaça per plaça, i el servidor comprova que és per sota.
  */
 export const ESTATS_ASSISTENCIA = ["present", "absent", "absencia_justificada"] as const;
 export type EstatAssistencia = (typeof ESTATS_ASSISTENCIA)[number];
@@ -16,6 +17,9 @@ export const ETIQUETES_ASSISTENCIA: Record<EstatAssistencia, string> = {
 
 /** Abreviatures per a les graelles impreses. */
 export const ABREVIATURES_ASSISTENCIA: Record<EstatAssistencia, string> = { present: "P", absent: "A", absencia_justificada: "J" };
+
+/** Llindar d'assistència (%) dels cicles nous, segons la regla del casal. Es pot canviar per cicle. */
+export const LLINDAR_ASSISTENCIA_PER_DEFECTE = 80;
 
 /** Nombre mínim de sessions computables (present + absent) per calcular un percentatge. */
 export const MINIM_SESSIONS_PERCENTATGE = 3;

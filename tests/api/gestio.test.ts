@@ -20,6 +20,9 @@ describe("gestió de cicles", () => {
     expect(creat.status).toBe(201);
     const cicle = creat.cos.cicle;
     expect(cicle.estat).toBe("esborrany");
+    expect(cicle.llindar_assistencia).toBe(80); // regla del casal per defecte
+    const senseLlindar = await c.json(`/api/gestio/casals/${casal.id}/cicles`, { method: "POST", json: { ...NOU_CICLE, llindar_assistencia: null } });
+    expect(senseLlindar.cos.cicle.llindar_assistencia).toBeNull();
     expect(cicle.obertura_inscripcions).toBe("2027-03-01T07:00:00.000Z"); // normalitzat a UTC
 
     const mod = await c.json(`/api/gestio/casals/${casal.id}/cicles/${cicle.id}`, {

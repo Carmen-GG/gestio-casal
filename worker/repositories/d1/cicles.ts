@@ -1,4 +1,5 @@
 import type { EstatCicle } from "../../../shared/domain/cicles";
+import { LLINDAR_ASSISTENCIA_PER_DEFECTE } from "../../../shared/domain/assistencia";
 import type { CanvisCicle, Cicle, NouCicle, RepositoriCicles } from "../tipus";
 import { assignacionsUpdate, comOperacio, comStatement, jsonObjecte, marcadors } from "./util";
 import { nouId } from "../../lib/ids";
@@ -34,13 +35,14 @@ export class D1RepositoriCicles implements RepositoriCicles {
       this.db
         .prepare(
           `INSERT INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obertura_inscripcions,
-             tancament_inscripcions, data_resolucio_prevista, estat, configuracio_formulari, darrera_operacio,
-             creat_el, actualitzat_el)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'esborrany', ?, ?, ?, ?)`,
+             tancament_inscripcions, data_resolucio_prevista, estat, configuracio_formulari, llindar_assistencia,
+             darrera_operacio, creat_el, actualitzat_el)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'esborrany', ?, ?, ?, ?, ?)`,
         )
         .bind(id, dades.casal_id, dades.nom, dades.any, dades.data_inici, dades.data_fi,
           dades.obertura_inscripcions, dades.tancament_inscripcions, dades.data_resolucio_prevista,
-          JSON.stringify(dades.configuracio_formulari ?? {}), operacio, ara, ara),
+          JSON.stringify(dades.configuracio_formulari ?? {}),
+          dades.llindar_assistencia === undefined ? LLINDAR_ASSISTENCIA_PER_DEFECTE : dades.llindar_assistencia, operacio, ara, ara),
     );
   }
 

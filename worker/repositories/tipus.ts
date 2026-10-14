@@ -52,6 +52,8 @@ export interface Cicle {
 
 export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia"> & {
   configuracio_formulari?: Record<string, unknown>;
+  /** Sense valor: el llindar per defecte de la regla del casal. Null: sense llindar. */
+  llindar_assistencia?: number | null;
 };
 
 export const ESTATS_ACTIVITAT = ["esborrany", "activa", "inactiva", "arxivada"] as const;

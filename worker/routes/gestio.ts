@@ -17,7 +17,7 @@ import { ServeiGestioSollicituds, filtraParticipant, taulaSollicituds, visibilit
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
-import { cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
+import { baixaAssistencia, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
   consultaSollicituds, importacioConfirmacio, importacioPeticio, revisioDuplicat, sollicitudActualitzarDades,
@@ -318,6 +318,11 @@ export const rutesGestio = new Hono<Entorn>()
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, movimentPlaca);
     return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  .post("/casals/:casalId/places/:placaId/baixa-assistencia", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    const cos = await cosValidat(c, baixaAssistencia);
+    return c.json(await assistencia(c).baixaPerAssistencia(casalId, idRuta(c, "placaId"), cos, ctx(c)));
   })
   .get("/casals/:casalId/places/:placaId/moviments", async (c) => {
     const casalId = casalAutoritzat(c, "sollicituds.consultar");
