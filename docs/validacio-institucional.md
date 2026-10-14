@@ -31,6 +31,6 @@ de dades (DPD) validin, com a mínim:
 - Procediment de còpies de seguretat i proves de restauració.
 
 ## Regles de negoci
-- Regles d'adjudicació: el casal va indicar la seva regla el 14/10/2026 (llista d'espera anterior, preferència i sorteig per activitat). Està implementada com a valors per defecte configurables; cal deixar-la per escrit i validar el criteri per reconèixer la mateixa persona entre cicles ([adjudicacio.md](adjudicacio.md)).
+- Regles d'adjudicació: el casal va indicar la seva regla el 14/10/2026 (llista d'espera anterior, preferència i sorteig per activitat). Està implementada com a valors per defecte configurables; cal deixar-la per escrit. Validat el 14/10/2026: la mateixa persona entre cicles es reconeix pel DNI (i la data de naixement si dos comparteixen DNI), i qui va rebutjar una plaça no té prioritat al cicle següent ([adjudicacio.md](adjudicacio.md)).
 - Mínim de participants per activitat (habitualment 15 adults, 8 infantil i juvenil): només genera avisos.
 - Llindar d'assistència i conseqüències: regla confirmada pel casal, per sota del 80 % es perd la plaça. Llindar per defecte 80 %, configurable per cicle. La baixa no és automàtica: la confirma una persona autoritzada i el servidor comprova que és per sota (vegeu [assistencia.md](assistencia.md)). Totes les absències compten igual (no hi ha absències justificades).

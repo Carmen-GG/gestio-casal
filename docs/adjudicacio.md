@@ -31,14 +31,15 @@ Dins de la prioritat absoluta també es respecta la preferència (qui la tenia d
 
 ### Reconeixement de la mateixa persona entre cicles
 
-Per a la prioritat de la llista d'espera anterior (i per a la continuïtat) es considera que és la mateixa persona quan coincideix:
+Qui va rebutjar una plaça oferta (renúncia) no compta com a «quedar en llista d'espera» per al cicle següent (validat pel casal, 14/10/2026). Només compta qui era en llista d'espera en tancar el cicle.
+
+Criteri validat pel casal (14/10/2026). Per a la prioritat de la llista d'espera anterior (i per a la continuïtat) es considera que és la mateixa persona quan coincideix:
 
 - el mateix registre de participant, o
 - el mateix codi intern del casal, o
-- el mateix document d'identitat (sense espais ni guions), o
-- el mateix nom i cognoms (sense accents ni majúscules) **i** la mateixa data de naixement o el mateix telèfon.
+- el mateix document d'identitat (DNI o NIE, sense espais ni guions). Si dues persones comparteixen document, es distingeixen per la data de naixement: si totes dues la tenen i és diferent, no són la mateixa persona.
 
-El nom sol no n'hi ha prou. **Pendent de validar pel casal.** Si el formulari no demana ni la data de naixement ni el telèfon, només funcionarà amb el codi intern o el document.
+El nom i el telèfon **no** serveixen: hi ha gent gran que comparteix telèfon fix o mòbil. Per tant, perquè funcioni la prioritat entre cicles, el formulari ha de demanar el DNI (i convé la data de naixement). El document només s'usa per fer aquesta comparació al servidor: mai es mostra com a identificador.
 
 ## Com funciona
 
@@ -125,8 +126,6 @@ La mateixa persona es reconeix amb el criteri de l'apartat [Reconeixement de la 
 ## Què cal validar
 
 1. Deixar per escrit la regla del casal (prioritat per la llista d'espera anterior, preferència i sorteig per activitat) i quin tipus de sorteig fa cada casal.
-2. El criteri per reconèixer la mateixa persona entre cicles.
-3. Si «quedar en llista d'espera» inclou qui va rebutjar una plaça oferta (ara només compta qui hi era al final del cicle).
-4. El nombre màxim d'activitats per persona.
-5. Si les sol·licituds pendents de revisió entren a l'adjudicació.
-6. Com es comunica la resolució. L'enviament de comunicacions no està implementat.
+2. El nombre màxim d'activitats per persona.
+3. Si les sol·licituds pendents de revisió entren a l'adjudicació.
+4. Com es comunica la resolució. L'enviament de comunicacions no està implementat.

@@ -17,17 +17,15 @@ const EXCLOSA = (alies: string) => `${alies}.estat IN ('renuncia', 'baixa')
 
 /**
  * La mateixa persona en dos cicles (participants `p` i `p0` del mateix casal): el mateix registre,
- * el mateix codi intern, el mateix document, o el mateix nom i cognoms (clau normalitzada)
- * amb la mateixa data de naixement o el mateix telèfon. El nom sol no n'hi ha prou.
- * Criteri documentat a docs/adjudicacio.md; pendent de validar pel casal.
+ * el mateix codi intern o el mateix document. Si dues persones comparteixen document, les
+ * distingeix la data de naixement. Ni el nom ni el telèfon serveixen (hi ha gent gran que
+ * comparteix telèfon). Criteri validat pel casal (14/10/2026), documentat a docs/adjudicacio.md.
  */
 const MATEIXA_PERSONA = `(p0.id = p.id
   OR (p.codi_participant_intern IS NOT NULL AND p0.codi_participant_intern = p.codi_participant_intern)
   OR (p.document_identitat IS NOT NULL AND p0.document_identitat IS NOT NULL
-      AND upper(replace(replace(p0.document_identitat, ' ', ''), '-', '')) = upper(replace(replace(p.document_identitat, ' ', ''), '-', '')))
-  OR (p0.clau_ordenacio = p.clau_ordenacio AND (
-      (p.data_naixement IS NOT NULL AND p0.data_naixement = p.data_naixement)
-      OR (p.telefon IS NOT NULL AND p0.telefon IS NOT NULL AND replace(p0.telefon, ' ', '') = replace(p.telefon, ' ', '')))))`;
+      AND upper(replace(replace(p0.document_identitat, ' ', ''), '-', '')) = upper(replace(replace(p.document_identitat, ' ', ''), '-', ''))
+      AND (p.data_naixement IS NULL OR p0.data_naixement IS NULL OR p0.data_naixement = p.data_naixement)))`;
 
 /** Activitat equivalent en el cicle anterior: enllaç explícit, mateix codi extern o mateix nom. */
 const ACTIVITAT_EQUIVALENT = `(json_extract(a.configuracio_continuitat, '$.activitat_anterior_id') = a0.id
