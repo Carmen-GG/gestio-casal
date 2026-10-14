@@ -5,13 +5,18 @@ import { clauOrdenacioPersona } from "../../shared/domain/ordenacio";
 import { crearEscenari } from "../setup/dades";
 import { client, clientAutenticat } from "../setup/sessio";
 
-const CONFIG = { informacio_privacitat: "Text de prova fictici.", camps: { telefon: { actiu: true, obligatori: false } } };
+const CONFIG = {
+  informacio_privacitat: "Text de prova fictici.",
+  camps: { telefon: { actiu: true, obligatori: false }, document_identitat: { actiu: true, obligatori: false }, data_naixement: { actiu: true, obligatori: false } },
+};
 
 /**
  * Cicle amb dues activitats d'una plaça i quatre sol·licituds fictícies:
  *   1. Zapata → [A]   2. Àvila → [B, A]   3. Bosch → [B]   4. Costa → [B, A]
- * Al cicle anterior, la mateixa Costa (un altre registre, mateix nom i telèfon) va quedar
- * en llista d'espera de l'activitat equivalent a A, que havia triat en 2a preferència.
+ * Al cicle anterior, la mateixa Costa (un altre registre, mateix DNI i data de naixement) va quedar
+ * en llista d'espera de l'activitat equivalent a A, que havia triat en 2a preferència. Una altra
+ * Laia Costa amb el mateix telèfon i el mateix DNI però una altra data de naixement va quedar en
+ * llista d'espera de la de B: no és la mateixa persona i no dona prioritat.
  */
 async function escenari() {
   const e = await crearEscenari({ estatCicle: "inscripcions_obertes" });
@@ -30,8 +35,8 @@ async function escenari() {
   await envia({ nom: "Marta", cognom1: "Zapata", telefon: "600000001" }, [A.id]);
   await envia({ nom: "Jordi", cognom1: "Àvila" }, [B.id, A.id]);
   await envia({ nom: "Núria", cognom1: "Bosch" }, [B.id]);
-  await envia({ nom: "Laia", cognom1: "Costa", telefon: "600000004" }, [B.id, A.id]);
-  await cicleAnterior(e.casal.id, A.nom);
+  await envia({ nom: "Laia", cognom1: "Costa", telefon: "600000004", document_identitat: "00000000-t", data_naixement: "1950-03-02" }, [B.id, A.id]);
+  await cicleAnterior(e.casal.id, A.nom, B.nom);
   await env.DB.prepare("UPDATE cicles SET estat = 'inscripcions_tancades' WHERE id = ?").bind(e.cicle.id).run();
   const base = `/api/gestio/casals/${e.casal.id}`;
   const g = await clientAutenticat("gestor_casal", e.casal.id);
@@ -49,7 +54,7 @@ async function escenari() {
 }
 
 /** Cicle anterior fictici, amb adjudicació confirmada i Costa en llista d'espera (2a preferència). */
-async function cicleAnterior(casalId: string, nomActivitat: string) {
+async function cicleAnterior(casalId: string, nomActivitat: string, nomActivitatB: string) {
   const id = crypto.randomUUID();
   const ara = "2026-06-01T10:00:00.000Z";
   const actA = crypto.randomUUID();
@@ -57,14 +62,23 @@ async function cicleAnterior(casalId: string, nomActivitat: string) {
   const exec = crypto.randomUUID();
   const participant = crypto.randomUUID();
   const sollicitud = crypto.randomUUID();
+  const actB = crypto.randomUUID();
+  const homonima = crypto.randomUUID();
+  const sollicitudHomonima = crypto.randomUUID();
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obertura_inscripcions, tancament_inscripcions,
       data_resolucio_prevista, estat, creat_el, actualitzat_el) VALUES (?, ?, 'Cicle anterior fictici', 2026, '2026-09-14', '2026-12-18',
       '2026-06-01T07:00:00.000Z', '2026-06-30T21:59:59.000Z', '2026-07-10', 'finalitzat', ?, ?)`).bind(id, casalId, ara, ara),
     env.DB.prepare(`INSERT INTO activitats (id, casal_id, cicle_id, nom, capacitat, estat, creat_el, actualitzat_el)
       VALUES (?, ?, ?, ?, 1, 'activa', ?, ?)`).bind(actA, casalId, id, nomActivitat, ara, ara),
-    env.DB.prepare(`INSERT INTO participants (id, casal_id, nom, cognom1, clau_ordenacio, telefon, creat_el, actualitzat_el)
-      VALUES (?, ?, 'Laia', 'Costa', ?, '600 000 004', ?, ?)`).bind(participant, casalId, clauOrdenacioPersona({ cognom1: "Costa", nom: "Laia" }), ara, ara),
+    env.DB.prepare(`INSERT INTO activitats (id, casal_id, cicle_id, nom, capacitat, estat, creat_el, actualitzat_el)
+      VALUES (?, ?, ?, ?, 1, 'activa', ?, ?)`).bind(actB, casalId, id, nomActivitatB, ara, ara),
+    env.DB.prepare(`INSERT INTO participants (id, casal_id, nom, cognom1, clau_ordenacio, telefon, document_identitat, data_naixement, creat_el, actualitzat_el)
+      VALUES (?, ?, 'Laia', 'Costa', ?, '600 000 999', '00000000T', '1950-03-02', ?, ?)`).bind(participant, casalId, clauOrdenacioPersona({ cognom1: "Costa", nom: "Laia" }), ara, ara),
+    env.DB.prepare(`INSERT INTO participants (id, casal_id, nom, cognom1, clau_ordenacio, telefon, document_identitat, data_naixement, creat_el, actualitzat_el)
+      VALUES (?, ?, 'Laia', 'Costa', ?, '600 000 004', '00000000T', '1948-11-20', ?, ?)`).bind(homonima, casalId, clauOrdenacioPersona({ cognom1: "Costa", nom: "Laia" }), ara, ara),
+    env.DB.prepare(`INSERT INTO sollicituds (id, casal_id, cicle_id, participant_id, numero, rebuda_el, estat, origen, codi_confirmacio, actualitzat_el)
+      VALUES (?, ?, ?, ?, 2, ?, 'validada', 'gestio', ?, ?)`).bind(sollicitudHomonima, casalId, id, homonima, ara, crypto.randomUUID(), ara),
     env.DB.prepare(`INSERT INTO sollicituds (id, casal_id, cicle_id, participant_id, numero, rebuda_el, estat, origen, codi_confirmacio, actualitzat_el)
       VALUES (?, ?, ?, ?, 1, ?, 'validada', 'gestio', ?, ?)`).bind(sollicitud, casalId, id, participant, ara, crypto.randomUUID(), ara),
     env.DB.prepare(`INSERT INTO configuracions_adjudicacio (id, cicle_id, versio, parametres, creat_el) VALUES (?, ?, 1, '{}', ?)`).bind(config, id, ara),
@@ -72,6 +86,8 @@ async function cicleAnterior(casalId: string, nomActivitat: string) {
       VALUES (?, ?, ?, ?, 1, 'confirmada', ?)`).bind(exec, casalId, id, config, ara),
     env.DB.prepare(`INSERT INTO places (id, casal_id, activitat_id, sollicitud_id, estat, posicio_espera, preferencia, execucio_origen_id, actualitzat_el)
       VALUES (?, ?, ?, ?, 'llista_espera', 1, 2, ?, ?)`).bind(crypto.randomUUID(), casalId, actA, sollicitud, exec, ara),
+    env.DB.prepare(`INSERT INTO places (id, casal_id, activitat_id, sollicitud_id, estat, posicio_espera, preferencia, execucio_origen_id, actualitzat_el)
+      VALUES (?, ?, ?, ?, 'llista_espera', 1, 1, ?, ?)`).bind(crypto.randomUUID(), casalId, actB, sollicitudHomonima, exec, ara),
   ]);
 }
 
