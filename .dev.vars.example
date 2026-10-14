@@ -1,0 +1,7 @@
+# Secrets i variables locals del Worker per a `npm run dev`.
+# Copieu-lo a `.dev.vars` (ignorat per git). A staging i producció, els secrets
+# es configuren amb `npx wrangler secret put NOM --env staging|production`.
+#
+# (Fase 2) Clau per signar les sessions de l'autenticació de desenvolupament.
+# Genereu-ne una d'aleatòria: node -e "console.log(crypto.randomBytes(32).toString('base64url'))"
+# SESSION_SECRET=
