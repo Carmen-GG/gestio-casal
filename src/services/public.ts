@@ -1,9 +1,10 @@
-import type { RespostaActivitatsPubliques, RespostaCiclesPubliques, RespostaSollicitudRegistrada } from "../../shared/api/public";
+import type { RespostaActivitatsPubliques, RespostaCasalsPublics, RespostaCiclesPubliques, RespostaSollicitudRegistrada } from "../../shared/api/public";
 import { api } from "./api";
 
 const codi = (c: string) => encodeURIComponent(c);
 
 export const serveiPublic = {
+  casals: (signal?: AbortSignal) => api.get<RespostaCasalsPublics>("/public/casals", signal),
   cicles: (codiCasal: string, signal?: AbortSignal) =>
     api.get<RespostaCiclesPubliques>(`/public/casals/${codi(codiCasal)}/cicles`, signal),
   activitats: (codiCasal: string, cicleId: string, signal?: AbortSignal) =>

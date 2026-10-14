@@ -24,6 +24,10 @@ export interface CasalPublic {
   municipi: string;
 }
 
+export interface RespostaCasalsPublics {
+  casals: CasalPublic[];
+}
+
 export interface ActivitatPublica {
   id: string;
   nom: string;

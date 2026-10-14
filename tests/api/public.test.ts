@@ -36,6 +36,16 @@ describe("API: salut i capçaleres", () => {
 });
 
 describe("API pública: cicles i activitats", () => {
+  it("llista els casals actius només amb codi, nom i municipi", async () => {
+    const { casal } = await crearEscenari();
+    const r = await peticio("/api/public/casals");
+    expect(r.status).toBe(200);
+    const { casals } = (await r.json()) as { casals: Record<string, unknown>[] };
+    const trobat = casals.find((c) => c.codi === casal.codi);
+    expect(trobat).toEqual({ codi: casal.codi, nom: casal.nom, municipi: casal.municipi });
+    for (const c of casals) expect(Object.keys(c).sort()).toEqual(["codi", "municipi", "nom"]);
+  });
+
   it("no mostra cicles en esborrany", async () => {
     const { casal } = await crearEscenari();
     const r = await peticio(`/api/public/casals/${casal.codi}/cicles`);

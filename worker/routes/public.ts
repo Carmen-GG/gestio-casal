@@ -12,6 +12,11 @@ import { ServeiSollicitudsPubliques } from "../services/sollicituds-publiques";
  * a la difusió i mai dades personals ni camps interns.
  */
 export const rutesPubliques = new Hono<Entorn>()
+  .get("/casals", async (c) => {
+    // Casals actius per triar-ne un a la portada: només nom, codi i municipi.
+    const casals = await c.get("repos").casals.llistar({ nomesActius: true });
+    return c.json({ casals: casals.map((k) => ({ codi: k.codi, nom: k.nom, municipi: k.municipi })) });
+  })
   .get("/casals/:codi/cicles", async (c) => {
     const servei = new ServeiConsultaPublica(c.get("repos"), c.get("rellotge"));
     return c.json(await servei.ciclesPublics(c.req.param("codi")));
