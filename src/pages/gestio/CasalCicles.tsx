@@ -19,6 +19,7 @@ export function CasalCicles() {
   const consulta = useConsulta((s) => serveiGestio.cicles(casalId, s), [casalId, versio]);
   const casal = jo.casals.find((c) => c.id === casalId);
   const [exit, setExit] = useState("");
+  const senseCicles = consulta.tipus === "dades" && consulta.dades.cicles.length === 0;
 
   if (!casal) return <p role="alert" className="avis avis--error">No teniu accés a aquest casal.</p>;
 
@@ -35,7 +36,10 @@ export function CasalCicles() {
         {consulta.tipus === "carregant" && <Carregant />}
         {consulta.tipus === "error" && <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />}
         {consulta.tipus === "dades" && (consulta.dades.cicles.length === 0 ? (
-          <p>Encara no hi ha cap cicle.</p>
+          <p>
+            Encara no hi ha cap cicle.
+            {pot("cicles.gestionar") && " Per començar, creeu-ne un a la secció «Nou cicle»: després hi podreu afegir les activitats i obrir les inscripcions."}
+          </p>
         ) : (
           <div className="taula-contenidor" tabIndex={0} role="region" aria-label="Cicles">
             <table className="taula">
@@ -56,7 +60,8 @@ export function CasalCicles() {
       </Seccio>
 
       {pot("cicles.gestionar") && (
-        <Seccio titol="Nou cicle" obertaInicial={false}>
+        // Sense cap cicle, el formulari s'obre directament: és el primer pas al casal.
+        <Seccio key={senseCicles ? "obert" : "tancat"} titol="Nou cicle" obertaInicial={senseCicles}>
           <FormCicle textBoto="Crea el cicle" onDesar={async (dades) => {
             const { cicle } = await serveiGestio.crearCicle(casalId, dades);
             setExit(`S'ha creat el cicle «${cicle.nom}».`);
