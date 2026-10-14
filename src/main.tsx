@@ -16,6 +16,9 @@ import { DetallSollicitud } from "./pages/gestio/DetallSollicitud";
 import { DetallAdjudicacio } from "./pages/gestio/DetallAdjudicacio";
 import { AssistenciaActivitat } from "./pages/gestio/AssistenciaActivitat";
 import { PantallaSorteig } from "./pages/gestio/PantallaSorteig";
+import { CartellsInici } from "./pages/cartells/CartellsInici";
+import { Plantilles } from "./pages/cartells/Plantilles";
+import { DetallPlantilla } from "./pages/cartells/DetallPlantilla";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -38,6 +41,9 @@ const router = createBrowserRouter([
           { path: ":casalId/sollicituds/:sollicitudId", element: <DetallSollicitud /> },
           { path: ":casalId/adjudicacions/:execucioId", element: <DetallAdjudicacio /> },
           { path: ":casalId/activitats/:activitatId/assistencia", element: <AssistenciaActivitat /> },
+          { path: ":casalId/cartells", element: <CartellsInici /> },
+          { path: ":casalId/cartells/plantilles", element: <Plantilles /> },
+          { path: ":casalId/cartells/plantilles/:plantillaId", element: <DetallPlantilla /> },
         ],
       },
       { path: "*", element: <NoTrobada /> },

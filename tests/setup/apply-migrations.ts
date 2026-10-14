@@ -7,6 +7,7 @@ declare global {
       APP_ENV: string;
       ALLOWED_ORIGINS: string;
       LIMIT_SOLLICITUDS?: RateLimit;
+      FITXERS: R2Bucket;
       TEST_MIGRATIONS: import("cloudflare:test").D1Migration[];
     }
   }

@@ -166,5 +166,34 @@ Criteris:
 - Les activitats inactives o en esborrany no es compten, i les arxivades tampoc.
 - No es desa cap xifra: cada consulta torna a calcular-les.
 
+## PG-Cartells
+
+Totes exigeixen sessió. Les rutes amb `{casalId}` comproven el permís al casal; les de recursos comuns
+(`/api/gestio/cartells/...`) exigeixen el permís amb abast global. Detalls a [cartells.md](cartells.md).
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| POST | `/casals/{casalId}/cartells/fitxers?us=&nom=` | segons l'ús (vegeu cartells.md) | Puja un fitxer del casal. Cos: el fitxer tal qual, amb el seu `Content-Type` |
+| POST | `/cartells/fitxers?us=&nom=` | global, segons l'ús | Puja un recurs comú |
+| GET | `/casals/{casalId}/cartells/fitxers/{fitxerId}` | `cartells.consultar` | Baixa un fitxer del casal o comú |
+| GET | `/casals/{casalId}/cartells/plantilles?tipus=` | `cartells.consultar` | Plantilles comunes i del casal (només actives sense `cartells.plantilles`) |
+| GET | `/casals/{casalId}/cartells/plantilles/{id}` | `cartells.consultar` | Fitxa d'una plantilla |
+| POST | `/casals/{casalId}/cartells/plantilles` | `cartells.plantilles` | Crea una plantilla del casal (en esborrany) |
+| POST | `/cartells/plantilles` | `cartells.plantilles` global | Crea una plantilla comuna (en esborrany) |
+| PATCH | `/casals/{casalId}/cartells/plantilles/{id}` | `cartells.plantilles` (global si és comuna) | Canvia nom, estat, estació, temàtica, identitat gràfica o rols dels camps. Exigeix `versio` |
+
+Errors propis:
+- `tipus_fitxer_no_permes` (415): el tipus no s'accepta per a aquest ús.
+- `fitxer_no_valid` (415): el contingut no correspon al tipus.
+- `fitxer_massa_gran` (413).
+- `plantilla_existent` (409): el fitxer ja és una plantilla.
+- `plantilla_incompleta` (409): falten el títol o la fotografia per activar-la.
+- `transicio_no_permesa` (409).
+- `conflicte_concurrencia` (409).
+- `emmagatzematge_no_configurat` (503): falta el bucket R2.
+
+La pujada d'un fitxer retorna 201 amb `{ fitxer, existent: false }`, o 200 amb `existent: true` si el mateix
+contingut ja s'havia pujat al mateix àmbit i ús.
+
 ## Previst
 - Es publicarà una especificació OpenAPI quan hi hagi els endpoints de gestió.

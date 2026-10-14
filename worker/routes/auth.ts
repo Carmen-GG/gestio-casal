@@ -50,6 +50,7 @@ export const rutesAuth = new Hono<Entorn>()
       usuari: { id: usuari.id, nom_visible: usuari.usuari.nom_visible, email: usuari.usuari.email },
       administracio_central: ids === null,
       pot_crear_casals: usuari.esGlobal("casal.configurar"),
+      pot_gestionar_plantilles_comunes: usuari.esGlobal("cartells.plantilles"),
       casals: casals.map((k) => ({ id: k.id, codi: k.codi, nom: k.nom, actiu: k.actiu, permisos: usuari.permisosA(k.id) })),
     });
   });

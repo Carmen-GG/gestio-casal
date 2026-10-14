@@ -21,6 +21,8 @@
   "dependencies": {
     "exceljs": "^4.4.0",
     "hono": "^4.13.13",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0",

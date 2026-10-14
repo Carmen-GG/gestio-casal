@@ -85,11 +85,12 @@ una migració nova. Procediment i còpies de seguretat: [`docs/operacions.md`](d
 - [Operacions, còpies i recuperació](docs/operacions.md)
 - [Requisits pendents de validació institucional](docs/validacio-institucional.md)
 - [Auditoria de PG-Cartells](docs/auditoria-pg-cartells.md)
+- [PG-Cartells: plantilles i fitxers](docs/cartells.md)
 
 ## Limitacions conegudes
 - Sense formulari d'inscripció (Fase 3). L'autenticació corporativa (Entra ID) està preparada però no implementada.
 - Sense limitació de peticions ni protecció antibots als endpoints públics (Fase 3: Rate Limiting de
   Cloudflare i Turnstile).
 - El flux de desplegament no s'ha pogut executar: falten el compte i els identificadors de Cloudflare.
-- Mòdul PG-Cartells bloquejat: el repositori original és buit.
+- Mòdul PG-Cartells en curs: plantilles fetes; generadors, fotografies i historial pendents ([cartells.md](docs/cartells.md)).
 - Les regles d'adjudicació oficials s'han de validar abans d'implementar-les com a configuració.

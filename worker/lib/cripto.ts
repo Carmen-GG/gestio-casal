@@ -9,3 +9,9 @@ export async function resumSha256(valor: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(valor));
   return [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
+
+/** Resum SHA-256 en hexadecimal del contingut d'un fitxer. */
+export async function resumSha256Bytes(dades: ArrayBuffer | Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", dades);
+  return [...new Uint8Array(digest)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}

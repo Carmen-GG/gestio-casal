@@ -236,3 +236,34 @@ main:focus { outline: none; }
 .xifres > div { border: 1px solid var(--color-vora); border-radius: 0.5rem; padding: 0.6rem 0.8rem; }
 .xifres dt { font-size: 0.85rem; color: var(--color-text-secundari); }
 .xifres dd { margin: 0.2rem 0 0; font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- PG-Cartells ---------- */
+.barra-gestio__moduls { display: flex; gap: 0.25rem; list-style: none; margin: 0; padding: 0; }
+.barra-gestio__moduls a { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 999px; text-decoration: none; }
+.barra-gestio__moduls a[aria-current="page"] { background: var(--color-primari); color: #fff; font-weight: 600; }
+.llista-seccions { padding-left: 1.2rem; }
+.llista-seccions li { margin: 0.4rem 0; }
+.llista-seccions a { font-weight: 600; }
+.graella-plantilles { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); }
+.targeta--plantilla { display: flex; flex-direction: column; gap: 0.35rem; padding: 0.6rem; }
+.targeta__imatge { width: 100%; aspect-ratio: 1 / 1.1; object-fit: contain; object-position: top; background: var(--color-fons); border-radius: 0.3rem; }
+.targeta__titol { font-weight: 600; }
+.targeta__meta { color: var(--color-text-secundari); font-size: 0.9rem; }
+.imatge-fitxer { max-width: 100%; display: block; }
+.imatge-fitxer--buida { background: var(--color-fons); min-height: 8rem; border-radius: 0.3rem; }
+.etiqueta--esborrany { border-color: #8a5a00; color: #5c3c00; }
+.etiqueta--arxivada { color: var(--color-text-secundari); }
+.etiqueta--activa { border-color: var(--color-exit); color: var(--color-exit); }
+.fitxa-plantilla { margin: 1rem 0; }
+.fitxa-plantilla__disseny { margin: 0; max-width: 34rem; }
+.fitxa-plantilla__disseny figcaption { color: var(--color-text-secundari); font-size: 0.9rem; margin-top: 0.4rem; }
+.disseny-camps { position: relative; border: 1px solid var(--color-vora); }
+.disseny-camps__imatge { display: block; width: 100%; height: auto; }
+.disseny-camps__camp { position: absolute; border: 2px solid #0b5cad; background: rgba(11, 92, 173, 0.12); color: #06386b; font-size: 0.7rem;
+  font-weight: 700; line-height: 1.1; padding: 0 0.15rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.disseny-camps__camp span, .disseny-camps__camp { text-shadow: 0 0 2px #fff, 0 0 2px #fff; }
+.disseny-camps__camp--sense { border-style: dashed; border-color: #6b6b6b; background: rgba(255, 255, 255, 0.35); color: #3d3d3d; }
+.opcio { display: flex; gap: 0.5rem; align-items: center; margin: 0.3rem 0; }
+.dades { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; }
+.dades dt { font-weight: 600; }
+.dades dd { margin: 0; }

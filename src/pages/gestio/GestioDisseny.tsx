@@ -23,6 +23,8 @@ export function GestioDisseny() {
   }
 
   const jo = consulta.dades;
+  const casalActual = jo.casals.find((c) => c.id === casalId);
+  const esCartells = /^\/gestio\/[^/]+\/cartells(\/|$)/.test(ubicacio.pathname);
   const context: ContextGestio = { jo, recarregarJo: () => setVersio((v) => v + 1) };
 
   async function sortir() {
@@ -46,6 +48,14 @@ export function GestioDisseny() {
               {jo.casals.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
             </select>
           </label>
+        )}
+        {casalActual && (
+          <ul className="barra-gestio__moduls" aria-label="Mòduls">
+            <li><Link to={`/gestio/${casalActual.id}`} aria-current={esCartells ? undefined : "page"}>Inscripcions</Link></li>
+            {casalActual.permisos.includes("cartells.consultar") && (
+              <li><Link to={`/gestio/${casalActual.id}/cartells`} aria-current={esCartells ? "page" : undefined}>PG-Cartells</Link></li>
+            )}
+          </ul>
         )}
         <span className="barra-gestio__usuari">{jo.usuari.nom_visible}</span>
         <button type="button" className="boto boto--secundari boto--petit" onClick={sortir} disabled={sortint}>

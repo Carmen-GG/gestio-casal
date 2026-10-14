@@ -10,6 +10,7 @@ import type { CampPersonal } from "../../shared/domain/formulari";
 import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMotor } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
 import type { EstatAssistencia } from "../../shared/domain/assistencia";
+import type { CampPlantilla, Estacio, EstatPlantilla, FormatSortida, TipusPlantilla, UsFitxer } from "../../shared/domain/cartells";
 
 export interface Casal {
   id: string;
@@ -126,7 +127,7 @@ export interface EntradaAuditoria {
  */
 export interface CondicioOperacio {
   taula: "casals" | "cicles" | "activitats" | "participants" | "sollicituds" | "execucions_adjudicacio" | "places" | "sessions_activitat"
-    | "sortejos_adjudicacio";
+    | "sortejos_adjudicacio" | "cartells_plantilles";
   id: string;
   operacio: string;
 }
@@ -604,5 +605,60 @@ export interface Repositoris {
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
   indicadors: RepositoriIndicadors;
+  cartells: RepositoriCartells;
   unitat: UnitatDeTreball;
+}
+
+// ---------- PG-Cartells ----------
+
+export interface FitxerCartells {
+  id: string;
+  casal_id: string | null;
+  us: UsFitxer;
+  clau: string;
+  tipus_mime: string;
+  mida: number;
+  sha256: string;
+  nom_original: string;
+  pujat_per: string;
+  pujat_el: string;
+}
+
+export interface PlantillaCartells {
+  id: string;
+  casal_id: string | null;
+  fitxer_id: string;
+  previsualitzacio_id: string | null;
+  nom: string;
+  tipus: TipusPlantilla;
+  estacio: Estacio | null;
+  linies_titol: number;
+  amb_qr: boolean;
+  tematica: string | null;
+  identitat_grafica: string | null;
+  estat: EstatPlantilla;
+  pagina_amplada: number;
+  pagina_alcada: number;
+  format_sortida: FormatSortida;
+  camps: CampPlantilla[];
+  versio: number;
+  creat_per: string;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export type NovaPlantillaCartells = Omit<PlantillaCartells, "id" | "versio" | "creat_el" | "actualitzat_el" | "estat">;
+
+export interface RepositoriCartells {
+  operacioCrearFitxer(f: FitxerCartells): Operacio;
+  fitxer(id: string): Promise<FitxerCartells | null>;
+  /** Fitxers amb el mateix contingut i el mateix àmbit (casal o comú), per evitar duplicats. */
+  fitxersPerContingut(sha256: string, us: UsFitxer, casalId: string | null): Promise<FitxerCartells[]>;
+  operacioCrearPlantilla(id: string, p: NovaPlantillaCartells, ara: string, operacio: string): Operacio;
+  operacioActualitzarPlantilla(id: string, versioActual: number, canvis: Partial<Pick<PlantillaCartells,
+    "nom" | "estat" | "estacio" | "tematica" | "identitat_grafica" | "camps" | "format_sortida">>, ara: string, operacio: string): Operacio;
+  plantilla(id: string): Promise<PlantillaCartells | null>;
+  plantillaPerFitxer(fitxerId: string): Promise<PlantillaCartells | null>;
+  /** Plantilles comunes i, si s'indica, les específiques del casal. */
+  plantilles(filtre: { casalId: string | null; tipus?: TipusPlantilla; estats?: EstatPlantilla[] }): Promise<PlantillaCartells[]>;
 }

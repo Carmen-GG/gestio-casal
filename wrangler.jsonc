@@ -23,6 +23,10 @@
   "ratelimits": [
     { "name": "LIMIT_SOLLICITUDS", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
   ],
+  // Fitxers de PG-Cartells (plantilles, fotografies, materials). Bucket privat: només s'hi accedeix des del Worker.
+  "r2_buckets": [
+    { "binding": "FITXERS", "bucket_name": "casal-gestio-fitxers-local" }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -41,6 +45,9 @@
       "ratelimits": [
         { "name": "LIMIT_SOLLICITUDS", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
       ],
+      "r2_buckets": [
+        { "binding": "FITXERS", "bucket_name": "casal-gestio-fitxers-staging" }
+      ],
       "d1_databases": [
         {
           "binding": "DB",
@@ -58,6 +65,9 @@
       },
       "ratelimits": [
         { "name": "LIMIT_SOLLICITUDS", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+      ],
+      "r2_buckets": [
+        { "binding": "FITXERS", "bucket_name": "casal-gestio-fitxers-production" }
       ],
       "d1_databases": [
         {
