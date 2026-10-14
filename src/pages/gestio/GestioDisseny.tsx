@@ -40,7 +40,7 @@ export function GestioDisseny() {
     <div className="gestio">
       <nav className="barra-gestio" aria-label="Panell de gestió">
         <Link to="/gestio" className="barra-gestio__titol">Panell de gestió</Link>
-        {jo.casals.length > 1 && (
+        {jo.casals.length > 0 && (
           <label className="barra-gestio__casal">
             <span>Casal:</span>
             <select value={casalId ?? ""} onChange={(e) => e.target.value && navegar(`/gestio/${e.target.value}`)}>
