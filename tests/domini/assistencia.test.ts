@@ -11,9 +11,9 @@ describe("assistència: domini", () => {
     expect(datesSessions([1, 2, 3, 4, 5, 6, 7], "2020-01-01", "2030-01-01")).toHaveLength(200);
   });
 
-  it("calcula el percentatge sense comptar les absències justificades i només amb prou dades", () => {
-    expect(resumAssistencia(["present", "absent"])).toEqual({ presents: 1, absents: 1, justificades: 0, percentatge: null });
-    expect(resumAssistencia(["present", "present", "absent", "absencia_justificada"]).percentatge).toBe(67);
+  it("calcula el percentatge amb totes les absències i només amb prou dades", () => {
+    expect(resumAssistencia(["present", "absent"])).toEqual({ presents: 1, absents: 1, percentatge: null });
+    expect(resumAssistencia(["present", "present", "absent", "absent"]).percentatge).toBe(50);
     expect(resumAssistencia(["present", "present", "present"]).percentatge).toBe(100);
   });
 

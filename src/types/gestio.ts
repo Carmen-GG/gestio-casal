@@ -174,7 +174,7 @@ export interface Sessio {
   id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada"; motiu_cancellacio: string | null; versio: number; marques: number;
 }
-export interface ResumAssistencia { presents: number; absents: number; justificades: number; percentatge: number | null }
+export interface ResumAssistencia { presents: number; absents: number; percentatge: number | null }
 export interface PersonaAssistencia extends FilaPlaca {
   marques: Record<string, { estat: EstatAssistencia; versio: number }>; resum: ResumAssistencia; sota_llindar: boolean;
 }

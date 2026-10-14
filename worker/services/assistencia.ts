@@ -322,14 +322,14 @@ export class ServeiAssistencia {
       const marquesA = marques.filter((m) => ids.has(m.sessio_id));
       for (const p of this.participants(places.filter((x) => x.activitat_id === a.id), marquesA)) {
         const r = resumAssistencia(marquesA.filter((m) => m.placa_id === p.id).map((m) => m.estat));
-        files.push([a.nom, p.numero, nomPersona(p.participant), r.presents, r.absents, r.justificades,
+        files.push([a.nom, p.numero, nomPersona(p.participant), r.presents, r.absents,
           r.percentatge, sotaLlindar(r.percentatge, cicle.llindar_assistencia) ? "Sí" : "No"]);
       }
     }
     return {
       titol: `Assistència · ${cicle.nom}`,
       fitxer: `assistencia-${cicle.nom.normalize("NFD").replace(/[^\w]+/g, "-").toLowerCase().slice(0, 50)}.xlsx`,
-      columnes: ["Activitat", "Núm. sol·licitud", "Persona", "Presències", "Absències", "Absències justificades", "% d'assistència",
+      columnes: ["Activitat", "Núm. sol·licitud", "Persona", "Presències", "Absències", "% d'assistència",
         cicle.llindar_assistencia ? `Per sota del ${cicle.llindar_assistencia}%` : "Per sota del llindar (no configurat)"],
       files,
     };

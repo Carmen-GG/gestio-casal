@@ -127,7 +127,7 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
         </div>
       ))}
       <p className="text-secundari">
-        El percentatge compta les presències sobre les sessions amb presència o absència (les absències justificades no compten)
+        El percentatge compta les presències sobre totes les sessions registrades (totes les absències compten igual)
         i només es calcula a partir de {MINIM_SESSIONS_PERCENTATGE} sessions. No comporta cap pèrdua de plaça automàtica.
       </p>
 
