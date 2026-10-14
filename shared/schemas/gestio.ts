@@ -42,6 +42,8 @@ const campsCicle = {
   tancament_inscripcions: dataHora,
   data_resolucio_prevista: data,
   configuracio_formulari: configuracioFormulari.optional(),
+  /** Percentatge mínim d'assistència per identificar persones per sota (sense cap acció automàtica). */
+  llindar_assistencia: z.number().int().min(1, "Mínim 1%.").max(100, "Màxim 100%.").nullable().optional(),
 };
 
 type DatesCicle = Partial<Record<"data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions", string>>;

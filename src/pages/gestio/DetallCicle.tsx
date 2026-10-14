@@ -20,6 +20,7 @@ import { ImportacioExportacio } from "./ImportacioExportacio";
 import { LlistatSollicituds } from "./Sollicituds";
 import { Adjudicacio } from "./Adjudicacio";
 import { Places } from "./Places";
+import { Assistencia } from "./Assistencia";
 
 /** Estats del cicle en què pot existir una adjudicació confirmada. */
 const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat", "finalitzat", "arxivat"];
@@ -42,8 +43,8 @@ export function DetallCicle() {
   const pot = usePermisos(casalId);
   const [versio, setVersio] = useState(0);
   const recarrega = () => setVersio((v) => v + 1);
-  const detall = useConsulta((s) => serveiGestio.cicle(casalId, cicleId, s), [casalId, cicleId, versio]);
-  const activitats = useConsulta((s) => serveiGestio.activitats(casalId, cicleId, s), [casalId, cicleId, versio]);
+  const detall = useConsulta((s) => serveiGestio.cicle(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
+  const activitats = useConsulta((s) => serveiGestio.activitats(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
   const [editantCicle, setEditantCicle] = useState(false);
   const [editantActivitat, setEditantActivitat] = useState<string | null>(null);
   const [exit, setExit] = useState("");
@@ -215,6 +216,12 @@ export function DetallCicle() {
       {pot("sollicituds.consultar") && ESTATS_AMB_PLACES.includes(cicle.estat) && (
         <Seccio titol="Places i llistes d'espera" obertaInicial={["adjudicat", "publicat"].includes(cicle.estat)}>
           <Places casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} onCanvi={() => setVersioPlaces((v) => v + 1)} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && ["adjudicat", "publicat", "finalitzat"].includes(cicle.estat) && (
+        <Seccio titol="Assistència" obertaInicial={cicle.estat === "publicat"}>
+          <Assistencia casalId={casalId} cicle={cicle} pot={pot} onCanviCicle={recarrega} />
         </Seccio>
       )}
 

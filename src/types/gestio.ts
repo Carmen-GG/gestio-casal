@@ -3,6 +3,7 @@ import type { EstatCicle, TipusTransicio } from "../../shared/domain/cicles";
 import type { ConfiguracioFormulari } from "../../shared/domain/formulari";
 import type { ParametresAdjudicacio } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
+import type { EstatAssistencia } from "../../shared/domain/assistencia";
 
 export interface Casal {
   id: string; codi: string; nom: string; municipi: string; adreca: string | null; actiu: boolean; versio: number;
@@ -22,7 +23,7 @@ export interface Jo {
 export interface Cicle {
   id: string; casal_id: string; nom: string; any: number; data_inici: string; data_fi: string;
   obertura_inscripcions: string; tancament_inscripcions: string; data_resolucio_prevista: string;
-  estat: EstatCicle; configuracio_formulari: Record<string, unknown>; versio: number;
+  estat: EstatCicle; configuracio_formulari: Record<string, unknown>; llindar_assistencia: number | null; versio: number;
   creat_el: string; actualitzat_el: string;
 }
 
@@ -130,4 +131,35 @@ export interface RespostaPlaces {
 }
 export interface MovimentPlaca {
   id: number; estat_anterior: EstatPlaca | null; estat_nou: EstatPlaca; motiu: string | null; execucio_id: string | null; creat_el: string;
+}
+
+// ---------- Assistència ----------
+export type { EstatAssistencia };
+export interface Sessio {
+  id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null;
+  estat: "prevista" | "realitzada" | "cancellada"; motiu_cancellacio: string | null; versio: number; marques: number;
+}
+export interface ResumAssistencia { presents: number; absents: number; justificades: number; percentatge: number | null }
+export interface PersonaAssistencia extends FilaPlaca {
+  marques: Record<string, { estat: EstatAssistencia; versio: number }>; resum: ResumAssistencia; sota_llindar: boolean;
+}
+export interface FullAssistencia {
+  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null };
+  cicle: { id: string; nom: string; estat: EstatCicle; llindar_assistencia: number | null; data_inici: string; data_fi: string };
+  sessions: Sessio[]; persones: PersonaAssistencia[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
+}
+export interface ResumAssistenciaCicle {
+  llindar_assistencia: number | null;
+  activitats: { activitat_id: string; activitat: string; horari: string | null; admeses: number; sessions: number; realitzades: number;
+    cancellades: number; nombre_sessions_previst: number | null; mitjana: number | null; sota_llindar: number }[];
+}
+export interface DadesGraelles {
+  casal: string; cicle: string; telefon: boolean; llegenda: string;
+  totals: { activitats: number; admeses: number; espera: number };
+  graelles: {
+    activitat: string; horari: string | null; capacitat: number; espai: string | null;
+    sessions: { id: string; data: string }[]; columnes_buides: number;
+    admeses: { ordre: number; numero: number; persona: string; telefon: string | null; marques: string[] }[];
+    espera: { posicio: number | null; numero: number; persona: string; telefon: string | null; oferta_pendent: boolean }[];
+  }[];
 }

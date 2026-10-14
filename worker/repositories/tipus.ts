@@ -9,6 +9,7 @@ import type { EstatCicle } from "../../shared/domain/cicles";
 import type { CampPersonal } from "../../shared/domain/formulari";
 import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMotor } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
+import type { EstatAssistencia } from "../../shared/domain/assistencia";
 
 export interface Casal {
   id: string;
@@ -43,12 +44,13 @@ export interface Cicle {
   data_resolucio_prevista: string;
   estat: EstatCicle;
   configuracio_formulari: Record<string, unknown>;
+  llindar_assistencia: number | null;
   versio: number;
   creat_el: string;
   actualitzat_el: string;
 }
 
-export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari"> & {
+export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia"> & {
   configuracio_formulari?: Record<string, unknown>;
 };
 
@@ -119,7 +121,7 @@ export interface EntradaAuditoria {
  * `taula` ha de portar el testimoni aleatori `operacio` que aquella escriptura hi desa.
  */
 export interface CondicioOperacio {
-  taula: "casals" | "cicles" | "activitats" | "participants" | "sollicituds" | "execucions_adjudicacio" | "places";
+  taula: "casals" | "cicles" | "activitats" | "participants" | "sollicituds" | "execucions_adjudicacio" | "places" | "sessions_activitat";
   id: string;
   operacio: string;
 }
@@ -189,7 +191,7 @@ export interface RepositoriSessions {
 
 export type CanvisCicle = Partial<Pick<Cicle,
   | "nom" | "any" | "data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions"
-  | "data_resolucio_prevista" | "configuracio_formulari">>;
+  | "data_resolucio_prevista" | "configuracio_formulari" | "llindar_assistencia">>;
 
 export interface RepositoriCicles {
   /** Sempre filtra per casal per evitar accessos horitzontals. */
@@ -489,6 +491,47 @@ export interface RepositoriAdjudicacio {
   operacioRegistreMoviment(d: { placa_id: string; des: EstatPlaca; cap: EstatPlaca; motiu: string; usuari_id: string; operacio: string }, ara: string): Operacio;
 }
 
+// ---------- Assistència ----------
+export interface Sessio {
+  id: string;
+  activitat_id: string;
+  data: string;
+  hora_inici: string | null;
+  hora_fi: string | null;
+  estat: "prevista" | "realitzada" | "cancellada";
+  motiu_cancellacio: string | null;
+  versio: number;
+  /** Nombre de marques registrades en aquesta sessió. */
+  marques: number;
+}
+
+export interface Marca {
+  sessio_id: string;
+  placa_id: string;
+  estat: EstatAssistencia;
+  versio: number;
+  registrat_el: string;
+}
+
+export interface RepositoriAssistencia {
+  sessions(activitatId: string): Promise<Sessio[]>;
+  sessionsCicle(cicleId: string): Promise<Sessio[]>;
+  sessio(casalId: string, id: string): Promise<(Sessio & { cicle_id: string }) | null>;
+  /** Insereix les sessions que encara no existeixen (mateixa activitat, data i hora d'inici). */
+  operacioCrearSessions(sessions: { id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null }[], usuariId: string, ara: string): Operacio;
+  operacioCancellarSessio(id: string, versio: number, motiu: string, ara: string, operacio: string): Operacio;
+  marquesActivitat(activitatId: string): Promise<Marca[]>;
+  marquesCicle(cicleId: string): Promise<Marca[]>;
+  operacioNovaMarca(d: { sessio_id: string; placa_id: string; estat: EstatAssistencia; usuari_id: string; operacio: string }, ara: string): Operacio;
+  operacioModificarMarca(d: { sessio_id: string; placa_id: string; estat: EstatAssistencia; versio: number; usuari_id: string; operacio: string }, ara: string): Operacio;
+  /**
+   * Historial d'una modificació. Fa fallar tot el lot si la modificació no ha tingut
+   * efecte (algú altre l'ha canviada mentrestant).
+   */
+  operacioHistorialMarca(d: { casal_id: string; sessio_id: string; placa_id: string; data: string; abans: EstatAssistencia; despres: EstatAssistencia; motiu: string; usuari_id: string; operacio: string }, ara: string): Operacio;
+  operacioSessioRealitzada(sessioId: string, ara: string): Operacio;
+}
+
 /** Executa un conjunt d'operacions de manera atòmica (tot o res). */
 export interface UnitatDeTreball {
   executar(operacions: Operacio[]): Promise<{ canvis: number }[]>;
@@ -505,5 +548,6 @@ export interface Repositoris {
   sollicituds: RepositoriSollicituds;
   gestioSollicituds: RepositoriGestioSollicituds;
   adjudicacio: RepositoriAdjudicacio;
+  assistencia: RepositoriAssistencia;
   unitat: UnitatDeTreball;
 }
