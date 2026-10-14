@@ -79,7 +79,9 @@ main:focus { outline: none; }
 .visualment-amagat { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .barra-gestio { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; padding: 0.5rem 0 1rem; border-bottom: 1px solid var(--color-vora); margin-bottom: 1rem; }
 .barra-gestio__titol { font-weight: 700; text-decoration: none; }
-.barra-gestio__casal { display: flex; gap: 0.4rem; align-items: center; }
+.barra-gestio__casal { display: flex; gap: 0.4rem; align-items: center; flex: 1 1 18rem; min-width: 0; max-width: 34rem; }
+/* Els noms de casal són llargs: el desplegable s'encongeix i no fa sortir la pàgina de la pantalla. */
+.barra-gestio__casal select { flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
 .barra-gestio__usuari { margin-left: auto; color: var(--color-text-secundari); }
 
 .seccio { background: var(--color-superficie); border: 1px solid var(--color-vora); border-radius: var(--radi); margin-bottom: var(--espai); }
