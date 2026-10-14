@@ -122,12 +122,12 @@ export function Adjudicacio({ casalId, cicleId, pot, versioCicle }: {
 function ResumParametres({ parametres: p }: { parametres: ParametresAdjudicacio }) {
   return (
     <dl className="dades">
-      <dt>Ordre de prioritat</dt><dd>{ETIQUETES_CRITERI[p.criteri_ordre]}</dd>
-      <dt>Mètode</dt><dd>{ETIQUETES_METODE[p.metode]}</dd>
-      <dt>Màxim d'activitats per persona</dt><dd>{p.maxim_activitats_per_persona ?? "Sense límit"}</dd>
-      <dt>Prioritat per continuïtat</dt><dd>{p.prioritat_continuitat ? "Sí" : "No"}</dd>
-      <dt>Llista d'espera</dt><dd>{p.llista_espera ? "Sí" : "No"}</dd>
-      <dt>Sol·licituds que hi entren</dt><dd>{p.estats_sollicitud.map((e) => ETIQUETES_ESTAT_SOLLICITUD[e]).join(", ")}</dd>
+      <div><dt>Ordre de prioritat</dt><dd>{ETIQUETES_CRITERI[p.criteri_ordre]}</dd></div>
+      <div><dt>Mètode</dt><dd>{ETIQUETES_METODE[p.metode]}</dd></div>
+      <div><dt>Màxim d'activitats per persona</dt><dd>{p.maxim_activitats_per_persona ?? "Sense límit"}</dd></div>
+      <div><dt>Prioritat per continuïtat</dt><dd>{p.prioritat_continuitat ? "Sí" : "No"}</dd></div>
+      <div><dt>Llista d'espera</dt><dd>{p.llista_espera ? "Sí" : "No"}</dd></div>
+      <div><dt>Sol·licituds que hi entren</dt><dd>{p.estats_sollicitud.map((e) => ETIQUETES_ESTAT_SOLLICITUD[e]).join(", ")}</dd></div>
     </dl>
   );
 }

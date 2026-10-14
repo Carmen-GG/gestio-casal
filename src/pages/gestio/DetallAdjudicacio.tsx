@@ -68,19 +68,19 @@ export function DetallAdjudicacio() {
 
       <Seccio titol="Resum">
         <dl className="dades">
-          <dt>Calculada</dt><dd>{formataDataHora(e.executada_el)} amb els paràmetres v{e.configuracio_versio}</dd>
-          {p && <><dt>Ordre de prioritat</dt><dd>{ETIQUETES_CRITERI[p.criteri_ordre]}{e.lletra_sorteig ? ` · lletra ${e.lletra_sorteig}` : ""}</dd></>}
-          {e.llavor_desempat && <><dt>Llavor del sorteig</dt><dd className="codi">{e.llavor_desempat}</dd></>}
-          {p && <><dt>Mètode</dt><dd>{ETIQUETES_METODE[p.metode]}</dd></>}
-          {p && <><dt>Màxim d'activitats per persona</dt><dd>{p.maxim_activitats_per_persona ?? "Sense límit"}</dd></>}
-          {p?.prioritat_continuitat && <><dt>Continuïtat</dt><dd>
+          <div><dt>Calculada</dt><dd>{formataDataHora(e.executada_el)} amb els paràmetres v{e.configuracio_versio}</dd></div>
+          {p && <div><dt>Ordre de prioritat</dt><dd>{ETIQUETES_CRITERI[p.criteri_ordre]}{e.lletra_sorteig ? ` · lletra ${e.lletra_sorteig}` : ""}</dd></div>}
+          {e.llavor_desempat && <div><dt>Llavor del sorteig</dt><dd className="codi">{e.llavor_desempat}</dd></div>}
+          {p && <div><dt>Mètode</dt><dd>{ETIQUETES_METODE[p.metode]}</dd></div>}
+          {p && <div><dt>Màxim d'activitats per persona</dt><dd>{p.maxim_activitats_per_persona ?? "Sense límit"}</dd></div>}
+          {p?.prioritat_continuitat && <div><dt>Continuïtat</dt><dd>
             {e.resum.cicle_anterior ? `Respecte del cicle «${e.resum.cicle_anterior.nom}» (${e.resum.parelles_continuitat ?? 0} casos)` : "No hi ha cap cicle anterior adjudicat"}
-          </dd></>}
-          <dt>Sol·licituds adjudicades</dt><dd>{e.resum.sollicituds ?? 0} ({e.resum.sollicituds_fora_adjudicacio ?? 0} no hi entren pel seu estat)</dd>
-          <dt>Amb almenys una plaça</dt><dd>{e.resum.sollicituds_amb_placa ?? 0}</dd>
-          <dt>Sense cap plaça</dt><dd>{e.resum.sollicituds_sense_placa ?? 0}</dd>
-          {e.confirmada_el && <><dt>Confirmada</dt><dd>{formataDataHora(e.confirmada_el)}</dd></>}
-          {e.motiu && <><dt>Motiu</dt><dd>{e.motiu}</dd></>}
+          </dd></div>}
+          <div><dt>Sol·licituds adjudicades</dt><dd>{e.resum.sollicituds ?? 0} ({e.resum.sollicituds_fora_adjudicacio ?? 0} no hi entren pel seu estat)</dd></div>
+          <div><dt>Amb almenys una plaça</dt><dd>{e.resum.sollicituds_amb_placa ?? 0}</dd></div>
+          <div><dt>Sense cap plaça</dt><dd>{e.resum.sollicituds_sense_placa ?? 0}</dd></div>
+          {e.confirmada_el && <div><dt>Confirmada</dt><dd>{formataDataHora(e.confirmada_el)}</dd></div>}
+          {e.motiu && <div><dt>Motiu</dt><dd>{e.motiu}</dd></div>}
         </dl>
         <div className="botonera">
           {pot_confirmar && pot("adjudicacio.confirmar") && (
