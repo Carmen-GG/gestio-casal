@@ -12,6 +12,7 @@ import { GestioInici } from "./pages/gestio/GestioInici";
 import { CasalCicles } from "./pages/gestio/CasalCicles";
 import { DetallCicle } from "./pages/gestio/DetallCicle";
 import { Usuaris } from "./pages/gestio/Usuaris";
+import { DetallSollicitud } from "./pages/gestio/DetallSollicitud";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
           { path: ":casalId/usuaris", element: <Usuaris /> },
+          { path: ":casalId/sollicituds/:sollicitudId", element: <DetallSollicitud /> },
         ],
       },
       { path: "*", element: <NoTrobada /> },

@@ -17,5 +17,5 @@
   },
   "include": ["worker", "shared", "tests"],
   // Les proves del client importen codi del navegador: es comproven amb tsconfig.app.json.
-  "exclude": ["tests/client"]
+  "exclude": ["tests/client", "tests/node"]
 }

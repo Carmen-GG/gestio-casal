@@ -117,7 +117,7 @@ export interface EntradaAuditoria {
  * `taula` ha de portar el testimoni aleatori `operacio` que aquella escriptura hi desa.
  */
 export interface CondicioOperacio {
-  taula: "casals" | "cicles" | "activitats";
+  taula: "casals" | "cicles" | "activitats" | "participants" | "sollicituds";
   id: string;
   operacio: string;
 }
@@ -271,6 +271,110 @@ export interface RepositoriSollicituds {
   registrarPublica(dades: NovaSollicitudPublica): Promise<ResultatRegistre>;
 }
 
+export const ESTATS_SOLLICITUD = ["rebuda", "validada", "pendent_revisio", "anullada"] as const;
+export type EstatSollicitud = (typeof ESTATS_SOLLICITUD)[number];
+export type OrigenSollicitud = "formulari_public" | "importacio" | "gestio";
+/** Estat d'adjudicació derivat de l'adjudicació confirmada del cicle, si n'hi ha. */
+export type EstatAdjudicacio = "pendent" | "admesa" | "llista_espera" | "sense_placa";
+
+export type Participant = { id: string; versio: number } & Record<CampPersonal, string | null> & {
+  codi_participant_intern: string | null;
+};
+
+/** Fila del llistat de sol·licituds. Conté totes les dades: el servei en treu les no autoritzades. */
+export interface FilaSollicitud {
+  id: string;
+  numero: number;
+  rebuda_el: string;
+  estat: EstatSollicitud;
+  origen: OrigenSollicitud;
+  versio: number;
+  nombre_preferencies: number;
+  estat_adjudicacio: EstatAdjudicacio;
+  participant: Participant;
+}
+
+export type OrdreLlistat = "inscripcio" | "alfabetic" | "preferencies" | "estat";
+
+export interface FiltreSollicituds {
+  /** Text ja normalitzat (minúscules, sense accents) separat en paraules. */
+  paraules?: string[];
+  numero?: number;
+  activitatId?: string;
+  estat?: EstatSollicitud;
+  ordre?: OrdreLlistat;
+  descendent?: boolean;
+  pagina?: number;
+  mida?: number;
+}
+
+export interface PreferenciaDetall {
+  activitat_id: string;
+  activitat: string;
+  estat_activitat: EstatActivitat;
+  ordre: number;
+}
+
+export interface DetallSollicitud extends FilaSollicitud {
+  cicle_id: string;
+  codi_confirmacio: string;
+  privacitat_acceptada_el: string | null;
+  importacio_id: string | null;
+  preferencies: PreferenciaDetall[];
+}
+
+export interface GrupActivitat {
+  activitat_id: string;
+  activitat: string;
+  capacitat: number;
+  files: (FilaSollicitud & { ordre: number })[];
+}
+
+/** Parella de sol·licituds que podrien ser de la mateixa persona. */
+export interface ParellaDuplicada {
+  a: FilaSollicitud;
+  b: FilaSollicitud;
+  motius: ("mateix_nom" | "mateix_email" | "mateix_telefon" | "mateix_document" | "mateix_codi_intern" | "mateixa_persona")[];
+  revisio: { decisio: "no_duplicat" | "duplicat"; motiu: string | null; revisat_el: string } | null;
+}
+
+export type CanvisParticipant = Partial<Record<CampPersonal | "codi_participant_intern", string | null>> & { clau_ordenacio?: string };
+
+/** Fila d'una importació de sol·licituds ja validada al servidor. */
+export interface FilaImportacioSollicitud {
+  sollicitud_id: string;
+  participant_id: string;
+  /** Si és cert, el participant ja existeix (mateix codi intern) i no es modifica. */
+  participant_existent: boolean;
+  dades: Record<CampPersonal, string | null>;
+  codi_participant_intern: string | null;
+  clau_ordenacio: string;
+  numero: number;
+  rebuda_el: string;
+  codi_confirmacio: string;
+  clau_idempotencia: string;
+  preferencies: { activitat_id: string; ordre: number }[];
+}
+
+export interface RepositoriGestioSollicituds {
+  llistar(casalId: string, cicleId: string, filtre: FiltreSollicituds): Promise<{ files: FilaSollicitud[]; total: number }>;
+  perActivitat(casalId: string, cicleId: string, filtre: FiltreSollicituds): Promise<GrupActivitat[]>;
+  detall(casalId: string, id: string): Promise<DetallSollicitud | null>;
+  /** Totes les files d'un cicle (exportacions i detecció de duplicats), en ordre d'inscripció. */
+  totes(casalId: string, cicleId: string): Promise<(FilaSollicitud & { preferencies: PreferenciaDetall[] })[]>;
+  participantPerCodiIntern(casalId: string, codi: string): Promise<Participant | null>;
+  revisionsDuplicats(casalId: string, cicleId: string): Promise<{ a: string; b: string; decisio: "no_duplicat" | "duplicat"; motiu: string | null; revisat_el: string }[]>;
+  maxNumero(cicleId: string): Promise<number>;
+  operacioActualitzarParticipant(casalId: string, id: string, versioActual: number, canvis: CanvisParticipant, ara: string, operacio: string): Operacio;
+  /** Toca la sol·licitud (versió i testimoni) i, opcionalment, en canvia l'estat. */
+  operacioActualitzarSollicitud(casalId: string, id: string, versioActual: number, canvis: { estat?: EstatSollicitud }, ara: string, operacio: string): Operacio;
+  /** Substitueix les preferències, condicionat al testimoni de l'operació sobre la sol·licitud. */
+  operacionsSubstituirPreferencies(sollicitudId: string, cicleId: string, casalId: string, preferencies: { activitat_id: string; ordre: number }[], operacio: string): Operacio[];
+  operacioRevisioDuplicat(dades: { id: string; casal_id: string; cicle_id: string; a: string; b: string; decisio: "no_duplicat" | "duplicat"; motiu: string | null; usuari_id: string }, ara: string): Operacio;
+  operacionsImportarSollicituds(dades: { importacio_id: string; casal_id: string; cicle_id: string; clau: string; nom_fitxer: string | null; usuari_id: string; resum: Record<string, unknown>; files: FilaImportacioSollicitud[] }, ara: string): Operacio[];
+  operacionsImportarActivitats(dades: { importacio_id: string; casal_id: string; cicle_id: string; clau: string; nom_fitxer: string | null; usuari_id: string; resum: Record<string, unknown>; activitats: (NovaActivitat & { id: string })[] }, ara: string): Operacio[];
+}
+
 /** Executa un conjunt d'operacions de manera atòmica (tot o res). */
 export interface UnitatDeTreball {
   executar(operacions: Operacio[]): Promise<{ canvis: number }[]>;
@@ -285,5 +389,6 @@ export interface Repositoris {
   historial: RepositoriHistorial;
   auditoria: RepositoriAuditoria;
   sollicituds: RepositoriSollicituds;
+  gestioSollicituds: RepositoriGestioSollicituds;
   unitat: UnitatDeTreball;
 }

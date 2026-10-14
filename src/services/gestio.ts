@@ -1,4 +1,7 @@
-import type { Activitat, AssignacioRol, Casal, Cicle, DetallCicle, EntradaHistorial, Jo } from "../types/gestio";
+import type {
+  Activitat, AssignacioRol, Casal, Cicle, DetallCicle, DetallSollicitud, EntradaHistorial, Jo, ParellaDuplicada, Previsualitzacio,
+  RespostaLlistat, TaulaExportacio,
+} from "../types/gestio";
 import { api } from "./api";
 
 const g = (casalId: string) => `/gestio/casals/${encodeURIComponent(casalId)}`;
@@ -25,6 +28,25 @@ export const serveiGestio = {
   actualitzarActivitat: (casalId: string, id: string, dades: unknown) => api.patch<{ activitat: Activitat }>(`${g(casalId)}/activitats/${id}`, dades),
   canviarEstatActivitat: (casalId: string, id: string, dades: unknown) => api.post<{ activitat: Activitat }>(`${g(casalId)}/activitats/${id}/estat`, dades),
   duplicarActivitat: (casalId: string, id: string) => api.post<{ activitat: Activitat }>(`${g(casalId)}/activitats/${id}/duplicar`, {}),
+
+  sollicituds: (casalId: string, cicleId: string, params: Record<string, string>, s?: AbortSignal) =>
+    api.get<RespostaLlistat>(`${g(casalId)}/cicles/${cicleId}/sollicituds?${new URLSearchParams(params)}`, s),
+  sollicitud: (casalId: string, id: string, s?: AbortSignal) => api.get<{ sollicitud: DetallSollicitud }>(`${g(casalId)}/sollicituds/${id}`, s),
+  actualitzarDadesSollicitud: (casalId: string, id: string, dades: unknown) =>
+    api.patch<{ sollicitud: DetallSollicitud }>(`${g(casalId)}/sollicituds/${id}/dades`, dades),
+  canviarEstatSollicitud: (casalId: string, id: string, dades: unknown) =>
+    api.post<{ sollicitud: DetallSollicitud }>(`${g(casalId)}/sollicituds/${id}/estat`, dades),
+  canviarPreferencies: (casalId: string, id: string, dades: unknown) =>
+    api.put<{ sollicitud: DetallSollicitud }>(`${g(casalId)}/sollicituds/${id}/preferencies`, dades),
+  duplicats: (casalId: string, cicleId: string, s?: AbortSignal) =>
+    api.get<{ parelles: ParellaDuplicada[] }>(`${g(casalId)}/cicles/${cicleId}/duplicats`, s),
+  revisarDuplicat: (casalId: string, cicleId: string, dades: unknown) => api.post<{ ok: true }>(`${g(casalId)}/cicles/${cicleId}/duplicats/revisio`, dades),
+  previsualitzarImportacio: (casalId: string, cicleId: string, tipus: "sollicituds" | "activitats", dades: unknown) =>
+    api.post<Previsualitzacio>(`${g(casalId)}/cicles/${cicleId}/importacions/${tipus}/previsualitzacio`, dades),
+  confirmarImportacio: (casalId: string, cicleId: string, tipus: "sollicituds" | "activitats", dades: unknown) =>
+    api.post<{ importacio_id: string; importades: number; omeses: number }>(`${g(casalId)}/cicles/${cicleId}/importacions/${tipus}`, dades),
+  exportacioSollicituds: (casalId: string, cicleId: string, activitatId?: string) =>
+    api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/sollicituds${activitatId ? `?activitat=${activitatId}` : ""}`),
 
   historial: (casalId: string, entitat: string, id: string, s?: AbortSignal) =>
     api.get<{ historial: EntradaHistorial[] }>(`${g(casalId)}/historial/${entitat}/${id}`, s),

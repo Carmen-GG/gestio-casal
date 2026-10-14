@@ -15,6 +15,9 @@ import { usePermisos } from "./context";
 import { FormActivitat } from "./FormActivitat";
 import { FormCicle } from "./FormCicle";
 import { Historial } from "./Historial";
+import { Duplicats } from "./Duplicats";
+import { ImportacioExportacio } from "./ImportacioExportacio";
+import { LlistatSollicituds } from "./Sollicituds";
 
 const ETIQUETES_ESTAT_ACTIVITAT: Record<EstatActivitat, string> = { esborrany: "Esborrany", activa: "Activa", inactiva: "Inactiva", arxivada: "Arxivada" };
 const ACCIONS_ACTIVITAT: Record<EstatActivitat, { estat: EstatActivitat; text: string }[]> = {
@@ -174,6 +177,25 @@ export function DetallCicle() {
             setExit(`S'ha creat l'activitat «${activitat.nom}» en esborrany. Activeu-la perquè aparegui a la pàgina pública.`);
             recarrega();
           }} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && (
+        <Seccio titol="Sol·licituds rebudes">
+          <LlistatSollicituds casalId={casalId} cicleId={cicleId} activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
+        </Seccio>
+      )}
+
+      {pot("sollicituds.consultar") && (
+        <Seccio titol="Possibles duplicats" obertaInicial={false}>
+          <Duplicats casalId={casalId} cicleId={cicleId} potGestionar={pot("sollicituds.gestionar")} />
+        </Seccio>
+      )}
+
+      {(pot("dades.importar") || pot("dades.exportar")) && (
+        <Seccio titol="Importació i exportació" obertaInicial={false}>
+          <ImportacioExportacio casalId={casalId} cicleId={cicleId} pot={pot}
+            activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
         </Seccio>
       )}
 
