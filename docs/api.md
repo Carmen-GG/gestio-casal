@@ -149,6 +149,22 @@ Totes sota `/api/gestio/casals/{casalId}` i amb sessió. Les regles es descriuen
 
 Cada registre queda a l'auditoria i cada modificació d'una marca, amb el motiu, a l'historial de la plaça (`/historial?entitat=placa&id=…`). El llindar d'assistència del cicle es desa amb `PATCH /cicles/{cicleId}` (`llindar_assistencia`, 1–100 o `null`). En crear un cicle, si no s'indica, és 80.
 
+## Quadre de comandament
+
+| Mètode | Ruta | Permís | Descripció |
+|---|---|---|---|
+| GET | `/cicles/{cicleId}/indicadors` | `sollicituds.consultar` | Indicadors del cicle calculats en el moment a partir de la base de dades |
+
+Resposta:
+- `inscripcions.estat`: `pendents`, `obertes`, `fora_de_termini` o `tancades`.
+- `adjudicacio`: darrera proposta o adjudicació confirmada (`estat`, `versio`, `data`), o `sense_proposta`.
+- `totals`: activitats actives, sol·licituds no anul·lades (i per estat), persones inscrites (participants diferents), places disponibles, ocupades (admeses + ofertes pendents) i lliures, persones admeses i en llista d'espera, activitats sense inscripcions i activitats amb més demanda que places.
+- `activitats`: per a cada activitat activa, places, sol·licituds, sol·licituds en 1a preferència, admeses, ofertes pendents, llista d'espera, places lliures i els indicadors `sense_inscripcions` i `mes_demanda`.
+
+Criteris:
+- Una activitat té «més demanda que places» quan el nombre de sol·licituds no anul·lades que la inclouen en qualsevol preferència supera la capacitat.
+- Les activitats inactives o en esborrany no es compten, i les arxivades tampoc.
+- No es desa cap xifra: cada consulta torna a calcular-les.
+
 ## Previst
-- Fase 7: estadístiques i quadre de comandament.
 - Es publicarà una especificació OpenAPI quan hi hagi els endpoints de gestió.

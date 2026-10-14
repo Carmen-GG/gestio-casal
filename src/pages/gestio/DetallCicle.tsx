@@ -22,6 +22,7 @@ import { Adjudicacio } from "./Adjudicacio";
 import { Places } from "./Places";
 import { Assistencia } from "./Assistencia";
 import { Sorteig } from "./Sorteig";
+import { Indicadors } from "./Indicadors";
 
 /** Estats del cicle en què pot existir una adjudicació confirmada. */
 const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat", "finalitzat", "arxivat"];
@@ -100,6 +101,12 @@ export function DetallCicle() {
         {exit && <AvisExit>{exit}</AvisExit>}
         {errorAccio && <MissatgeError error={errorAccio} />}
       </div>
+
+      {pot("sollicituds.consultar") && (
+        <Seccio titol="Resum i indicadors">
+          <Indicadors casalId={casalId} cicleId={cicleId} versio={versio + versioPlaces} />
+        </Seccio>
+      )}
 
       <Seccio titol="Dades del cicle" accions={pot("cicles.gestionar") && !editantCicle && cicle.estat !== "arxivat" ? (
         <button type="button" className="boto boto--secundari boto--petit" onClick={() => setEditantCicle(true)}>Edita les dades</button>

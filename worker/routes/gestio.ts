@@ -17,6 +17,7 @@ import { ServeiGestioSollicituds, filtraParticipant, taulaSollicituds, visibilit
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
+import { ServeiIndicadors } from "../services/indicadors";
 import { baixaAssistencia, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
@@ -35,6 +36,7 @@ const sollicituds = (c: C) => new ServeiGestioSollicituds(c.get("repos"), c.get(
 const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rellotge"));
 const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
 const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
+const indicadors = (c: C) => new ServeiIndicadors(c.get("repos"), c.get("rellotge"));
 
 /** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
 async function exportacioAuditada(c: C, casalId: string, tipus: string, entitat: string, entitatId: string, taula: { files: unknown[] }, extra: Record<string, unknown> = {}) {
@@ -340,6 +342,10 @@ export const rutesGestio = new Hono<Entorn>()
   })
 
   // ---------- Assistència ----------
+  .get("/casals/:casalId/cicles/:cicleId/indicadors", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await indicadors(c).cicle(casalId, idRuta(c, "cicleId")));
+  })
   .get("/casals/:casalId/cicles/:cicleId/assistencia", async (c) => {
     const casalId = casalAutoritzat(c, "sollicituds.consultar");
     return c.json(await assistencia(c).resumCicle(casalId, idRuta(c, "cicleId")));

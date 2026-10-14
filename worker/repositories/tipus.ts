@@ -577,6 +577,21 @@ export interface UnitatDeTreball {
   executar(operacions: Operacio[]): Promise<{ canvis: number }[]>;
 }
 
+export interface DadesIndicadors {
+  sollicituds_per_estat: Record<string, number>;
+  /** Participants diferents amb alguna sol·licitud no anul·lada. */
+  persones: number;
+  activitats: {
+    id: string; nom: string; estat: EstatActivitat; capacitat: number; minim_participants: number | null;
+    sollicituds: number; primera_preferencia: number; admeses: number; ofertes: number; espera: number;
+  }[];
+  darrera_execucio: { versio: number; estat: "proposta" | "confirmada"; executada_el: string; confirmada_el: string | null } | null;
+}
+
+export interface RepositoriIndicadors {
+  cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
+}
+
 export interface Repositoris {
   casals: RepositoriCasals;
   usuaris: RepositoriUsuaris;
@@ -589,5 +604,6 @@ export interface Repositoris {
   gestioSollicituds: RepositoriGestioSollicituds;
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
+  indicadors: RepositoriIndicadors;
   unitat: UnitatDeTreball;
 }
