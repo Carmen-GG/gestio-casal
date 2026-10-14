@@ -3,6 +3,7 @@
  * al públic: cap camp intern ni cap dada personal.
  */
 import type { EstatCicle } from "../domain/cicles";
+import type { CampPersonal } from "../domain/formulari";
 
 export interface CiclePublic {
   id: string;
@@ -42,10 +43,28 @@ export interface RespostaCiclesPubliques {
   cicles: CiclePublic[];
 }
 
+/** Camps que demana el formulari d'aquest cicle, en l'ordre en què s'han de mostrar. */
+export interface FormulariPublic {
+  camps: { camp: CampPersonal; obligatori: boolean }[];
+  informacio_privacitat: string;
+}
+
 export interface RespostaActivitatsPubliques {
   casal: CasalPublic;
   cicle: CiclePublic;
   activitats: ActivitatPublica[];
+  formulari: FormulariPublic;
+}
+
+/** Resposta a una sol·licitud registrada. No conté cap dada personal. */
+export interface RespostaSollicitudRegistrada {
+  codi_confirmacio: string;
+  rebuda_el: string;
+  data_resolucio_prevista: string;
+  cicle: string;
+  preferencies: { ordre: number; activitat: string }[];
+  /** Cert si és un reintent d'una sol·licitud que ja s'havia registrat. */
+  repetida: boolean;
 }
 
 /** Format comú dels errors de l'API. `codi` és estable; `missatge` és per a persones. */

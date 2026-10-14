@@ -18,6 +18,11 @@
     "APP_ENV": "local",
     "ALLOWED_ORIGINS": "http://localhost:5173"
   },
+  // Limitació d'enviaments del formulari públic: 10 per minut per origen de xarxa.
+  // Els límits no s'hereten entre entorns: cal repetir-los a cada entorn.
+  "ratelimits": [
+    { "name": "LIMIT_SOLLICITUDS", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -33,6 +38,9 @@
         "APP_ENV": "staging",
         "ALLOWED_ORIGINS": ""
       },
+      "ratelimits": [
+        { "name": "LIMIT_SOLLICITUDS", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
+      ],
       "d1_databases": [
         {
           "binding": "DB",
@@ -48,6 +56,9 @@
         "APP_ENV": "production",
         "ALLOWED_ORIGINS": ""
       },
+      "ratelimits": [
+        { "name": "LIMIT_SOLLICITUDS", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
+      ],
       "d1_databases": [
         {
           "binding": "DB",

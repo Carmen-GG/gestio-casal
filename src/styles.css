@@ -130,3 +130,4 @@ main:focus { outline: none; }
 .dialeg::backdrop { background: rgb(0 0 0 / 0.45); }
 .dialeg h2 { margin-top: 0; }
 .dialeg__botons { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+.subseccio { font-size: 1rem; margin: 1.25rem 0 0.25rem; }

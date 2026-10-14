@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { ESTATS_CICLE } from "../domain/cicles";
-import { CAMPS_PERSONALS } from "../domain/formulari";
+import { CAMPS_PERSONALS, MIDA_MAXIMA_PRIVACITAT } from "../domain/formulari";
 import { data, dataHora, hora, motiu, textCurt, textOpcional, versio } from "./comuns";
 
 export const ESTATS_ACTIVITAT = ["esborrany", "activa", "inactiva", "arxivada"] as const;
@@ -13,6 +13,7 @@ export const ESTATS_ACTIVITAT = ["esborrany", "activa", "inactiva", "arxivada"] 
 const configCamp = z.strictObject({ actiu: z.boolean(), obligatori: z.boolean() });
 export const configuracioFormulari = z.strictObject({
   camps: z.partialRecord(z.enum(CAMPS_PERSONALS), configCamp),
+  informacio_privacitat: z.string().trim().max(MIDA_MAXIMA_PRIVACITAT, `Màxim ${MIDA_MAXIMA_PRIVACITAT} caràcters.`).optional(),
 });
 
 // ---------- Casals ----------

@@ -2,6 +2,7 @@ import { acceptaSollicituds, type EstatCicle } from "../../shared/domain/cicles"
 import type {
   ActivitatPublica, CasalPublic, CiclePublic, RespostaActivitatsPubliques, RespostaCiclesPubliques,
 } from "../../shared/api/public";
+import { CAMPS_PERSONALS, configuracioFormulariEfectiva } from "../../shared/domain/formulari";
 import { errors } from "../http/errors";
 import type { Activitat, Casal, Cicle, Repositoris } from "../repositories/tipus";
 import type { Rellotge } from "../lib/rellotge";
@@ -40,7 +41,7 @@ export class ServeiConsultaPublica {
     };
   }
 
-  private async casalActiu(codi: string): Promise<Casal> {
+  async casalActiu(codi: string): Promise<Casal> {
     if (!PATRO_CODI_CASAL.test(codi)) throw errors.noTrobat("No s'ha trobat el casal.");
     const casal = await this.repos.casals.perCodi(codi);
     if (!casal || !casal.actiu) throw errors.noTrobat("No s'ha trobat el casal.");
@@ -53,16 +54,27 @@ export class ServeiConsultaPublica {
     return { casal: casalPublic(casal), cicles: cicles.map((c) => this.ciclePublic(c)) };
   }
 
-  async activitatsPubliques(codiCasal: string, cicleId: string): Promise<RespostaActivitatsPubliques> {
-    const casal = await this.casalActiu(codiCasal);
+  /** Cicle visible a l'àrea pública; si no ho és, respon com si no existís. */
+  async ciclePublicat(casal: Casal, cicleId: string): Promise<Cicle> {
     if (!PATRO_UUID.test(cicleId)) throw errors.noTrobat("No s'ha trobat el cicle.");
     const cicle = await this.repos.cicles.perId(casal.id, cicleId);
     if (!cicle || !ESTATS_CICLE_PUBLICS.includes(cicle.estat)) throw errors.noTrobat("No s'ha trobat el cicle.");
+    return cicle;
+  }
+
+  async activitatsPubliques(codiCasal: string, cicleId: string): Promise<RespostaActivitatsPubliques> {
+    const casal = await this.casalActiu(codiCasal);
+    const cicle = await this.ciclePublicat(casal, cicleId);
+    const config = configuracioFormulariEfectiva(cicle.configuracio_formulari);
     const activitats = await this.repos.activitats.llistarPerCicle(casal.id, cicle.id, { estats: ["activa"] });
     return {
       casal: casalPublic(casal),
       cicle: this.ciclePublic(cicle),
       activitats: activitats.map(ServeiConsultaPublica.activitatPublica),
+      formulari: {
+        camps: CAMPS_PERSONALS.filter((c) => config.camps[c].actiu).map((c) => ({ camp: c, obligatori: config.camps[c].obligatori })),
+        informacio_privacitat: config.informacio_privacitat,
+      },
     };
   }
 }
