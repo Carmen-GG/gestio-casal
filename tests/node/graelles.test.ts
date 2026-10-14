@@ -4,7 +4,7 @@ import { generaGraelles, nomsFulls, validaGraelles } from "../../src/fitxers/gra
 import type { DadesGraelles } from "../../src/types/gestio";
 
 const dades = (): DadesGraelles => ({
-  casal: "Casal de prova", cicle: "Cicle fictici", telefon: true, llegenda: "P: Present · A: Absent · J: Absència justificada",
+  casal: "Casal de prova", cicle: "Cicle fictici", telefon: true, llegenda: "P: Present · A: Absent",
   totals: { activitats: 2, admeses: 3, espera: 1 },
   graelles: [
     {

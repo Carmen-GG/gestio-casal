@@ -5,18 +5,19 @@
  * Regla del casal: una assistència inferior al llindar (per defecte, el 80 %)
  * implica la pèrdua de la plaça. Mai s'aplica automàticament: cal que una persona
  * autoritzada ho confirmi plaça per plaça, i el servidor comprova que és per sota.
+ *
+ * El casal no fa servir absències justificades: totes les absències compten igual.
  */
-export const ESTATS_ASSISTENCIA = ["present", "absent", "absencia_justificada"] as const;
+export const ESTATS_ASSISTENCIA = ["present", "absent"] as const;
 export type EstatAssistencia = (typeof ESTATS_ASSISTENCIA)[number];
 
 export const ETIQUETES_ASSISTENCIA: Record<EstatAssistencia, string> = {
   present: "Present",
   absent: "Absent",
-  absencia_justificada: "Absència justificada",
 };
 
 /** Abreviatures per a les graelles impreses. */
-export const ABREVIATURES_ASSISTENCIA: Record<EstatAssistencia, string> = { present: "P", absent: "A", absencia_justificada: "J" };
+export const ABREVIATURES_ASSISTENCIA: Record<EstatAssistencia, string> = { present: "P", absent: "A" };
 
 /** Llindar d'assistència (%) dels cicles nous, segons la regla del casal. Es pot canviar per cicle. */
 export const LLINDAR_ASSISTENCIA_PER_DEFECTE = 80;
@@ -49,21 +50,17 @@ export function datesSessions(dies: number[], inici: string, fi: string): string
 export interface ResumAssistencia {
   presents: number;
   absents: number;
-  justificades: number;
-  /**
-   * Presències sobre les sessions computables (present + absent). Les absències
-   * justificades no compten. Null si encara no hi ha prou sessions computables.
-   */
+  /** Presències sobre totes les sessions amb marca. Null si encara no n'hi ha prou. */
   percentatge: number | null;
 }
 
 export function resumAssistencia(marques: EstatAssistencia[]): ResumAssistencia {
   const presents = marques.filter((m) => m === "present").length;
-  const absents = marques.filter((m) => m === "absent").length;
-  const justificades = marques.filter((m) => m === "absencia_justificada").length;
-  const computables = presents + absents;
+  // Qualsevol marca que no sigui «present» compta com a absència.
+  const absents = marques.length - presents;
+  const computables = marques.length;
   return {
-    presents, absents, justificades,
+    presents, absents,
     percentatge: computables >= MINIM_SESSIONS_PERCENTATGE ? Math.round((presents / computables) * 100) : null,
   };
 }

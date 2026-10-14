@@ -89,17 +89,17 @@ describe("assistència: registre", () => {
 
     // Tornar a enviar una marca nova que ja existeix és un conflicte (algú altre ja l'ha desada).
     expect((await desa(s1!.id, [{ placa_id: a.id, estat: "present", versio: null }])).cos.error.codi).toBe("conflicte_concurrencia");
-    const sense = await desa(s1!.id, [{ placa_id: a.id, estat: "absencia_justificada", versio: 1 }]);
+    const sense = await desa(s1!.id, [{ placa_id: a.id, estat: "present", versio: 1 }]);
     expect(sense.status).toBe(428);
-    expect((await desa(s1!.id, [{ placa_id: a.id, estat: "absencia_justificada", versio: 1 }], "Ha portat justificant mèdic")).cos)
+    expect((await desa(s1!.id, [{ placa_id: a.id, estat: "present", versio: 1 }], "Havia arribat tard")).cos)
       .toEqual({ noves: 0, modificades: 1 });
     expect((await desa(s1!.id, [{ placa_id: a.id, estat: "present", versio: 1 }], "Versió antiga")).cos.error.codi).toBe("conflicte_concurrencia");
     f = (await full()).cos;
-    expect(f.persones.find((p: Persona) => p.id === a.id).marques[s1!.id]).toEqual({ estat: "absencia_justificada", versio: 2 });
+    expect(f.persones.find((p: Persona) => p.id === a.id).marques[s1!.id]).toEqual({ estat: "present", versio: 2 });
     const historial = await g.json(`${base}/historial/placa/${a.id}`);
     expect(historial.cos.historial).toHaveLength(1);
-    expect(historial.cos.historial[0]).toMatchObject({ accio: "modificacio", motiu: "Ha portat justificant mèdic",
-      canvis: { assistencia: { abans: "absent", despres: "absencia_justificada", data: "2026-10-05" } } });
+    expect(historial.cos.historial[0]).toMatchObject({ accio: "modificacio", motiu: "Havia arribat tard",
+      canvis: { assistencia: { abans: "absent", despres: "present", data: "2026-10-05" } } });
     const auditoria = await env.DB.prepare("SELECT COUNT(*) AS n FROM registres_assistencia WHERE sessio_id = ?").bind(s1!.id).first<{ n: number }>();
     expect(auditoria!.n).toBe(2);
     const consulta = await clientAutenticat("consulta_casal", casal.id);
@@ -145,7 +145,7 @@ describe("assistència: registre", () => {
     expect(resumCicle.cos.activitats.find((x: { admeses: number }) => x.admeses === 2)).toMatchObject({ sessions: 8, realitzades: 4, mitjana: 63, sota_llindar: 1 });
 
     const exp = await g.json(`${base}/cicles/${cicle.id}/exportacions/assistencia`);
-    expect(exp.cos.files).toEqual([["Taller fictici", 2, "Àvila, Jordi", 1, 3, 0, 25, "Sí"], ["Taller fictici", 1, "Zapata, Marta", 4, 0, 0, 100, "No"]]);
+    expect(exp.cos.files).toEqual([["Taller fictici", 2, "Àvila, Jordi", 1, 3, 25, "Sí"], ["Taller fictici", 1, "Zapata, Marta", 4, 0, 100, "No"]]);
     const consulta = await clientAutenticat("consulta_casal", casal.id);
     expect((await consulta.json(`${base}/cicles/${cicle.id}/exportacions/assistencia`)).status).toBe(403);
   });
@@ -182,6 +182,8 @@ describe("assistència: registre", () => {
     expect(moviments.at(-1)).toMatchObject({ estat_nou: "baixa", motiu: "Assistència del 20%, inferior al llindar del 80%." });
     const audit = await env.DB.prepare("SELECT detalls FROM registres_auditoria WHERE tipus_operacio = 'places.baixa_assistencia' AND entitat_id = ?").bind(a.id).first<{ detalls: string }>();
     expect(JSON.parse(audit!.detalls)).toMatchObject({ percentatge: 20, llindar: 80, des: "admesa", cap: "baixa" });
+    // L'absència justificada no existeix: el servidor la rebutja.
+    expect((await desa(sessions[5]!.id, [{ placa_id: z.id, estat: "absencia_justificada", versio: null }])).status).toBe(400);
     // No es pot repetir.
     expect((await baixa(a.id, a.versio + 1)).status).toBe(409);
   });

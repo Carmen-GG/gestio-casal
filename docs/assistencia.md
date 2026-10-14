@@ -10,13 +10,13 @@ Funcionament del registre d'assistència (Fase 6) i regles que cal validar insti
 
 ## Registre
 - L'assistència es registra quan el cicle està **adjudicat** o **publicat**, i només per a sessions d'avui o anteriors (hora de Madrid).
-- Hi ha tres marques: **present**, **absent** i **absència justificada**.
+- Hi ha dues marques: **present** i **absent**. El casal no fa servir absències justificades: totes les absències compten igual (confirmat el 14/10/2026). El servidor rebutja qualsevol altra marca.
 - Apareixen les persones amb plaça admesa a l'activitat i, a més, les que ja tenien marques encara que hagin perdut la plaça (per conservar-ne l'historial).
 - Una marca nova es desa directament. **Modificar** una marca ja desada exigeix un motiu i queda a l'historial de la plaça amb l'estat anterior, el nou, la persona usuària i la data.
 - Tot el registre d'una sessió es desa en una sola transacció. Si una altra persona ha desat canvis al mateix temps, no es desa res i cal tornar a carregar.
 
 ## Percentatge i llindar
-- Percentatge = presències / (presències + absències). Les absències justificades no compten.
+- Percentatge = presències / sessions amb marca.
 - Només es calcula a partir de **3 sessions** computables, per no assenyalar ningú amb dades insuficients.
 - Cada cicle té un **llindar** (1–100 %). Les persones per sota apareixen marcades al resum.
 
@@ -37,5 +37,4 @@ Confirmada per la coordinació del casal (14/10/2026): **una assistència inferi
 - Totes les exportacions queden a l'auditoria.
 
 ## Pendent de validar
-- Si les absències justificades han de comptar com a sessions (ara no compten: «80 % de les sessions» es calcula sobre presències + absències).
 - Si cal un mínim de sessions diferent de 3 per calcular el percentatge.

@@ -15,7 +15,7 @@ import { Historial } from "./Historial";
 import { nomComplet } from "./Sollicituds";
 
 const ESTATS_SESSIO = { prevista: "Prevista", realitzada: "Feta", cancellada: "Cancel·lada" } as const;
-const ABREV: Record<EstatAssistencia, string> = { present: "P", absent: "A", absencia_justificada: "J" };
+const ABREV: Record<EstatAssistencia, string> = { present: "P", absent: "A" };
 
 /** Sessions i registre d'assistència d'una activitat. */
 export function AssistenciaActivitat() {
@@ -237,7 +237,7 @@ function ResumPersones({ full, onHistorial, onBaixa, enCurs }: {
             <tr>
               <th scope="col">Persona</th>
               {sessions.map((s) => <th key={s.id} scope="col" className="nowrap">{s.data.slice(8, 10)}/{s.data.slice(5, 7)}</th>)}
-              <th scope="col">P</th><th scope="col">A</th><th scope="col">J</th><th scope="col">%</th><th scope="col"><span className="visualment-amagat">Accions</span></th>
+              <th scope="col">P</th><th scope="col">A</th><th scope="col">%</th><th scope="col"><span className="visualment-amagat">Accions</span></th>
             </tr>
           </thead>
           <tbody>
@@ -245,7 +245,7 @@ function ResumPersones({ full, onHistorial, onBaixa, enCurs }: {
               <tr key={p.id} className={p.sota_llindar ? "fila--avis" : undefined}>
                 <th scope="row">{nomComplet(p.participant)}, {p.participant.nom}</th>
                 {sessions.map((s) => <td key={s.id}>{p.marques[s.id] ? ABREV[p.marques[s.id]!.estat] : ""}</td>)}
-                <td>{p.resum.presents}</td><td>{p.resum.absents}</td><td>{p.resum.justificades}</td>
+                <td>{p.resum.presents}</td><td>{p.resum.absents}</td>
                 <td>
                   {p.resum.percentatge === null ? "—" : `${p.resum.percentatge}%`}{p.sota_llindar ? " · per sota del llindar" : ""}
                   {p.estat !== "admesa" && <div className="text-secundari">Ja no té plaça ({p.estat === "baixa" ? "baixa" : "renúncia"})</div>}
@@ -264,7 +264,7 @@ function ResumPersones({ full, onHistorial, onBaixa, enCurs }: {
         </table>
       </div>
       <p className="text-secundari">
-        P: present · A: absent · J: absència justificada.
+        P: present · A: absent.
         {full.cicle.llindar_assistencia
           ? ` Llindar del cicle: ${full.cicle.llindar_assistencia}%. Per sota, la persona perd la plaça, però només quan algú ho confirma amb «Dona de baixa».`
           : " El cicle no té llindar d'assistència."}
