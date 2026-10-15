@@ -36,6 +36,15 @@ export function Entrar() {
     }
   }
 
+  // Si ja hi ha sessió (p. ex. des de la pàgina principal), anem directament al destí.
+  useEffect(() => {
+    if (window.location.hash.includes("testimoni=")) return;
+    const c = new AbortController();
+    serveiAuth.jo(c.signal).then(() => navegar(desti, { replace: true }), () => undefined);
+    return () => c.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const t = hash.get("testimoni");

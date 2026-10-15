@@ -17,13 +17,6 @@ export const configuracioFormulari = z.strictObject({
 });
 
 // ---------- Casals ----------
-export const casalCrear = z.strictObject({
-  codi: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,40}$/, "Només majúscules, números i guions (2-40)."),
-  nom: textCurt(200),
-  municipi: textCurt(100),
-  adreca: textOpcional(250).optional(),
-});
-
 export const casalActualitzar = z.strictObject({
   nom: textCurt(200).optional(),
   municipi: textCurt(100).optional(),

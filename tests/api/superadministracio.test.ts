@@ -132,4 +132,26 @@ describe("superadministració i responsables", () => {
     const gestor = await clientAutenticat("gestor_casal", casal.id);
     expect((await gestor.json("/api/gestio/administracio/quadre")).status).toBe(403);
   });
+  it("la superadministració entra només amb la seva contrasenya; la d'un altre rol no hi serveix", async () => {
+    const { casal } = await crearEscenari();
+    const frase = `frase superadministracio ${crypto.randomUUID()}`;
+    const admin = await clientAutenticat("admin_central", null);
+    expect((await admin.json("/api/auth/contrasenya", { method: "POST", json: { nova: frase } })).status).toBe(200);
+    const gestor = await clientAutenticat("gestor_casal", casal.id);
+    const fraseGestor = `frase de l'equip ${crypto.randomUUID()}`;
+    expect((await gestor.json("/api/auth/contrasenya", { method: "POST", json: { nova: fraseGestor } })).status).toBe(200);
+
+    const sl = () => client(undefined, { LIMIT_ENTRADA: undefined });
+    const c = sl();
+    expect((await c.json("/api/auth/superadministracio", { method: "POST", json: { contrasenya: frase } })).status).toBe(200);
+    const jo = await c.json("/api/auth/jo");
+    expect(jo.cos.superadministracio).toBe(true);
+    expect(jo.cos.usuari.id).toBe(admin.usuari.id);
+
+    for (const contrasenya of ["no és la contrasenya correcta", fraseGestor]) {
+      const r = await sl().json("/api/auth/superadministracio", { method: "POST", json: { contrasenya } });
+      expect(r.status).toBe(401);
+    }
+    expect((await sl().json("/api/auth/superadministracio", { method: "POST", json: { contrasenya: frase, email: "x@y.cat" } })).status).toBe(400);
+  });
 });

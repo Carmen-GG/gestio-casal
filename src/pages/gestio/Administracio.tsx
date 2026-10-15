@@ -7,14 +7,12 @@ import { CodiAccesLliurat, ResultatAlta } from "../../components/CodiAccesLliura
 import { DialegConfirmacio } from "../../components/DialegConfirmacio";
 import { Carregant, MissatgeError } from "../../components/EstatsConsulta";
 import { CampText } from "../../components/Formulari";
-import { Seccio } from "../../components/Seccio";
 import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type { AccesAlta, CasalResponsables, CodiAcces, ResponsableCasal } from "../../types/gestio";
 import { formataDataHora } from "../../utils/format";
 import { useGestio } from "./context";
-import { NouCasal } from "./GestioInici";
 
 /** Pantalla d'inici de la superadministració: només tres opcions (petició de 2026-10-15). */
 export function AdministracioInici() {
@@ -222,9 +220,8 @@ function FormResponsable({ casal, onFet, onCancelar }: {
   );
 }
 
-/** Casal: triar qualsevol casal i entrar-hi; i, per a la xarxa, donar-ne d'alta de nous. */
+/** Casal: triar qualsevol casal i entrar-hi. Els casals són fixos: no se'n poden crear. */
 export function AdministracioCasal() {
-  const { jo } = useGestio();
   const navegar = useNavigate();
   const consulta = useConsulta((s) => serveiGestio.responsables(s), []);
   const [triat, setTriat] = useState("");
@@ -256,11 +253,6 @@ export function AdministracioCasal() {
           ))}
           <button type="submit" className="boto" disabled={!triat}>Entra al casal</button>
         </form>
-      )}
-      {jo.pot_crear_casals && (
-        <Seccio titol="Nou casal" obertaInicial={false}>
-          <NouCasal />
-        </Seccio>
       )}
     </div>
   );

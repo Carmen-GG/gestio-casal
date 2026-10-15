@@ -111,15 +111,13 @@ describe("autorització", () => {
     expect((await c.peticio(`/api/gestio/casals/${casal.id}/cicles`)).status).toBe(403);
   });
 
-  it("només l'administració central pot crear casals", async () => {
+  it("ningú no pot crear casals des de l'API: són fixos", async () => {
     const { casal } = await crearEscenari();
-    const gestor = await clientAutenticat("gestor_casal", casal.id);
     const dades = { codi: `NOU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`, nom: "Casal nou fictici", municipi: "Municipi fictici" };
-    expect((await gestor.peticio("/api/gestio/casals", { method: "POST", json: dades })).status).toBe(403);
-    const admin = await clientAutenticat("admin_central", null);
-    const r = await admin.json("/api/gestio/casals", { method: "POST", json: dades });
-    expect(r.status).toBe(201);
-    expect(r.cos.casal.codi).toBe(dades.codi);
+    for (const c of [await clientAutenticat("gestor_casal", casal.id), await clientAutenticat("admin_central", null)]) {
+      expect((await c.peticio("/api/gestio/casals", { method: "POST", json: dades })).status).toBeGreaterThanOrEqual(400);
+    }
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM casals WHERE codi = ?").bind(dades.codi).first("n")).toBe(0);
   });
 
   it("rebutja camps no autoritzats a la petició", async () => {

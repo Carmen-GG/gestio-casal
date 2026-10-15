@@ -40,6 +40,16 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
     return f?.contrasenya_resum ?? null;
   }
 
+  async superadministracio() {
+    const { results } = await this.db.prepare(
+      `SELECT DISTINCT u.id, u.contrasenya_resum FROM usuaris u
+       JOIN assignacions_rols a ON a.usuari_id = u.id AND a.casal_id IS NULL AND a.revocat_el IS NULL
+       JOIN rols_permisos rp ON rp.rol_codi = a.rol_codi AND rp.permis_codi = 'usuaris.gestionar'
+       WHERE u.actiu = 1 AND u.contrasenya_resum IS NOT NULL ORDER BY u.creat_el`,
+    ).all<{ id: string; contrasenya_resum: string }>();
+    return results;
+  }
+
   async fixarContrasenya(usuariId: string, resum: string, ara: string) {
     await this.db.prepare("UPDATE usuaris SET contrasenya_resum = ?, contrasenya_canviada_el = ?, actualitzat_el = ? WHERE id = ?")
       .bind(resum, ara, ara, usuariId).run();

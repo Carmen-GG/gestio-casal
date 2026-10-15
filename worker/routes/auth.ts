@@ -14,6 +14,7 @@ const entradaContrasenya = z.strictObject({
   email: z.string().trim().toLowerCase().email().max(254),
   contrasenya: z.string().min(1).max(LLARGADA_MAXIMA_CONTRASENYA),
 });
+const entradaSuperadministracio = z.strictObject({ contrasenya: z.string().min(1).max(LLARGADA_MAXIMA_CONTRASENYA) });
 const novaContrasenya = z.string()
   .min(LLARGADA_MINIMA_CONTRASENYA, `La contrasenya ha de tenir almenys ${LLARGADA_MINIMA_CONTRASENYA} caràcters.`)
   .max(LLARGADA_MAXIMA_CONTRASENYA)
@@ -89,6 +90,39 @@ export const rutesAuth = new Hono<Entorn>()
     return c.json({ ok: true });
   })
   /**
+   * Superadministració (petició de 2026-10-15): s'hi entra només amb la seva contrasenya, que no caduca.
+   * Es compara amb la de cada persona de la superadministració; amb el mateix límit d'intents.
+   */
+  .post("/superadministracio", async (c) => {
+    if (c.env.LIMIT_ENTRADA) {
+      const ip = c.req.header("cf-connecting-ip") ?? "desconeguda";
+      const { success } = await c.env.LIMIT_ENTRADA.limit({ key: await resumSha256(`entrada:${ip}`) });
+      if (!success) throw new ErrorAplicacio(429, "massa_peticions", "Massa intents seguits. Espereu un minut i torneu-ho a provar.");
+    }
+    const { contrasenya } = await cosValidat(c, entradaSuperadministracio);
+    const repos = c.get("repos");
+    const ara = c.get("rellotge").ara().toISOString();
+    const candidates = await repos.usuaris.superadministracio();
+    let usuariId: string | null = null;
+    for (const p of candidates) {
+      if (await comprovaContrasenya(contrasenya, p.contrasenya_resum)) { usuariId = p.id; break; }
+    }
+    if (candidates.length === 0) await comprovaContrasenya(contrasenya, null);
+    if (!usuariId) {
+      await repos.auditoria.registrar(
+        { casal_id: null, usuari_id: null, tipus_operacio: "sessio.inici", entitat: "sessio", entitat_id: null, resultat: "denegat", id_peticio: c.get("idPeticio") },
+        ara,
+      );
+      throw new ErrorAplicacio(401, "credencials_no_valides", "La contrasenya de superadministració no és correcta.");
+    }
+    await iniciarSessio(c, usuariId);
+    await repos.auditoria.registrar(
+      { casal_id: null, usuari_id: usuariId, tipus_operacio: "sessio.inici", entitat: "sessio", entitat_id: null, resultat: "exit", id_peticio: c.get("idPeticio") },
+      ara,
+    );
+    return c.json({ ok: true });
+  })
+  /**
    * Primer accés (o contrasenya oblidada): correu + codi d'un sol ús lliurat per la superadministració
    * o per la persona responsable del casal. Crea la contrasenya i obre la sessió.
    */
@@ -150,7 +184,6 @@ export const rutesAuth = new Hono<Entorn>()
       superadministracio: usuari.esGlobal("usuaris.gestionar"),
       quadre_global: usuari.esGlobal("estadistiques.consultar"),
       te_contrasenya: (await c.get("repos").usuaris.resumContrasenya(usuari.id)) !== null,
-      pot_crear_casals: usuari.esGlobal("casal.configurar"),
       pot_gestionar_plantilles_comunes: usuari.esGlobal("cartells.plantilles"),
       casals: casals.map((k) => ({
         id: k.id, codi: k.codi, nom: k.nom, actiu: k.actiu, permisos: usuari.permisosA(k.id), nomes_consulta: usuari.nomesConsulta(k.id),
