@@ -1,4 +1,5 @@
 /** Tipus de les respostes de l'API de gestió (coincideixen amb worker/repositories/tipus.ts). */
+import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import type { EstatCicle, TipusTransicio } from "../../shared/domain/cicles";
 import type { ConfiguracioFormulari } from "../../shared/domain/formulari";
 import type { ParametresAdjudicacio } from "../../shared/domain/adjudicacio";
@@ -193,6 +194,19 @@ export interface FullAssistencia {
   activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null };
   cicle: { id: string; nom: string; estat: EstatCicle; llindar_assistencia: number | null; data_inici: string; data_fi: string };
   sessions: Sessio[]; persones: PersonaAssistencia[]; espera: FilaPlaca[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
+}
+export interface ComunicacioPlaca {
+  placa_id: string; tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio;
+  motiu: MotiuNoContacte | null; nota: string | null; actualitzat_el: string;
+}
+export interface PersonaComunicacio {
+  placa_id: string; sollicitud_id: string; participant_id: string; numero: number;
+  situacio: "admesa" | "espera"; oferta_pendent: boolean; posicio: number | null;
+  nom: string; cognoms: string; telefon: string | null; comunicacio: ComunicacioPlaca | null;
+}
+export interface DadesComunicacions {
+  casal: string; cicle: { id: string; nom: string; estat: EstatCicle }; avui: string;
+  activitats: { activitat_id: string; activitat: string; horari: string | null; espai: string | null; data_inici: string; persones: PersonaComunicacio[] }[];
 }
 export interface ResultatBaixaVoluntaria {
   data: string;

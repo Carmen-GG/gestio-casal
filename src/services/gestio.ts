@@ -1,8 +1,9 @@
 import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
-  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
+  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat,
 } from "../types/gestio";
+import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
 
 const g = (casalId: string) => `/gestio/casals/${encodeURIComponent(casalId)}`;
@@ -78,6 +79,11 @@ export const serveiGestio = {
     api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/numeros-sorteig`),
   places: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<RespostaPlaces>(`${g(casalId)}/cicles/${cicleId}/places`, s),
   mourePlaca: (casalId: string, placaId: string, dades: unknown) => api.post<unknown>(`${g(casalId)}/places/${placaId}/moviments`, dades),
+  comunicacions: (casalId: string, cicleId: string, s?: AbortSignal) =>
+    api.get<DadesComunicacions>(`${g(casalId)}/cicles/${cicleId}/comunicacions`, s),
+  registrarComunicacio: (casalId: string, placaId: string, dades: { tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio; motiu?: MotiuNoContacte | null; nota?: string | null }) =>
+    api.put<{ comunicacio: ComunicacioPlaca }>(`${g(casalId)}/places/${placaId}/comunicacio`, dades),
+  desferComunicacio: (casalId: string, placaId: string) => api.post<{ ok: true }>(`${g(casalId)}/places/${placaId}/comunicacio/desfer`),
   baixaVoluntaria: (casalId: string, placaId: string, dades: { versio: number; motiu: string }) =>
     api.post<ResultatBaixaVoluntaria>(`${g(casalId)}/places/${placaId}/baixa-voluntaria`, dades),
   baixaPerAssistencia: (casalId: string, placaId: string, dades: { versio: number; motiu?: string }) =>

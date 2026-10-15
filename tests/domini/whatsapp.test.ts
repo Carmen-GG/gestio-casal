@@ -25,3 +25,13 @@ describe("WhatsApp: telèfons i missatge d'oferta", () => {
     expect(decodeURIComponent(url.split("text=")[1]!)).toBe(text);
   });
 });
+
+describe("WhatsApp: missatges de l'assignació", () => {
+  const base = { nom: "Marta", casal: "Casal de prova", activitat: "Ioga", horari: "dl · 10:00–11:30", espai: null, data_inici: null };
+  it("escriu el missatge de plaça admesa i el de llista d'espera amb la posició", async () => {
+    const { missatgeAdmissio, missatgeEspera } = await import("../../shared/domain/whatsapp");
+    expect(missatgeAdmissio(base)).toContain("Teniu plaça a l'activitat «Ioga» (dl · 10:00–11:30).");
+    expect(missatgeEspera({ ...base, posicio: 3 })).toContain("heu quedat en llista d'espera amb el número 3.");
+    expect(missatgeEspera({ ...base, posicio: null })).toContain("heu quedat en llista d'espera.");
+  });
+});

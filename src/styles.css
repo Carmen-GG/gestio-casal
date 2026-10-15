@@ -391,3 +391,15 @@ main:focus { outline: none; }
 .selector-simple, #tria-activitat { padding: 0.35rem 0.5rem; border: 1px solid var(--color-vora); border-radius: var(--radi); font: inherit; max-width: 100%; }
 .graella-assistencia__baixa { white-space: nowrap; font-size: 0.85rem; }
 .graella-assistencia__baixa .boto { display: block; margin-top: 0.25rem; }
+
+/* Comunicacions segons activitat */
+.resum-comunicacions { font-size: 1.05rem; margin: 0.5rem 0 1rem; }
+.fila--feta td { color: var(--color-text-secundari); }
+.llistat-trucades h2 { margin-top: var(--espai); }
+.nomes-imprimir { display: none; }
+@media print {
+  .imprimint-trucades .no-imprimir-trucades { display: none !important; }
+  .imprimint-trucades .llistat-trucades { border: 0; }
+  .imprimint-trucades .nomes-imprimir { display: block; }
+  .imprimint-trucades .taula-contenidor { max-height: none; overflow: visible; }
+}

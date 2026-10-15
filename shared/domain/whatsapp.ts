@@ -46,11 +46,47 @@ export interface DadesMissatgeOferta {
 }
 
 const dataLlegible = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+const detallsActivitat = (d: DadesMissatgeOferta) =>
+  [d.horari, d.espai ? `aula ${d.espai}` : null, d.data_inici ? `a partir del ${dataLlegible(d.data_inici)}` : null].filter(Boolean).join(", ");
+
+/**
+ * Plantilles de missatge. Quan el casal tingui l'API de WhatsApp Business, cada plantilla
+ * s'haurà de donar d'alta a Meta amb aquest nom i aquests paràmetres, en aquest ordre;
+ * el text d'aquí és el mateix que s'envia ara de manera semiautomàtica.
+ */
+export const PLANTILLES_WHATSAPP = {
+  placa_admesa: { parametres: ["nom", "casal", "activitat", "detalls"] },
+  llista_espera: { parametres: ["nom", "casal", "activitat", "detalls", "posicio"] },
+  oferta_placa: { parametres: ["nom", "casal", "activitat", "detalls"] },
+} as const;
+export type PlantillaWhatsapp = keyof typeof PLANTILLES_WHATSAPP;
+
+/** Missatge per a una persona admesa en una activitat. */
+export function missatgeAdmissio(d: DadesMissatgeOferta): string {
+  const detalls = detallsActivitat(d);
+  return [
+    `Hola, ${d.nom.trim()}!`,
+    `Us escrivim del ${d.casal}. Teniu plaça a l'activitat «${d.activitat}»${detalls ? ` (${detalls})` : ""}.`,
+    "Si finalment no hi podeu venir, digueu-nos-ho per poder oferir la plaça a una altra persona.",
+    "Us hi esperem!",
+  ].join("\n\n");
+}
+
+/** Missatge per a una persona que ha quedat en llista d'espera d'una activitat. */
+export function missatgeEspera(d: DadesMissatgeOferta & { posicio: number | null }): string {
+  const detalls = detallsActivitat(d);
+  return [
+    `Hola, ${d.nom.trim()}!`,
+    `Us escrivim del ${d.casal}. De moment no hi ha plaça a l'activitat «${d.activitat}»${detalls ? ` (${detalls})` : ""}`
+      + ` i heu quedat en llista d'espera${d.posicio ? ` amb el número ${d.posicio}` : ""}.`,
+    "Si s'allibera una plaça, us avisarem per aquest mateix mitjà.",
+    "Gràcies!",
+  ].join("\n\n");
+}
 
 /** Text del missatge d'oferta de plaça. El casal el pot retocar a WhatsApp abans d'enviar-lo. */
 export function missatgeOferta(d: DadesMissatgeOferta): string {
-  const detalls = [d.horari, d.espai ? `aula ${d.espai}` : null, d.data_inici ? `a partir del ${dataLlegible(d.data_inici)}` : null]
-    .filter(Boolean).join(", ");
+  const detalls = detallsActivitat(d);
   return [
     `Hola, ${d.nom.trim()}!`,
     `Us escrivim del ${d.casal}. S'ha alliberat una plaça a l'activitat «${d.activitat}»${detalls ? ` (${detalls})` : ""}`
