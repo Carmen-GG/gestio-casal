@@ -34,3 +34,6 @@ export const baixaAssistencia = z.strictObject({
   versio,
   motiu: z.string().trim().max(400).optional(),
 });
+
+/** Baixa voluntària: la persona deixa l'activitat. El motiu és obligatori per als indicadors. */
+export const baixaVoluntaria = z.strictObject({ versio, motiu: motiuObligatori });

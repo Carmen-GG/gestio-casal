@@ -94,4 +94,20 @@ export class D1RepositoriAssistencia implements RepositoriAssistencia {
       `UPDATE sessions_activitat SET estat = 'realitzada', versio = versio + 1, actualitzat_el = ? WHERE id = ? AND estat = 'prevista'`,
     ).bind(ara, sessioId));
   }
+
+  operacioBaixaVoluntaria(d: { placa_id: string; casal_id: string; estat_anterior: "admesa" | "oferta_pendent"; data: string; motiu: string; usuari_id: string | null; operacio: string }, ara: string) {
+    // Només s'insereix si el canvi d'estat de la plaça d'aquesta mateixa operació s'ha aplicat.
+    return comOperacio(this.db.prepare(
+      `INSERT INTO baixes_voluntaries (placa_id, casal_id, cicle_id, activitat_id, estat_anterior, data, motiu, usuari_id, creat_el)
+       SELECT p.id, ?, a.cicle_id, p.activitat_id, ?, ?, ?, ?, ? FROM places p JOIN activitats a ON a.id = p.activitat_id
+       WHERE p.id = ? AND p.darrera_operacio = ?`,
+    ).bind(d.casal_id, d.estat_anterior, d.data, d.motiu, d.usuari_id, ara, d.placa_id, d.operacio));
+  }
+
+  async baixesVoluntaries(activitatId: string) {
+    const { results } = await this.db.prepare(
+      "SELECT placa_id, data, motiu FROM baixes_voluntaries WHERE activitat_id = ?",
+    ).bind(activitatId).all<{ placa_id: string; data: string; motiu: string }>();
+    return results;
+  }
 }

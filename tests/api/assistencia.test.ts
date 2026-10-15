@@ -145,13 +145,13 @@ describe("assistència: registre", () => {
     expect(resumCicle.cos.activitats.find((x: { admeses: number }) => x.admeses === 2)).toMatchObject({ sessions: 8, realitzades: 4, mitjana: 63, sota_llindar: 1 });
 
     const exp = await g.json(`${base}/cicles/${cicle.id}/exportacions/assistencia`);
-    expect(exp.cos.files).toEqual([["Taller fictici", 2, "Àvila, Jordi", 1, 3, 25, "Sí"], ["Taller fictici", 1, "Zapata, Marta", 4, 0, 100, "No"]]);
+    expect(exp.cos.files).toEqual([["Taller fictici", 2, "Àvila, Jordi", 1, 3, 0, 25, "Sí"], ["Taller fictici", 1, "Zapata, Marta", 4, 0, 0, 100, "No"]]);
     const consulta = await clientAutenticat("consulta_casal", casal.id);
     expect((await consulta.json(`${base}/cicles/${cicle.id}/exportacions/assistencia`)).status).toBe(403);
   });
 
   it("dona de baixa per assistència només si es confirma i la persona és per sota del llindar", async () => {
-    const { base, cicle, g, sessions, persona, desa, casal } = await ambSessions();
+    const { base, A, cicle, g, sessions, persona, desa, casal } = await ambSessions();
     const z = persona("Zapata"), a = persona("Àvila");
     const baixa = (id: string, versio: number, client = g) =>
       client.json(`${base}/places/${id}/baixa-assistencia`, { method: "POST", json: { versio } });
@@ -182,8 +182,10 @@ describe("assistència: registre", () => {
     expect(moviments.at(-1)).toMatchObject({ estat_nou: "baixa", motiu: "Assistència del 20%, inferior al llindar del 80%." });
     const audit = await env.DB.prepare("SELECT detalls FROM registres_auditoria WHERE tipus_operacio = 'places.baixa_assistencia' AND entitat_id = ?").bind(a.id).first<{ detalls: string }>();
     expect(JSON.parse(audit!.detalls)).toMatchObject({ percentatge: 20, llindar: 80, des: "admesa", cap: "baixa" });
-    // L'absència justificada no existeix: el servidor la rebutja.
-    expect((await desa(sessions[5]!.id, [{ placa_id: z.id, estat: "absencia_justificada", versio: null }])).status).toBe(400);
+    // La falta justificada (FJ) es desa i compta com a falta.
+    expect((await desa(sessions[5]!.id, [{ placa_id: z.id, estat: "absencia_justificada", versio: null }])).status).toBe(200);
+    const full = (await g.json(`${base}/activitats/${A.id}/assistencia`)).cos;
+    expect(full.persones.find((p: Persona) => p.id === z.id).resum).toEqual({ presents: 5, absents: 1, justificades: 1, percentatge: 83 });
     // No es pot repetir.
     expect((await baixa(a.id, a.versio + 1)).status).toBe(409);
   });
@@ -193,18 +195,78 @@ describe("graelles d'assistència", () => {
   it("retorna una graella per activitat amb admeses per ordre alfabètic i la llista d'espera a part", async () => {
     const { base, A, cicle, g, casal } = await escenari();
     await g.json(`${base}/activitats/${A.id}/sessions/generacio`, { method: "POST" });
-    const r = await g.json(`${base}/cicles/${cicle.id}/exportacions/graelles?telefon=1`);
+    const r = await g.json(`${base}/cicles/${cicle.id}/exportacions/graelles`);
     expect(r.status).toBe(200);
     expect(r.cos.totals).toEqual({ activitats: 1, admeses: 2, espera: 1 });
     const graella = r.cos.graelles[0];
     expect(graella).toMatchObject({ activitat: "Taller fictici", capacitat: 2, horari: "dl, dc · 10:00–11:30", columnes_buides: 0 });
     expect(graella.sessions).toHaveLength(8);
-    expect(graella.admeses.map((p: { persona: string; telefon: string }) => [p.persona, p.telefon])).toEqual([["Àvila, Jordi", "600000002"], ["Zapata, Marta", "600000001"]]);
-    expect(graella.espera).toEqual([{ posicio: 1, numero: 3, persona: "Bosch, Núria", telefon: "600000003", oferta_pendent: false }]);
-    // Sense el telèfon demanat, o sense permís per veure'l, no s'hi inclou.
-    expect((await g.json(`${base}/cicles/${cicle.id}/exportacions/graelles`)).cos.graelles[0].admeses[0].telefon).toBeNull();
+    // Sempre amb nom, cognoms i telèfon (decisió de 2026-10-15).
+    expect(graella.admeses.map((p: { nom: string; cognoms: string; telefon: string }) => [p.nom, p.cognoms, p.telefon]))
+      .toEqual([["Jordi", "Àvila", "600000002"], ["Marta", "Zapata", "600000001"]]);
+    expect(graella.espera).toEqual([{ posicio: 1, numero: 3, nom: "Núria", cognoms: "Bosch", telefon: "600000003", oferta_pendent: false }]);
+    // Si es demana explícitament sense telèfon, o sense permís per veure'l, no s'hi inclou.
+    expect((await g.json(`${base}/cicles/${cicle.id}/exportacions/graelles?telefon=0`)).cos.graelles[0].admeses[0].telefon).toBeNull();
     const auditoria = await env.DB.prepare("SELECT detalls FROM registres_auditoria WHERE casal_id = ? AND tipus_operacio = 'exportacio.graelles'").bind(casal.id).all<{ detalls: string }>();
     expect(auditoria.results).toHaveLength(2);
     expect(auditoria.results[0]!.detalls).not.toContain("600000");
+  });
+});
+
+describe("baixa voluntària", () => {
+  it("desa el motiu i la data, allibera la plaça i l'ofereix a la primera persona de la llista d'espera", async () => {
+    const { base, A, cicle, g, full, casal } = await escenari();
+    const persones = (await full()).cos.persones as Persona[];
+    const avila = persones.find((p) => p.participant.cognom1 === "Àvila")!;
+    const baixa = (id: string, json: unknown, client = g) => client.json(`${base}/places/${id}/baixa-voluntaria`, { method: "POST", json });
+
+    expect((await baixa(avila.id, { versio: avila.versio, motiu: "" })).status).toBe(400);
+    const consulta = await clientAutenticat("consulta_casal", casal.id);
+    expect((await baixa(avila.id, { versio: avila.versio, motiu: "Canvi d'horari a la feina" }, consulta)).status).toBe(403);
+
+    const r = await baixa(avila.id, { versio: avila.versio, motiu: "Canvi d'horari a la feina" });
+    expect(r.status).toBe(200);
+    expect(r.cos).toMatchObject({
+      data: "2026-11-01", sense_oferta: null,
+      oferta: { posicio: 1, nom: "Núria", cognom1: "Bosch", telefon: "600000003" },
+      missatge: { activitat: "Taller fictici", horari: "dl, dc · 10:00–11:30", data_inici: null }, // ja ha començat
+    });
+    const places = (await g.json(`${base}/cicles/${cicle.id}/places`)).cos.grups[0].places as { id: string; estat: string; participant: { cognom1: string } }[];
+    expect(Object.fromEntries(places.map((p) => [p.participant.cognom1, p.estat]))).toEqual({ Zapata: "admesa", Àvila: "renuncia", Bosch: "oferta_pendent" });
+
+    // Motiu i data desats per als indicadors.
+    const fila = await env.DB.prepare("SELECT activitat_id, cicle_id, estat_anterior, data, motiu FROM baixes_voluntaries WHERE placa_id = ?").bind(avila.id).first();
+    expect(fila).toEqual({ activitat_id: A.id, cicle_id: cicle.id, estat_anterior: "admesa", data: "2026-11-01", motiu: "Canvi d'horari a la feina" });
+    const ind = (await g.json(`${base}/cicles/${cicle.id}/indicadors`)).cos;
+    expect(ind.totals.baixes_voluntaries).toBe(1);
+
+    // El full d'assistència mostra la baixa i la llista d'espera per ordre d'adjudicació.
+    const f = (await full()).cos;
+    expect(f.persones.find((p: Persona) => p.id === avila.id)).toBeUndefined(); // sense marques, ja no surt a la graella
+    expect(f.espera.map((p: { estat: string; participant: { cognom1: string; telefon: string } }) => [p.participant.cognom1, p.estat, p.participant.telefon]))
+      .toEqual([["Bosch", "oferta_pendent", "600000003"]]);
+
+    // No es pot repetir.
+    expect((await baixa(avila.id, { versio: avila.versio + 1, motiu: "Una altra vegada" })).status).toBe(409);
+
+    // La persona a qui s'ofereix no la vol: es desa igual i, sense ningú més en espera, la plaça queda lliure.
+    const bosch = f.espera[0] as { id: string; versio: number };
+    const r2 = await baixa(bosch.id, { versio: bosch.versio, motiu: "No li va bé l'horari" });
+    expect(r2.cos).toMatchObject({ oferta: null, sense_oferta: expect.stringContaining("buida") });
+    const fila2 = await env.DB.prepare("SELECT estat_anterior FROM baixes_voluntaries WHERE placa_id = ?").bind(bosch.id).first();
+    expect(fila2).toEqual({ estat_anterior: "oferta_pendent" });
+    const audit = await env.DB.prepare("SELECT COUNT(*) AS n FROM registres_auditoria WHERE tipus_operacio = 'places.baixa_voluntaria'").first<{ n: number }>();
+    expect(audit!.n).toBe(2);
+  });
+
+  it("guarda la baixa amb les marques: la persona continua a la graella amb la data de la baixa", async () => {
+    const { base, A, g, full } = await escenari();
+    await g.json(`${base}/activitats/${A.id}/sessions/generacio`, { method: "POST" });
+    const f = (await full()).cos;
+    const z = f.persones.find((p: Persona) => p.participant.cognom1 === "Zapata") as Persona;
+    await g.json(`${base}/sessions/${f.sessions[0].id}/assistencia`, { method: "PUT", json: { marques: [{ placa_id: z.id, estat: "present", versio: null }] } });
+    expect((await g.json(`${base}/places/${z.id}/baixa-voluntaria`, { method: "POST", json: { versio: z.versio, motiu: "Es trasllada de barri" } })).status).toBe(200);
+    const despres = (await full()).cos.persones.find((p: Persona) => p.id === z.id);
+    expect(despres).toMatchObject({ estat: "renuncia", baixa_voluntaria: { data: "2026-11-01", motiu: "Es trasllada de barri" } });
   });
 });

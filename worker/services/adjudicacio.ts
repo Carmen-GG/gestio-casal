@@ -10,7 +10,7 @@ import { ErrorAplicacio, errors } from "../http/errors";
 import { resumSha256, testimoniAleatori } from "../lib/cripto";
 import { nouId } from "../lib/ids";
 import { isoAra, type Rellotge } from "../lib/rellotge";
-import type { Cicle, Execucio, FilaPlaca, FilaResultat, Repositoris, SorteigActivitat } from "../repositories/tipus";
+import type { Cicle, Execucio, FilaPlaca, FilaResultat, Operacio, Repositoris, SorteigActivitat } from "../repositories/tipus";
 import { dataHoraLocal, filtraParticipant, type TaulaExportacio, type Visibilitat } from "./gestio-sollicituds";
 import type { ContextOperacio } from "./traca";
 
@@ -538,7 +538,7 @@ export class ServeiAdjudicacio {
    * assistència) quedi a l'auditoria amb el seu propi tipus d'operació i les seves dades.
    */
   async moviment(casalId: string, placaId: string, d: { accio: AccioPlaca; versio: number; motiu: string }, ctx: ContextOperacio,
-    origen?: { tipus_operacio: string; detalls: Record<string, unknown> }) {
+    origen?: { tipus_operacio: string; detalls: Record<string, unknown> }, extres?: (operacio: string) => Operacio[]) {
     const placa = await this.repos.adjudicacio.placa(casalId, placaId);
     if (!placa) throw errors.noTrobat("No s'ha trobat la plaça.");
     const cicle = await this.cicle(casalId, placa.cicle_id);
@@ -562,6 +562,7 @@ export class ServeiAdjudicacio {
         resultat: "exit", motiu: d.motiu, id_peticio: ctx.idPeticio ?? null,
         detalls: { activitat_id: placa.activitat_id, sollicitud_id: placa.sollicitud_id, des: placa.estat, cap: accio.cap, ...origen?.detalls },
       }, ara, condicio),
+      ...(extres?.(operacio) ?? []),
     ]);
     if (!r || r.canvis !== 1) {
       const actual = await this.repos.adjudicacio.placa(casalId, placaId);

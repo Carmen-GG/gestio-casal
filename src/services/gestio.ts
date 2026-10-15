@@ -1,6 +1,6 @@
 import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
-  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
+  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat,
 } from "../types/gestio";
 import { api } from "./api";
@@ -78,6 +78,8 @@ export const serveiGestio = {
     api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/numeros-sorteig`),
   places: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<RespostaPlaces>(`${g(casalId)}/cicles/${cicleId}/places`, s),
   mourePlaca: (casalId: string, placaId: string, dades: unknown) => api.post<unknown>(`${g(casalId)}/places/${placaId}/moviments`, dades),
+  baixaVoluntaria: (casalId: string, placaId: string, dades: { versio: number; motiu: string }) =>
+    api.post<ResultatBaixaVoluntaria>(`${g(casalId)}/places/${placaId}/baixa-voluntaria`, dades),
   baixaPerAssistencia: (casalId: string, placaId: string, dades: { versio: number; motiu?: string }) =>
     api.post<unknown>(`${g(casalId)}/places/${placaId}/baixa-assistencia`, dades),
   movimentsPlaca: (casalId: string, placaId: string, s?: AbortSignal) =>
@@ -97,8 +99,8 @@ export const serveiGestio = {
   cancellarSessio: (casalId: string, sessioId: string, dades: unknown) => api.post<{ ok: true }>(`${g(casalId)}/sessions/${sessioId}/cancellacio`, dades),
   registrarAssistencia: (casalId: string, sessioId: string, dades: unknown) =>
     api.put<{ noves: number; modificades: number }>(`${g(casalId)}/sessions/${sessioId}/assistencia`, dades),
-  graelles: (casalId: string, cicleId: string, telefon: boolean) =>
-    api.get<DadesGraelles>(`${g(casalId)}/cicles/${cicleId}/exportacions/graelles${telefon ? "?telefon=1" : ""}`),
+  graelles: (casalId: string, cicleId: string, telefon = true, s?: AbortSignal) =>
+    api.get<DadesGraelles>(`${g(casalId)}/cicles/${cicleId}/exportacions/graelles${telefon ? "" : "?telefon=0"}`, s),
   exportacioAssistencia: (casalId: string, cicleId: string) => api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/assistencia`),
 
   historial: (casalId: string, entitat: string, id: string, s?: AbortSignal) =>

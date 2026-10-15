@@ -46,6 +46,7 @@ export function Indicadors({ casalId, cicleId, versio }: { casalId: string; cicl
         <div><dt>Places disponibles</dt><dd>{t.places_disponibles}</dd></div>
         <div><dt>Places ocupades</dt><dd>{ambPlaces ? t.places_ocupades : "—"}</dd></div>
         <div><dt>Persones en llista d'espera</dt><dd>{ambPlaces ? t.espera : "—"}</dd></div>
+        <div><dt>Baixes voluntàries</dt><dd>{ambPlaces ? t.baixes_voluntaries : "—"}</dd></div>
         <div><dt>Activitats sense inscripcions</dt><dd>{t.activitats_sense_inscripcions}</dd></div>
         <div><dt>Activitats amb més demanda que places</dt><dd>{t.activitats_mes_demanda}</dd></div>
       </dl>
@@ -62,7 +63,7 @@ export function Indicadors({ casalId, cicleId, versio }: { casalId: string; cicl
             <thead>
               <tr>
                 <th scope="col">Activitat</th><th scope="col">Places</th><th scope="col">Sol·licituds</th><th scope="col">1a preferència</th>
-                <th scope="col">Admeses</th><th scope="col">Llista d'espera</th><th scope="col">Lliures</th><th scope="col">Observacions</th>
+                <th scope="col">Admeses</th><th scope="col">Llista d'espera</th><th scope="col">Baixes voluntàries</th><th scope="col">Lliures</th><th scope="col">Observacions</th>
               </tr>
             </thead>
             <tbody>
@@ -72,6 +73,7 @@ export function Indicadors({ casalId, cicleId, versio }: { casalId: string; cicl
                   <td>{a.capacitat}</td><td>{a.sollicituds}</td><td>{a.primera_preferencia}</td>
                   <td>{ambPlaces ? a.admeses + (a.ofertes ? ` (+${a.ofertes} ofertes)` : "") : "—"}</td>
                   <td>{ambPlaces ? a.espera : "—"}</td>
+                  <td>{ambPlaces ? a.baixes_voluntaries : "—"}</td>
                   <td>{ambPlaces ? a.lliures : "—"}</td>
                   <td>
                     {a.sense_inscripcions && <span className="etiqueta etiqueta--alerta">Sense inscripcions</span>}

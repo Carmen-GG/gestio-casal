@@ -596,6 +596,9 @@ export interface RepositoriAssistencia {
    */
   operacioHistorialMarca(d: { casal_id: string; sessio_id: string; placa_id: string; data: string; abans: EstatAssistencia; despres: EstatAssistencia; motiu: string; usuari_id: string; operacio: string }, ara: string): Operacio;
   operacioSessioRealitzada(sessioId: string, ara: string): Operacio;
+  /** Desa el motiu i la data d'una baixa voluntària, condicionat al canvi d'estat de la plaça de la mateixa operació. */
+  baixesVoluntaries(activitatId: string): Promise<{ placa_id: string; data: string; motiu: string }[]>;
+  operacioBaixaVoluntaria(d: { placa_id: string; casal_id: string; estat_anterior: "admesa" | "oferta_pendent"; data: string; motiu: string; usuari_id: string | null; operacio: string }, ara: string): Operacio;
 }
 
 /** Executa un conjunt d'operacions de manera atòmica (tot o res). */
@@ -609,7 +612,7 @@ export interface DadesIndicadors {
   persones: number;
   activitats: {
     id: string; nom: string; estat: EstatActivitat; capacitat: number; minim_participants: number | null;
-    sollicituds: number; primera_preferencia: number; admeses: number; ofertes: number; espera: number;
+    sollicituds: number; primera_preferencia: number; admeses: number; ofertes: number; espera: number; baixes_voluntaries: number;
   }[];
   darrera_execucio: { versio: number; estat: "proposta" | "confirmada"; executada_el: string; confirmada_el: string | null } | null;
 }

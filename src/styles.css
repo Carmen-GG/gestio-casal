@@ -328,3 +328,66 @@ main:focus { outline: none; }
 .filtre-columna__panell { display: grid; gap: 0.35rem; margin-top: 0.4rem; min-width: 10rem; font-weight: 400; }
 .cel-admesa { background: var(--color-exit-fons); color: var(--color-exit); font-weight: 600; }
 .cel-espera { background: #fff4d6; color: #5c3c00; }
+
+/* Graella d'assistència d'una activitat (X / F / FJ) */
+.avis--info { border-color: var(--color-primari); background: #eef4fb; color: inherit; }
+.avis--compacte { padding: 0.4rem 0.6rem; margin: 0.25rem 0; font-size: 0.9rem; }
+.avis-oferta { display: grid; gap: 0.5rem; justify-items: start; margin-bottom: var(--espai); }
+.avis-oferta p { margin: 0; }
+.boto--whatsapp { background: #075e54; border-color: #075e54; color: #fff; text-decoration: none; }
+.boto--whatsapp:hover { background: #054c44; color: #fff; }
+.graella-assistencia { border-collapse: separate; border-spacing: 0; }
+.graella-assistencia thead th { position: sticky; top: 0; z-index: 1; background: var(--color-superficie); }
+.graella-assistencia__dia { text-align: center; white-space: nowrap; font-size: 0.85rem; }
+.graella-assistencia__setmana { display: block; font-weight: 400; color: var(--color-text-secundari); }
+.graella-assistencia__marca { text-align: center; padding: 0.15rem !important; }
+.graella-assistencia__marca select { min-width: 3.2rem; padding: 0.3rem 0.2rem; border: 1px solid var(--color-vora); border-radius: 6px; font: inherit; font-weight: 700; text-align: center; background: #fff; }
+.marca--present, .marca--present select { background: #e7f5ea; color: #1d5e2c; }
+.marca--absent, .marca--absent select { background: #fde8e8; color: #8f1d1d; }
+.marca--absencia_justificada, .marca--absencia_justificada select { background: #fff4d6; color: #5c3c00; }
+.cel-canviada select { outline: 2px dashed var(--color-primari); outline-offset: 1px; }
+.barra-desar { padding: 0.5rem 0; }
+.taula-contenidor--alta.taula-contenidor { max-height: 70vh; }
+
+/* Graelles per imprimir: una pàgina A4 apaïsada per activitat */
+.full-graella { background: #fff; color: #111; border: 1px solid var(--color-vora); border-radius: var(--radi); padding: 1rem; margin-bottom: 1.5rem; overflow-x: auto; }
+.full-graella__capcalera { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; border-bottom: 3px solid #1f4e79; padding-bottom: 0.4rem; margin-bottom: 0.5rem; }
+.full-graella__capcalera h2 { margin: 0; color: #1f4e79; font-size: 1.35rem; }
+.full-graella__capcalera p { margin: 0.15rem 0 0; }
+.full-graella__casal { text-align: right; font-size: 0.85rem; color: #4a5560; }
+.full-graella h3 { font-size: 1rem; margin: 0.6rem 0 0.3rem; }
+.full-graella__taula { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.full-graella__taula th, .full-graella__taula td { border: 1px solid #9aa5b1; padding: 0.2rem 0.3rem; height: 1.6rem; }
+.full-graella__taula thead th { background: #1f4e79; color: #fff; font-weight: 700; }
+.full-graella__taula--espera thead th { background: #fff1d6; color: #5c3c00; }
+.full-graella__taula tbody tr:nth-child(even) td { background: #f3f6f9; }
+.full-graella .col-num { width: 2rem; text-align: center; }
+.full-graella .col-nom { min-width: 6rem; }
+.full-graella .col-cognoms { min-width: 9rem; }
+.full-graella .col-telefon { white-space: nowrap; width: 6.5rem; }
+.full-graella .col-dia { width: 2.1rem; min-width: 2.1rem; text-align: center; font-weight: 700; white-space: nowrap; }
+.full-graella thead .col-dia { font-size: 0.7rem; line-height: 1.1; }
+.full-graella thead .col-dia span { display: block; font-weight: 400; }
+.full-graella .col-pc { width: 2.8rem; text-align: center; }
+.full-graella__llegenda, .full-graella__buit { font-size: 0.8rem; color: #4a5560; margin: 0.25rem 0 0; }
+.full-graella--densa .full-graella__taula { font-size: 0.75rem; }
+.full-graella--densa .col-dia { width: 1.6rem; min-width: 1.6rem; }
+.full-graella--molt-densa .full-graella__taula { font-size: 0.65rem; }
+.full-graella--molt-densa .col-dia { width: 1.3rem; min-width: 1.3rem; }
+.marca-impresa--F, .marca-impresa--FJ { color: #8f1d1d; }
+
+@media print {
+  @page { size: A4 landscape; margin: 9mm; }
+  .pagina-impressio .barra-gestio, .pagina-impressio .menu-casal, .pagina-impressio .avis { display: none !important; }
+  .pagina-impressio .gestio__amb-menu { display: block; }
+  :root, body.pagina-impressio { background: #fff; }
+  .pagina-impressio main.contenidor { max-width: none; padding: 0; margin: 0; }
+  .full-graella { border: 0; border-radius: 0; padding: 0; margin: 0; overflow: visible; break-after: page; page-break-after: always; }
+  .full-graella:last-child { break-after: auto; page-break-after: auto; }
+  .full-graella__taula thead { display: table-header-group; }
+  .full-graella__taula tr { break-inside: avoid; }
+  .full-graella__taula thead th, .full-graella__taula tbody tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.selector-simple, #tria-activitat { padding: 0.35rem 0.5rem; border: 1px solid var(--color-vora); border-radius: var(--radi); font: inherit; max-width: 100%; }
+.graella-assistencia__baixa { white-space: nowrap; font-size: 0.85rem; }
+.graella-assistencia__baixa .boto { display: block; margin-top: 0.25rem; }
