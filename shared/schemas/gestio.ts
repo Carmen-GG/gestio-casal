@@ -91,6 +91,7 @@ const campsActivitat = {
   data_inici: data.nullable().optional(),
   data_fi: data.nullable().optional(),
   espai: textOpcional(120).optional(),
+  destinataris: textOpcional(200).optional(),
   capacitat: z.number().int().min(0).max(10000),
   nombre_sessions: z.number().int().min(0).max(1000).nullable().optional(),
   minim_participants: z.number().int().min(0).max(10000).nullable().optional(),

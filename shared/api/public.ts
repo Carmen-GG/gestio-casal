@@ -40,6 +40,7 @@ export interface ActivitatPublica {
   data_inici: string | null;
   data_fi: string | null;
   espai: string | null;
+  destinataris: string | null;
 }
 
 export interface RespostaCiclesPubliques {

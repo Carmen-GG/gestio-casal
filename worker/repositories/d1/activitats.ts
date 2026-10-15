@@ -42,13 +42,13 @@ export class D1RepositoriActivitats implements RepositoriActivitats {
       this.db
         .prepare(
           `INSERT INTO activitats (id, casal_id, cicle_id, nom, descripcio, categoria, dies_setmana, hora_inici,
-             hora_fi, horari_text, data_inici, data_fi, espai, capacitat, nombre_sessions, minim_participants, estat,
+             hora_fi, horari_text, data_inici, data_fi, espai, destinataris, capacitat, nombre_sessions, minim_participants, estat,
              informacio_difusio, configuracio_continuitat, codi_extern, darrera_operacio, creat_el, actualitzat_el)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(id, d.casal_id, d.cicle_id, d.nom, d.descripcio ?? null, d.categoria ?? null,
           JSON.stringify(d.dies_setmana ?? []), d.hora_inici ?? null, d.hora_fi ?? null, d.horari_text ?? null,
-          d.data_inici ?? null, d.data_fi ?? null, d.espai ?? null, d.capacitat, d.nombre_sessions ?? null,
+          d.data_inici ?? null, d.data_fi ?? null, d.espai ?? null, d.destinataris ?? null, d.capacitat, d.nombre_sessions ?? null,
           d.minim_participants ?? null, d.estat ?? "esborrany", JSON.stringify(d.informacio_difusio ?? {}),
           JSON.stringify(d.configuracio_continuitat ?? {}), d.codi_extern ?? null, operacio, ara, ara),
     );
@@ -63,7 +63,7 @@ export class D1RepositoriActivitats implements RepositoriActivitats {
   operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisActivitat, ara: string, operacio: string) {
     const { sql, valors } = assignacionsUpdate(canvis, [
       "nom", "descripcio", "categoria", "dies_setmana", "hora_inici", "hora_fi", "horari_text", "data_inici",
-      "data_fi", "espai", "capacitat", "nombre_sessions", "minim_participants", "estat", "informacio_difusio",
+      "data_fi", "espai", "destinataris", "capacitat", "nombre_sessions", "minim_participants", "estat", "informacio_difusio",
       "configuracio_continuitat", "codi_extern",
     ]);
     return comOperacio(

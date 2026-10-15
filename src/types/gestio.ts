@@ -43,7 +43,7 @@ export type EstatActivitat = "esborrany" | "activa" | "inactiva" | "arxivada";
 export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
-  data_inici: string | null; data_fi: string | null; espai: string | null; capacitat: number;
+  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; capacitat: number;
   nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 

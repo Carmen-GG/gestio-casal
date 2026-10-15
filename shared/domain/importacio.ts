@@ -88,6 +88,23 @@ export function interpretaDies(valor: string): number[] | null {
   return [...dies].sort((a, b) => a - b);
 }
 
+/** Interval d'hores «10:00 - 11:30», «10.00 a 11.30h». null si no ho és. */
+export function interpretaRangHores(valor: string): { inici: string; fi: string } | null {
+  const r = /^(\d{1,2}[:.h]\d{2})\s*h?\s*(?:-|–|a|fins a|al)\s*(\d{1,2}[:.h]\d{2})\s*h?$/i.exec(valor.trim());
+  if (!r) return null;
+  const inici = interpretaHora(r[1]!);
+  const fi = interpretaHora(r[2]!);
+  return inici && fi ? { inici, fi } : null;
+}
+
+/** Dates d'una sola columna («01/10/2026 - 18/12/2026», «del 1/10/2026 al 18/12/2026»). */
+export function interpretaRangDates(valor: string): { inici: string | null; fi: string | null } | null {
+  const trobades = valor.match(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.-]\d{1,2}[/.-]\d{4}/g) ?? [];
+  const dates = trobades.map(interpretaData);
+  if (dates.length === 0 || dates.length > 2 || dates.some((d) => !d)) return null;
+  return { inici: dates[0]!, fi: dates[1] ?? null };
+}
+
 /** Enter no negatiu escrit com a text ("12", "12,0"). */
 export function interpretaEnter(valor: string): number | null {
   const v = valor.trim().replace(/[.,]0+$/, "");
@@ -106,7 +123,7 @@ export function netejaNomActivitat(nom: string): string {
 
 /** Sinònims habituals de capçaleres per proposar el mapatge automàticament. */
 const SINONIMS: Record<string, string[]> = {
-  nom: ["nom", "nombre", "name", "nom activitat", "nom de l activitat", "nombre actividad", "nombre de la actividad"],
+  nom: ["nom", "nombre", "name", "titol", "titol activitat", "titol de l activitat", "titol de lactivitat", "nom de lactivitat", "nom activitat", "nom de l activitat", "nombre actividad", "nombre de la actividad"],
   cognom1: ["cognom1", "primer cognom", "cognom", "cognoms", "apellido", "primer apellido", "apellido1", "apellidos"],
   cognom2: ["cognom2", "segon cognom", "segundo apellido", "apellido2"],
   data_naixement: ["data naixement", "data de naixement", "fecha nacimiento", "fecha de nacimiento"],
@@ -122,17 +139,19 @@ const SINONIMS: Record<string, string[]> = {
   data_registre: ["data registre", "data inscripcio", "data", "fecha", "fecha inscripcion", "data hora", "marca temporal"],
   descripcio: ["descripcio", "descripcion"],
   categoria: ["categoria", "ambit", "ambito", "tipus", "tipo"],
-  dies: ["dies", "dia", "dias", "dies setmana"],
-  hora_inici: ["hora inici", "inici", "hora inicio", "inicio"],
-  hora_fi: ["hora fi", "fi", "hora final", "final", "hora fin"],
+  dies: ["dies", "dia", "dias", "dies setmana", "dia setmana", "dia de la setmana", "dies de la setmana", "dia de setmana", "dia semana", "dia de la semana"],
+  hora_inici: ["hora inici", "hora dinici", "hora de inici", "inici", "hora inicio", "hora de inicio", "inicio"],
+  hora_fi: ["hora fi", "hora de fi", "fi", "hora final", "final", "hora fin", "hora finalitzacio", "hora acabament"],
   horari_text: ["horari", "horario"],
-  data_inici: ["data inici", "fecha inicio"],
-  data_fi: ["data fi", "data final", "fecha fin", "fecha final"],
-  espai: ["espai", "sala", "aula", "espacio"],
+  data_inici: ["data inici", "data dinici", "data de inici", "fecha inicio", "fecha de inicio"],
+  data_fi: ["data fi", "data de fi", "data final", "data finalitzacio", "fecha fin", "fecha final", "fecha de fin"],
+  dates: ["dates", "periode", "fechas", "periodo"],
+  destinataris: ["destinataris", "persones a qui va dirigit", "persones a qui va dirigida", "a qui va dirigit", "a qui va dirigida", "dirigit a", "dirigida a", "adrecat a", "adrecada a", "public", "public objectiu", "publico", "dirigido a", "destinatarios"],
+  espai: ["espai", "sala", "aula", "espacio", "lloc"],
   // «Assistents previstos» és la columna de places del llistat d'activitats de la PGEc.
   capacitat: ["capacitat", "places", "plazas", "aforament", "aforo", "capacidad", "assistents previstos", "asistentes previstos"],
   nombre_sessions: ["sessions", "nombre sessions", "sesiones"],
-  codi_extern: ["codi", "codi extern", "codi pgec", "codigo", "id"],
+  codi_extern: ["codi", "codi extern", "codi pgec", "codigo", "id", "fa", "codi fa", "codi activitat", "codigo actividad"],
 };
 
 /** Proposa a quin camp de destinació correspon una capçalera, o null. */

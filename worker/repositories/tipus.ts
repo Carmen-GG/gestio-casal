@@ -74,6 +74,8 @@ export interface Activitat {
   data_inici: string | null;
   data_fi: string | null;
   espai: string | null;
+  /** Persones a qui va dirigida (text de la PGEc). */
+  destinataris: string | null;
   capacitat: number;
   nombre_sessions: number | null;
   /** Mínim de participants perquè es faci. Només genera avisos. */
@@ -92,7 +94,7 @@ export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "c
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "destinataris" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;

@@ -203,6 +203,12 @@ export const rutesGestio = new Hono<Entorn>()
   })
 
   // ---------- Importacions ----------
+  // Llistat d'activitats de la PGEc: s'importa tot directament, sense previsualització.
+  .post("/casals/:casalId/cicles/:cicleId/importacions/activitats-pgec", async (c) => {
+    const casalId = casalAutoritzat(c, "activitats.gestionar");
+    const { files } = await cosValidat(c, importacioPeticio);
+    return c.json(await importacions(c).importarActivitatsDirecte(casalId, idRuta(c, "cicleId"), files, ctx(c)), 201);
+  })
   .post("/casals/:casalId/cicles/:cicleId/importacions/:tipus/previsualitzacio", async (c) => {
     const casalId = casalAutoritzat(c, "dades.importar");
     const { files } = await cosValidat(c, importacioPeticio);

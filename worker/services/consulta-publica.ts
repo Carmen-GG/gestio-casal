@@ -37,7 +37,7 @@ export class ServeiConsultaPublica {
     return {
       id: a.id, nom: a.nom, descripcio: a.descripcio, categoria: a.categoria, dies_setmana: a.dies_setmana,
       hora_inici: a.hora_inici, hora_fi: a.hora_fi, horari_text: a.horari_text,
-      data_inici: a.data_inici, data_fi: a.data_fi, espai: a.espai,
+      data_inici: a.data_inici, data_fi: a.data_fi, espai: a.espai, destinataris: a.destinataris,
     };
   }
 
