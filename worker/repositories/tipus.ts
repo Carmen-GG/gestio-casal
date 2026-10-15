@@ -5,6 +5,7 @@
  * PostgreSQL o a una base de dades corporativa n'hi ha prou amb una implementació
  * nova de cada repositori (vegeu docs/adr/0003-capa-de-repositoris.md).
  */
+import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte, TipusComunicacio } from "../../shared/schemas/comunicacions";
 import type { EstatCicle } from "../../shared/domain/cicles";
 import type { CampPersonal } from "../../shared/domain/formulari";
 import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMotor } from "../../shared/domain/adjudicacio";
@@ -617,6 +618,22 @@ export interface DadesIndicadors {
   darrera_execucio: { versio: number; estat: "proposta" | "confirmada"; executada_el: string; confirmada_el: string | null } | null;
 }
 
+export interface ComunicacioPlaca {
+  placa_id: string;
+  tipus: TipusComunicacio;
+  canal: CanalComunicacio;
+  estat: EstatComunicacio;
+  motiu: MotiuNoContacte | null;
+  nota: string | null;
+  actualitzat_el: string;
+}
+
+export interface RepositoriComunicacions {
+  llistar(casalId: string, cicleId: string): Promise<ComunicacioPlaca[]>;
+  desar(d: ComunicacioPlaca & { casal_id: string; cicle_id: string; usuari_id: string | null }): Promise<void>;
+  esborrar(casalId: string, placaId: string): Promise<number>;
+}
+
 export interface RepositoriIndicadors {
   cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
 }
@@ -633,6 +650,7 @@ export interface Repositoris {
   gestioSollicituds: RepositoriGestioSollicituds;
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
+  comunicacions: RepositoriComunicacions;
   indicadors: RepositoriIndicadors;
   cartells: RepositoriCartells;
   unitat: UnitatDeTreball;

@@ -18,6 +18,8 @@ import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
 import { ServeiIndicadors } from "../services/indicadors";
+import { ServeiComunicacions } from "../services/comunicacions";
+import { registreComunicacio } from "../../shared/schemas/comunicacions";
 import { baixaAssistencia, baixaVoluntaria, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
@@ -36,6 +38,7 @@ const sollicituds = (c: C) => new ServeiGestioSollicituds(c.get("repos"), c.get(
 const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rellotge"));
 const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
 const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
+const comunicacions = (c: C) => new ServeiComunicacions(c.get("repos"), c.get("rellotge"));
 const indicadors = (c: C) => new ServeiIndicadors(c.get("repos"), c.get("rellotge"));
 
 /** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
@@ -334,6 +337,23 @@ export const rutesGestio = new Hono<Entorn>()
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, movimentPlaca);
     return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  // Comunicació de l'assignació: cal poder veure el telèfon de les persones.
+  .get("/casals/:casalId/cicles/:cicleId/comunicacions", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    return c.json(await comunicacions(c).assignacions(casalId, idRuta(c, "cicleId")));
+  })
+  .put("/casals/:casalId/places/:placaId/comunicacio", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
+    const cos = await cosValidat(c, registreComunicacio);
+    return c.json(await comunicacions(c).registrar(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  .post("/casals/:casalId/places/:placaId/comunicacio/desfer", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
+    return c.json(await comunicacions(c).esborrar(casalId, idRuta(c, "placaId"), ctx(c)));
   })
   .post("/casals/:casalId/places/:placaId/baixa-voluntaria", async (c) => {
     const casalId = casalAutoritzat(c, "places.gestionar");

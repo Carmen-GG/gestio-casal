@@ -40,7 +40,7 @@ export const MENU: ElementMenu[] = [
         text: "WhatsApp", desti: { properament: "whatsapp" },
         fills: [
           { text: "Comunicacions generals", desti: { properament: "whatsapp-generals" } },
-          { text: "Comunicacions segons activitat", desti: { properament: "whatsapp-activitat" } },
+          { text: "Comunicacions segons activitat", desti: { seccio: "comunicacions" }, permis: "sollicituds.dades_contacte" },
         ],
       },
       { text: "Instagram", desti: { properament: "instagram" } },
