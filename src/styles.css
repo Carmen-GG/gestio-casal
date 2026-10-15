@@ -403,3 +403,11 @@ main:focus { outline: none; }
   .imprimint-trucades .nomes-imprimir { display: block; }
   .imprimint-trucades .taula-contenidor { max-height: none; overflow: visible; }
 }
+
+/* Buscar usuari/a */
+.cerca-persones { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem; }
+.resultats-persones { margin-bottom: 1.5rem; }
+.cerca-persones .camp:first-child { flex: 1 1 18rem; }
+.cerca-persones .camp { margin: 0; }
+.omeses { margin: 0.5rem 0 1rem; }
+.omeses ul { max-height: 14rem; overflow: auto; }

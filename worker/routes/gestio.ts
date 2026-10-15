@@ -20,6 +20,9 @@ import { ServeiAssistencia } from "../services/assistencia";
 import { ServeiIndicadors } from "../services/indicadors";
 import { ServeiComunicacions } from "../services/comunicacions";
 import { registreComunicacio } from "../../shared/schemas/comunicacions";
+import { ServeiPersonesPlataforma } from "../services/persones-plataforma";
+import { cercaPersones, importacioPersones } from "../../shared/schemas/persones-plataforma";
+import type { CampPersona } from "../../shared/domain/persones-plataforma";
 import { baixaAssistencia, baixaVoluntaria, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
@@ -39,6 +42,7 @@ const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rel
 const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
 const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
 const comunicacions = (c: C) => new ServeiComunicacions(c.get("repos"), c.get("rellotge"));
+const personesPlataforma = (c: C) => new ServeiPersonesPlataforma(c.get("repos"), c.get("rellotge"));
 const indicadors = (c: C) => new ServeiIndicadors(c.get("repos"), c.get("rellotge"));
 
 /** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
@@ -337,6 +341,29 @@ export const rutesGestio = new Hono<Entorn>()
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, movimentPlaca);
     return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  // ---------- Buscar usuari/a: persones importades de la PGEc ----------
+  .get("/casals/:casalId/persones-plataforma", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    const consulta = cercaPersones.safeParse(c.req.query());
+    if (!consulta.success) throw errors.peticioInvalida("Paràmetres de consulta no vàlids.", errorsPerCamp(consulta.error));
+    const servei = personesPlataforma(c);
+    const [resultat, resum] = await Promise.all([
+      servei.cercar(casalId, consulta.data.q, consulta.data.camp as CampPersona | "tots", visibilitat(c.get("usuari"), casalId)),
+      servei.resum(casalId),
+    ]);
+    return c.json({ ...resultat, resum });
+  })
+  .get("/casals/:casalId/persones-plataforma/:personaId", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await personesPlataforma(c).fitxa(casalId, idRuta(c, "personaId"), visibilitat(c.get("usuari"), casalId)));
+  })
+  // Els llistats de la PGEc porten telèfons i adreces: per importar-los cal poder-los veure.
+  .post("/casals/:casalId/persones-plataforma/importacio", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.importar");
+    c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
+    const cos = await cosValidat(c, importacioPersones);
+    return c.json(await personesPlataforma(c).importar(casalId, cos, ctx(c)));
   })
   // Comunicació de l'assignació: cal poder veure el telèfon de les persones.
   .get("/casals/:casalId/cicles/:cicleId/comunicacions", async (c) => {

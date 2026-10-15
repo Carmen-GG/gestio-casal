@@ -5,6 +5,7 @@
  * PostgreSQL o a una base de dades corporativa n'hi ha prou amb una implementació
  * nova de cada repositori (vegeu docs/adr/0003-capa-de-repositoris.md).
  */
+import type { DadesPersona } from "../../shared/domain/persones-plataforma";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte, TipusComunicacio } from "../../shared/schemas/comunicacions";
 import type { EstatCicle } from "../../shared/domain/cicles";
 import type { CampPersonal } from "../../shared/domain/formulari";
@@ -634,6 +635,46 @@ export interface RepositoriComunicacions {
   esborrar(casalId: string, placaId: string): Promise<number>;
 }
 
+export interface PersonaPlataforma {
+  id: string;
+  clau: string;
+  document_norm: string | null;
+  nom: string | null;
+  cognom1: string | null;
+  cognom2: string | null;
+  clau_ordenacio: string;
+  data_naixement: string | null;
+  dades: DadesPersona;
+  origens: string[];
+  text_basic: string;
+  text_contacte: string;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface ParticipacioPersona {
+  cicle_id: string;
+  cicle: string;
+  cicle_data_inici: string | null;
+  sollicitud_numero: number;
+  sollicitud_estat: string;
+  activitat_id: string;
+  activitat: string;
+  preferencia: number;
+  placa_estat: string | null;
+  posicio_espera: number | null;
+}
+
+export interface RepositoriPersonesPlataforma {
+  perClaus(casalId: string, claus: string[]): Promise<PersonaPlataforma[]>;
+  desar(casalId: string, persones: PersonaPlataforma[]): Promise<void>;
+  cercar(casalId: string, f: { paraules: string[]; data_naixement: string | null; contacte: boolean; limit: number }): Promise<{ persones: PersonaPlataforma[]; total: number }>;
+  perId(casalId: string, id: string): Promise<PersonaPlataforma | null>;
+  resum(casalId: string): Promise<{ total: number; darrera_importacio: string | null }>;
+  /** Sol·licituds i places de l'aplicació de la mateixa persona (per document o per nom i data de naixement). */
+  participacions(casalId: string, documentNorm: string | null, clauOrdenacio: string, dataNaixement: string | null): Promise<ParticipacioPersona[]>;
+}
+
 export interface RepositoriIndicadors {
   cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
 }
@@ -651,6 +692,7 @@ export interface Repositoris {
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
   comunicacions: RepositoriComunicacions;
+  personesPlataforma: RepositoriPersonesPlataforma;
   indicadors: RepositoriIndicadors;
   cartells: RepositoriCartells;
   unitat: UnitatDeTreball;

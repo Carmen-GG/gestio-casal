@@ -1,7 +1,7 @@
 import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
-  EstatSorteig, IndicadorsCicle, SorteigActivitat,
+  EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
 } from "../types/gestio";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
@@ -79,6 +79,12 @@ export const serveiGestio = {
     api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/numeros-sorteig`),
   places: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<RespostaPlaces>(`${g(casalId)}/cicles/${cicleId}/places`, s),
   mourePlaca: (casalId: string, placaId: string, dades: unknown) => api.post<unknown>(`${g(casalId)}/places/${placaId}/moviments`, dades),
+  cercaPersones: (casalId: string, q: string, camp: string, s?: AbortSignal) =>
+    api.get<CercaPersonesPlataforma>(`${g(casalId)}/persones-plataforma?${new URLSearchParams({ q, camp })}`, s),
+  fitxaPersona: (casalId: string, id: string, s?: AbortSignal) =>
+    api.get<FitxaPersonaPlataforma>(`${g(casalId)}/persones-plataforma/${encodeURIComponent(id)}`, s),
+  importarPersones: (casalId: string, dades: { origen: "usuaris" | "carnets" | "altres"; nom_fitxer?: string; primera_fila: number; files: Record<string, string>[] }) =>
+    api.post<ResultatImportacioPersones>(`${g(casalId)}/persones-plataforma/importacio`, dades),
   comunicacions: (casalId: string, cicleId: string, s?: AbortSignal) =>
     api.get<DadesComunicacions>(`${g(casalId)}/cicles/${cicleId}/comunicacions`, s),
   registrarComunicacio: (casalId: string, placaId: string, dades: { tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio; motiu?: MotiuNoContacte | null; nota?: string | null }) =>
