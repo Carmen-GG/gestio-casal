@@ -150,7 +150,6 @@ export const rutesAuth = new Hono<Entorn>()
       superadministracio: usuari.esGlobal("usuaris.gestionar"),
       quadre_global: usuari.esGlobal("estadistiques.consultar"),
       te_contrasenya: (await c.get("repos").usuaris.resumContrasenya(usuari.id)) !== null,
-      pot_crear_casals: usuari.esGlobal("casal.configurar"),
       pot_gestionar_plantilles_comunes: usuari.esGlobal("cartells.plantilles"),
       casals: casals.map((k) => ({
         id: k.id, codi: k.codi, nom: k.nom, actiu: k.actiu, permisos: usuari.permisosA(k.id), nomes_consulta: usuari.nomesConsulta(k.id),

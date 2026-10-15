@@ -5,7 +5,7 @@ import { errors } from "../http/errors";
 import { cosValidat, idRuta } from "../http/validacio";
 import {
   activitatActualitzar, activitatCanviEstat, activitatCrear, activitatDuplicar, assignarResponsable, assignarRol, casalActualitzar,
-  casalCrear, cicleActualitzar, cicleCanviEstat, cicleCrear, revocarRol,
+  cicleActualitzar, cicleCanviEstat, cicleCrear, revocarRol,
 } from "../../shared/schemas/gestio";
 import { transicionsPermeses } from "../../shared/domain/cicles";
 import { configuracioFormulariEfectiva } from "../../shared/domain/formulari";
@@ -91,11 +91,7 @@ export const rutesGestio = new Hono<Entorn>()
     const ids = c.get("usuari").casalsAccessibles();
     return c.json({ casals: await c.get("repos").casals.llistar(ids === null ? {} : { ids }) });
   })
-  .post("/casals", async (c) => {
-    if (!c.get("usuari").esGlobal("casal.configurar")) throw errors.sensePermis();
-    const dades = await cosValidat(c, casalCrear);
-    return c.json({ casal: await casals(c).crear(dades, ctx(c)) }, 201);
-  })
+  // Els casals són fixos (llista oficial carregada per migració): no es poden crear des de l'aplicació.
   .get("/casals/:casalId", async (c) => {
     const casalId = casalAutoritzat(c, "casal.consultar");
     return c.json({ casal: await casals(c).obtenir(casalId) });
