@@ -4,7 +4,7 @@ import type { Entorn } from "../app";
 import { iniciarSessio, requereixSessio, tancarSessio } from "../auth/sessio";
 import { ErrorAplicacio, errors } from "../http/errors";
 import { cosValidat } from "../http/validacio";
-import { resumSha256 } from "../lib/cripto";
+import { resumCodiPrimerAcces, resumSha256 } from "../lib/cripto";
 import {
   comprovaContrasenya, LLARGADA_MAXIMA_CONTRASENYA, LLARGADA_MINIMA_CONTRASENYA, resumContrasenya,
 } from "../auth/contrasenya";
@@ -13,6 +13,15 @@ const entrada = z.strictObject({ testimoni: z.string().min(20).max(100) });
 const entradaContrasenya = z.strictObject({
   email: z.string().trim().toLowerCase().email().max(254),
   contrasenya: z.string().min(1).max(LLARGADA_MAXIMA_CONTRASENYA),
+});
+const novaContrasenya = z.string()
+  .min(LLARGADA_MINIMA_CONTRASENYA, `La contrasenya ha de tenir almenys ${LLARGADA_MINIMA_CONTRASENYA} caràcters.`)
+  .max(LLARGADA_MAXIMA_CONTRASENYA)
+  .refine((v) => v.trim().length === v.length, "La contrasenya no pot començar ni acabar amb espais.");
+const primerAcces = z.strictObject({
+  email: z.string().trim().toLowerCase().email().max(254),
+  codi: z.string().trim().min(8).max(40),
+  contrasenya: novaContrasenya,
 });
 const canviContrasenya = z.strictObject({
   actual: z.string().max(LLARGADA_MAXIMA_CONTRASENYA).optional(),
@@ -79,6 +88,37 @@ export const rutesAuth = new Hono<Entorn>()
     );
     return c.json({ ok: true });
   })
+  /**
+   * Primer accés (o contrasenya oblidada): correu + codi d'un sol ús lliurat per la superadministració
+   * o per la persona responsable del casal. Crea la contrasenya i obre la sessió.
+   */
+  .post("/primer-acces", async (c) => {
+    if (c.env.LIMIT_ENTRADA) {
+      const ip = c.req.header("cf-connecting-ip") ?? "desconeguda";
+      const { success } = await c.env.LIMIT_ENTRADA.limit({ key: await resumSha256(`entrada:${ip}`) });
+      if (!success) throw new ErrorAplicacio(429, "massa_peticions", "Massa intents seguits. Espereu un minut i torneu-ho a provar.");
+    }
+    const { email, codi, contrasenya } = await cosValidat(c, primerAcces);
+    const repos = c.get("repos");
+    const ara = c.get("rellotge").ara().toISOString();
+    const usuari = await repos.usuaris.perEmail(email);
+    const resum = await resumCodiPrimerAcces(codi);
+    const valid = !!usuari && usuari.actiu && await repos.sessions.consumirCodiPrimerAcces(resum, usuari.id, ara);
+    if (!usuari || !valid) {
+      await repos.auditoria.registrar(
+        { casal_id: null, usuari_id: null, tipus_operacio: "sessio.primer_acces", entitat: "sessio", entitat_id: null, resultat: "denegat", id_peticio: c.get("idPeticio") },
+        ara,
+      );
+      throw new ErrorAplicacio(401, "codi_no_valid", "El correu o el codi no són correctes, o el codi ja s'ha fet servir o ha caducat.");
+    }
+    await repos.usuaris.fixarContrasenya(usuari.id, await resumContrasenya(contrasenya), ara);
+    await iniciarSessio(c, usuari.id);
+    await repos.auditoria.registrar(
+      { casal_id: null, usuari_id: usuari.id, tipus_operacio: "sessio.primer_acces", entitat: "usuari", entitat_id: usuari.id, resultat: "exit", id_peticio: c.get("idPeticio") },
+      ara,
+    );
+    return c.json({ ok: true });
+  })
   .post("/contrasenya", requereixSessio, async (c) => {
     const { actual, nova } = await cosValidat(c, canviContrasenya);
     const repos = c.get("repos");
@@ -107,9 +147,13 @@ export const rutesAuth = new Hono<Entorn>()
     return c.json({
       usuari: { id: usuari.id, nom_visible: usuari.usuari.nom_visible, email: usuari.usuari.email },
       administracio_central: ids === null,
+      superadministracio: usuari.esGlobal("usuaris.gestionar"),
+      quadre_global: usuari.esGlobal("estadistiques.consultar"),
       te_contrasenya: (await c.get("repos").usuaris.resumContrasenya(usuari.id)) !== null,
       pot_crear_casals: usuari.esGlobal("casal.configurar"),
       pot_gestionar_plantilles_comunes: usuari.esGlobal("cartells.plantilles"),
-      casals: casals.map((k) => ({ id: k.id, codi: k.codi, nom: k.nom, actiu: k.actiu, permisos: usuari.permisosA(k.id) })),
+      casals: casals.map((k) => ({
+        id: k.id, codi: k.codi, nom: k.nom, actiu: k.actiu, permisos: usuari.permisosA(k.id), nomes_consulta: usuari.nomesConsulta(k.id),
+      })),
     });
   });

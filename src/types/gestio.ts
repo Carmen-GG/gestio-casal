@@ -12,11 +12,17 @@ export interface Casal {
 
 export interface CasalAccessible {
   id: string; codi: string; nom: string; actiu: boolean; permisos: string[];
+  /** Superadministració en un casal amb responsable: només hi pot consultar. */
+  nomes_consulta: boolean;
 }
 
 export interface Jo {
   usuari: { id: string; nom_visible: string; email: string };
   administracio_central: boolean;
+  /** Superadministració: assigna responsables i veu tots els casals. */
+  superadministracio: boolean;
+  /** Pot veure el quadre de comandament de tots els casals. */
+  quadre_global: boolean;
   /** Té una contrasenya per entrar al panell. */
   te_contrasenya: boolean;
   pot_crear_casals: boolean;
@@ -54,6 +60,38 @@ export interface EntradaHistorial {
 
 export interface AssignacioRol {
   id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string; casal_id: string | null; atorgat_el: string;
+  te_contrasenya?: boolean; darrer_acces_el?: string | null; codi_pendent_fins?: string | null;
+}
+
+/** Codi de primer accés: només es mostra una vegada. */
+export interface CodiAcces { codi: string; caduca_el: string }
+export type AccesAlta = { estat: "codi"; codi: CodiAcces } | { estat: "te_contrasenya" } | { estat: "altres_casals" };
+
+export interface ResponsableCasal {
+  assignacio_id: string; usuari_id: string; email: string; nom_visible: string; atorgat_el: string;
+  te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null;
+}
+export interface CasalResponsables {
+  id: string; codi: string; nom: string; municipi: string; actiu: boolean; responsables: ResponsableCasal[];
+}
+
+export interface RecomptesGlobals {
+  activitats: number; places_ofertes: number; sollicituds: number; persones: number; admeses: number; espera: number;
+  renuncies: number; baixes: number; baixes_voluntaries: number; sessions_realitzades: number;
+  presencies: number; absencies: number; absencies_justificades: number; percentatge_assistencia: number | null;
+}
+export interface QuadreGlobal {
+  any: number | null;
+  anys: number[];
+  totals: RecomptesGlobals & {
+    casals: number; casals_amb_responsable: number; casals_amb_cicles: number; cicles: number;
+    persones_diferents: number; persones_plataforma: number; equip: number;
+  };
+  casals: (RecomptesGlobals & {
+    casal_id: string; casal: string; municipi: string; actiu: boolean; cicles: number;
+    persones_diferents: number; persones_plataforma: number; equip: number; responsables: number;
+  })[];
+  cicles: (RecomptesGlobals & { casal_id: string; casal: string; cicle_id: string; cicle: string; any: number; estat: EstatCicle; data_inici: string; data_fi: string })[];
 }
 
 export type EstatSollicitud = "rebuda" | "validada" | "pendent_revisio" | "anullada";

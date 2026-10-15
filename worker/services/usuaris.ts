@@ -3,6 +3,15 @@ import type { AssignacioRol, Repositoris } from "../repositories/tipus";
 import { isoAra, type Rellotge } from "../lib/rellotge";
 import { nouId } from "../lib/ids";
 import type { ContextOperacio } from "./traca";
+import { ServeiAcces, type CodiLliurat } from "./acces";
+
+/** Què cal fer perquè la persona pugui entrar després d'una alta. */
+export type AccesAlta =
+  | { estat: "codi"; codi: CodiLliurat }
+  | { estat: "te_contrasenya" }
+  | { estat: "altres_casals" };
+
+export const ROL_RESPONSABLE = "responsable_casal";
 
 /**
  * Gestió de les persones autoritzades d'un casal. Les assignacions no s'esborren:
@@ -49,10 +58,41 @@ export class ServeiUsuaris {
     return (await this.repos.usuaris.assignacioPerId(id))!;
   }
 
-  async revocar(casalId: string, assignacioId: string, opcions: ContextOperacio & { usuariId: string; motiu?: string | null }) {
+  /**
+   * Després d'una alta: si la persona encara no té contrasenya, se li genera el codi de primer accés.
+   * Des d'un casal (no superadministració) només si la persona no té accés a cap altre lloc.
+   */
+  async accesAlta(usuariId: string, casalId: string, ctx: ContextOperacio, global: boolean): Promise<AccesAlta> {
+    if (await this.repos.usuaris.resumContrasenya(usuariId)) return { estat: "te_contrasenya" };
+    const acces = new ServeiAcces(this.repos, this.rellotge);
+    if (!global) {
+      const altres = (await this.repos.usuaris.assignacionsUsuari(usuariId)).some((a) => a.casal_id !== casalId);
+      if (altres) return { estat: "altres_casals" };
+    }
+    return { estat: "codi", codi: await acces.generarCodi(usuariId, casalId, ctx) };
+  }
+
+  /** Nou codi de primer accés per a una persona del casal (p. ex. si l'ha perdut o ha oblidat la contrasenya). */
+  async nouCodi(casalId: string, assignacioId: string, ctx: ContextOperacio & { usuariId: string }, global: boolean) {
+    const assignacio = await this.repos.usuaris.assignacioPerId(assignacioId);
+    if (!assignacio || assignacio.casal_id !== casalId) throw errors.noTrobat("No s'ha trobat l'assignació.");
+    if (assignacio.rol_codi === ROL_RESPONSABLE && !global) {
+      throw errors.conflicte("responsable", "El codi d'accés de la persona responsable el genera la superadministració.");
+    }
+    if (assignacio.usuari_id === ctx.usuariId) throw errors.conflicte("propi", "Per canviar la vostra contrasenya, aneu a «El meu compte».");
+    const acces = new ServeiAcces(this.repos, this.rellotge);
+    if (!global) await acces.exigeixNomesAquestCasal(assignacio.usuari_id, casalId);
+    return acces.generarCodi(assignacio.usuari_id, casalId, ctx);
+  }
+
+  async revocar(casalId: string, assignacioId: string, opcions: ContextOperacio & { usuariId: string; motiu?: string | null }, global = false) {
     const assignacio = await this.repos.usuaris.assignacioPerId(assignacioId);
     // Només es poden revocar assignacions del mateix casal (no globals ni d'altres casals).
     if (!assignacio || assignacio.casal_id !== casalId) throw errors.noTrobat("No s'ha trobat l'assignació.");
+    // La persona responsable només la pot donar de baixa la superadministració.
+    if (assignacio.rol_codi === ROL_RESPONSABLE && !global) {
+      throw errors.conflicte("responsable", "La persona responsable del casal només la pot donar de baixa la superadministració.");
+    }
     const ara = isoAra(this.rellotge);
     const motiu = opcions.motiu?.trim() || null;
     const [r] = await this.repos.unitat.executar([

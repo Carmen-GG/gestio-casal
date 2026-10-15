@@ -21,6 +21,8 @@ import { AssistenciaActivitat } from "./pages/gestio/AssistenciaActivitat";
 import { ImprimirGraelles } from "./pages/gestio/ImprimirGraelles";
 import { Comunicacions } from "./pages/gestio/Comunicacions";
 import { BuscarUsuari } from "./pages/gestio/BuscarUsuari";
+import { AdministracioCasal, Responsables } from "./pages/gestio/Administracio";
+import { QuadreGlobal } from "./pages/gestio/QuadreGlobal";
 import { FitxaPersona } from "./pages/gestio/FitxaPersona";
 import { PantallaSorteig } from "./pages/gestio/PantallaSorteig";
 import { CartellsInici } from "./pages/cartells/CartellsInici";
@@ -43,6 +45,9 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <GestioInici /> },
           { path: "compte", element: <Compte /> },
+          { path: "administracio/responsables", element: <Responsables /> },
+          { path: "administracio/casal", element: <AdministracioCasal /> },
+          { path: "administracio/quadre", element: <QuadreGlobal /> },
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
           { path: ":casalId/anar/:seccio", element: <AnarASeccio /> },

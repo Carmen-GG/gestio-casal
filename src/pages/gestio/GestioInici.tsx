@@ -8,9 +8,11 @@ import { Seccio } from "../../components/Seccio";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import { useGestio } from "./context";
+import { AdministracioInici } from "./Administracio";
 
 export function GestioInici() {
   const { jo } = useGestio();
+  if (jo.superadministracio) return <AdministracioInici />;
   // Amb un sol casal s'hi entra directament, excepte qui pot crear-ne (ha de poder afegir el segon).
   if (jo.casals.length === 1 && !jo.pot_crear_casals) return <Navigate to={`/gestio/${jo.casals[0]!.id}`} replace />;
   return (
@@ -41,7 +43,7 @@ type Valors = Record<"codi" | "nom" | "municipi" | "adreca", string>;
 const buit: Valors = { codi: "", nom: "", municipi: "", adreca: "" };
 
 /** Alta d'un casal (només administració central). El servidor torna a validar i comprova el permís. */
-function NouCasal() {
+export function NouCasal() {
   const { recarregarJo } = useGestio();
   const navega = useNavigate();
   const [v, setV] = useState<Valors>(buit);

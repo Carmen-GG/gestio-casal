@@ -2,6 +2,7 @@ import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
+  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal,
 } from "../types/gestio";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
@@ -15,6 +16,7 @@ export const serveiAuth = {
     api.post<{ ok: true }>("/auth/entrar-contrasenya", { email, contrasenya }),
   canviarContrasenya: (dades: { actual?: string; nova: string }) => api.post<{ ok: true }>("/auth/contrasenya", dades),
   sortir: () => api.post<{ ok: true }>("/auth/sortir"),
+  primerAcces: (dades: { email: string; codi: string; contrasenya: string }) => api.post<{ ok: true }>("/auth/primer-acces", dades),
 };
 
 export const serveiGestio = {
@@ -119,6 +121,16 @@ export const serveiGestio = {
     api.get<{ historial: EntradaHistorial[] }>(`${g(casalId)}/historial/${entitat}/${id}`, s),
 
   assignacions: (casalId: string, s?: AbortSignal) => api.get<{ assignacions: AssignacioRol[] }>(`${g(casalId)}/usuaris`, s),
-  assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol }>(`${g(casalId)}/usuaris`, dades),
+  assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`${g(casalId)}/usuaris`, dades),
+  nouCodiUsuari: (casalId: string, id: string) => api.post<{ codi: CodiAcces }>(`${g(casalId)}/usuaris/${id}/codi-acces`),
+  responsables: (s?: AbortSignal) => api.get<{ casals: CasalResponsables[] }>("/gestio/administracio/responsables", s),
+  assignarResponsable: (casalId: string, dades: { email: string; nom_visible: string }) =>
+    api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`/gestio/administracio/casals/${casalId}/responsables`, dades),
+  revocarResponsable: (casalId: string, id: string, motiu: string) =>
+    api.post<{ ok: true }>(`/gestio/administracio/casals/${casalId}/responsables/${id}/revocar`, { motiu }),
+  nouCodiResponsable: (casalId: string, id: string) =>
+    api.post<{ codi: CodiAcces }>(`/gestio/administracio/casals/${casalId}/responsables/${id}/codi-acces`),
+  quadreGlobal: (any: number | null, s?: AbortSignal) =>
+    api.get<QuadreGlobal>(`/gestio/administracio/quadre${any ? `?any=${any}` : ""}`, s),
   revocarRol: (casalId: string, id: string, motiu: string) => api.post<{ ok: true }>(`${g(casalId)}/usuaris/${id}/revocar`, { motiu }),
 };
