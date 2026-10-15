@@ -41,8 +41,6 @@ main:focus { outline: none; }
 .capcalera__interior { display: flex; align-items: center; justify-content: space-between; padding-block: 0.75rem; }
 .capcalera__marca { color: #fff; font-weight: 700; text-decoration: none; font-size: 1.1rem; }
 .capcalera__enllac { color: #fff; }
-.tria-casal { max-width: 40rem; }
-.tria-casal select { width: 100%; min-width: 0; }
 
 .peu { border-top: 1px solid var(--color-vora); color: var(--color-text-secundari); font-size: 0.9rem; }
 
@@ -434,5 +432,5 @@ main:focus { outline: none; }
 .entrada-inici { background: var(--color-superficie); border: 1px solid var(--color-vora); border-radius: var(--radi); padding: var(--espai); display: flex; flex-direction: column; gap: 0.5rem; }
 .entrada-inici h2 { margin: 0; color: var(--color-primari); font-size: 1.25rem; }
 .entrada-inici p { margin: 0; }
-.entrada-inici .tria-casal { margin-top: auto; }
-.entrada-inici > .boto { align-self: flex-start; margin-top: auto; }
+.entrada-inici__formulari { margin-top: auto; max-width: 28rem; }
+.entrada-inici__formulari .boto { align-self: flex-start; }

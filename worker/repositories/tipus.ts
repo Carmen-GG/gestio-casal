@@ -201,6 +201,8 @@ export interface RepositoriUsuaris {
   permisos(usuariId: string): Promise<PermisosUsuari>;
   /** Resum desat de la contrasenya (null si no en té). */
   resumContrasenya(usuariId: string): Promise<string | null>;
+  /** Persones actives de la superadministració amb contrasenya (per a l'accés només amb contrasenya). */
+  superadministracio(): Promise<{ id: string; contrasenya_resum: string }[]>;
   fixarContrasenya(usuariId: string, resum: string, ara: string): Promise<void>;
   assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
   assignacioPerId(id: string): Promise<AssignacioRol | null>;

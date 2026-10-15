@@ -4,8 +4,6 @@ import { CampText } from "../../components/Formulari";
 import { MissatgeError } from "../../components/EstatsConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiAuth } from "../../services/gestio";
-import { useConsulta } from "../../hooks/useConsulta";
-import { serveiPublic } from "../../services/public";
 
 /**
  * Accés al panell amb correu i contrasenya o, la primera vegada, amb un codi d'accés d'un sol ús.
@@ -24,12 +22,6 @@ export function Entrar() {
   const [error, setError] = useState<ErrorClientApi | null>(null);
   const automatic = useRef(false);
   const desti = params.get("tornar")?.startsWith("/gestio") ? params.get("tornar")! : "/gestio";
-  // Des de la pàgina principal: superadministració o l'administració d'un casal concret.
-  const codiCasal = /^\/gestio\/casal\/([^/?#]+)/.exec(desti)?.[1];
-  const casals = useConsulta((s) => (codiCasal ? serveiPublic.casals(s) : Promise.resolve(null)), [codiCasal]);
-  const nomCasal = codiCasal && casals.tipus === "dades" ? casals.dades?.casals.find((c) => c.codi === decodeURIComponent(codiCasal))?.nom : undefined;
-  const titol = params.get("ambit") === "superadministracio" ? "Accés a la superadministració"
-    : codiCasal ? "Accés a l'administració del casal" : "Accés al panell de gestió";
 
   async function entrar(valor: string | { email: string; contrasenya: string }) {
     setEnviant(true);
@@ -92,8 +84,7 @@ export function Entrar() {
 
   return (
     <section aria-labelledby="titol-entrar" className="estret">
-      <h1 id="titol-entrar">{titol}</h1>
-      {nomCasal && <p className="subtitol">{nomCasal}</p>}
+      <h1 id="titol-entrar">Accés al panell de gestió</h1>
       {error && <MissatgeError error={error} />}
       <form onSubmit={enviaContrasenya} noValidate className="formulari">
         <CampText etiqueta="Correu electrònic" type="email" obligatori autoComplete="username" value={email}

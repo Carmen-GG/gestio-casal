@@ -16,6 +16,7 @@ export const serveiAuth = {
     api.post<{ ok: true }>("/auth/entrar-contrasenya", { email, contrasenya }),
   canviarContrasenya: (dades: { actual?: string; nova: string }) => api.post<{ ok: true }>("/auth/contrasenya", dades),
   sortir: () => api.post<{ ok: true }>("/auth/sortir"),
+  entrarSuperadministracio: (contrasenya: string) => api.post<{ ok: true }>("/auth/superadministracio", { contrasenya }),
   primerAcces: (dades: { email: string; codi: string; contrasenya: string }) => api.post<{ ok: true }>("/auth/primer-acces", dades),
 };
 
