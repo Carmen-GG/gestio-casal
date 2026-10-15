@@ -18,6 +18,12 @@ import { Usuaris } from "./pages/gestio/Usuaris";
 import { DetallSollicitud } from "./pages/gestio/DetallSollicitud";
 import { DetallAdjudicacio } from "./pages/gestio/DetallAdjudicacio";
 import { AssistenciaActivitat } from "./pages/gestio/AssistenciaActivitat";
+import { ImprimirGraelles } from "./pages/gestio/ImprimirGraelles";
+import { Comunicacions } from "./pages/gestio/Comunicacions";
+import { BuscarUsuari } from "./pages/gestio/BuscarUsuari";
+import { AdministracioCasal, Responsables } from "./pages/gestio/Administracio";
+import { QuadreGlobal } from "./pages/gestio/QuadreGlobal";
+import { FitxaPersona } from "./pages/gestio/FitxaPersona";
 import { PantallaSorteig } from "./pages/gestio/PantallaSorteig";
 import { CartellsInici } from "./pages/cartells/CartellsInici";
 import { Plantilles } from "./pages/cartells/Plantilles";
@@ -39,6 +45,9 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <GestioInici /> },
           { path: "compte", element: <Compte /> },
+          { path: "administracio/responsables", element: <Responsables /> },
+          { path: "administracio/casal", element: <AdministracioCasal /> },
+          { path: "administracio/quadre", element: <QuadreGlobal /> },
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
           { path: ":casalId/anar/:seccio", element: <AnarASeccio /> },
@@ -48,6 +57,10 @@ const router = createBrowserRouter([
           { path: ":casalId/sollicituds/:sollicitudId", element: <DetallSollicitud /> },
           { path: ":casalId/adjudicacions/:execucioId", element: <DetallAdjudicacio /> },
           { path: ":casalId/activitats/:activitatId/assistencia", element: <AssistenciaActivitat /> },
+          { path: ":casalId/cicles/:cicleId/graelles", element: <ImprimirGraelles /> },
+          { path: ":casalId/cicles/:cicleId/comunicacions", element: <Comunicacions /> },
+          { path: ":casalId/persones", element: <BuscarUsuari /> },
+          { path: ":casalId/persones/:personaId", element: <FitxaPersona /> },
           { path: ":casalId/cartells", element: <CartellsInici /> },
           { path: ":casalId/cartells/plantilles", element: <Plantilles /> },
           { path: ":casalId/cartells/plantilles/:plantillaId", element: <DetallPlantilla /> },

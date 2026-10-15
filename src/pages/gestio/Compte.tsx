@@ -7,7 +7,7 @@ import { useGestio } from "./context";
 
 const MINIM = 12;
 
-/** El meu compte: fixar o canviar la contrasenya del panell. El servidor torna a validar-ho tot. */
+/** El meu compte: quin accés es té (superadministració o administració) i la contrasenya. El servidor torna a validar-ho tot. */
 export function Compte() {
   const { jo, recarregarJo } = useGestio();
   const [actual, setActual] = useState("");
@@ -33,7 +33,7 @@ export function Compte() {
     try {
       await serveiAuth.canviarContrasenya(jo.te_contrasenya ? { actual, nova } : { nova });
       setActual(""); setNova(""); setRepeticio("");
-      setExit("S'ha desat la contrasenya. A partir d'ara podeu entrar amb el vostre correu i aquesta contrasenya.");
+      setExit("S'ha desat la contrasenya. A partir d'ara entrareu amb aquesta contrasenya.");
       recarregarJo();
     } catch (err) {
       if (err instanceof ErrorClientApi) { setErrorServidor(err); setErrors(err.errorsCamps); }
@@ -46,11 +46,30 @@ export function Compte() {
   return (
     <section aria-labelledby="titol-compte" className="estret">
       <h1 id="titol-compte">El meu compte</h1>
-      <p>{jo.usuari.nom_visible} · {jo.usuari.email}</p>
+      <dl className="dades-compte">
+        <dt>Accés</dt>
+        <dd><strong>{jo.superadministracio ? "Superadministració" : "Administració"}</strong></dd>
+        {!jo.superadministracio && (
+          <>
+            <dt>{jo.casals.length === 1 ? "Casal" : "Casals"}</dt>
+            <dd>{jo.casals.length === 0 ? "Cap casal assignat" : jo.casals.map((c) => (
+              <span key={c.id} className="dades-compte__casal">
+                {c.nom} ({c.permisos.includes("usuaris.gestionar") ? "responsable" : "equip del casal"})
+              </span>
+            ))}</dd>
+          </>
+        )}
+        <dt>Nom</dt><dd>{jo.usuari.nom_visible}</dd>
+        <dt>Correu</dt><dd>{jo.usuari.email}</dd>
+      </dl>
+      <p className="text-secundari">
+        {jo.superadministracio
+          ? "Des de la pàgina principal, al bloc «Superadministració», s'hi entra només amb la contrasenya."
+          : "Des de la pàgina principal, al bloc «Administració», s'hi entra amb el correu i la contrasenya."}
+      </p>
       <h2>{jo.te_contrasenya ? "Canviar la contrasenya" : "Fixar una contrasenya"}</h2>
       <p className="text-secundari">
-        Amb la contrasenya entrareu al panell amb el vostre correu, sense codis d'accés. No caduca. La sessió es tanca
-        sola després de 60 minuts sense activitat.
+        La contrasenya no caduca. La sessió es tanca sola després de 60 minuts sense activitat.
       </p>
       {exit && <AvisExit>{exit}</AvisExit>}
       {errorServidor && <MissatgeError error={errorServidor} />}

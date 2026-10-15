@@ -10,7 +10,7 @@ import { ErrorAplicacio, errors } from "../http/errors";
 import { resumSha256, testimoniAleatori } from "../lib/cripto";
 import { nouId } from "../lib/ids";
 import { isoAra, type Rellotge } from "../lib/rellotge";
-import type { Cicle, Execucio, FilaPlaca, FilaResultat, Repositoris, SorteigActivitat } from "../repositories/tipus";
+import type { Cicle, Execucio, FilaPlaca, FilaResultat, Operacio, Repositoris, SorteigActivitat } from "../repositories/tipus";
 import { dataHoraLocal, filtraParticipant, type TaulaExportacio, type Visibilitat } from "./gestio-sollicituds";
 import type { ContextOperacio } from "./traca";
 
@@ -120,11 +120,12 @@ export class ServeiAdjudicacio {
     const mapaSortejos = new Map<string, Sorteig>(vigents.map((so) => [so.activitat_id, { tipus: so.tipus, valor: so.valor }]));
     const entrada: Omit<EntradaMotor, "lletra" | "llavor"> = {
       sollicituds: sollicituds.map(({ estat: _e, ...s }) => s),
-      activitats: dades.activitats.map(({ id, capacitat, disponible }) => ({ id, capacitat, disponible })),
+      activitats: dades.activitats.map(({ id, capacitat, disponible, grup }) => ({ id, capacitat, disponible, grup })),
+      limits_grups: dades.limits_grups,
       parametres, continuitat: continuitat.parelles, excloses, espera_anterior: esperaAnterior.parelles, sortejos: mapaSortejos,
     };
     const empremta = await resumSha256(JSON.stringify({
-      s: entrada.sollicituds, a: entrada.activitats, p: parametres,
+      s: entrada.sollicituds, a: entrada.activitats, p: parametres, lg: entrada.limits_grups,
       c: [...continuitat.parelles].sort(), e: [...excloses].sort(), ea: [...esperaAnterior.parelles].sort(),
       so: [...mapaSortejos.entries()].sort(([a], [b]) => (a < b ? -1 : 1)),
     }));
@@ -537,7 +538,7 @@ export class ServeiAdjudicacio {
    * assistència) quedi a l'auditoria amb el seu propi tipus d'operació i les seves dades.
    */
   async moviment(casalId: string, placaId: string, d: { accio: AccioPlaca; versio: number; motiu: string }, ctx: ContextOperacio,
-    origen?: { tipus_operacio: string; detalls: Record<string, unknown> }) {
+    origen?: { tipus_operacio: string; detalls: Record<string, unknown> }, extres?: (operacio: string) => Operacio[]) {
     const placa = await this.repos.adjudicacio.placa(casalId, placaId);
     if (!placa) throw errors.noTrobat("No s'ha trobat la plaça.");
     const cicle = await this.cicle(casalId, placa.cicle_id);
@@ -561,6 +562,7 @@ export class ServeiAdjudicacio {
         resultat: "exit", motiu: d.motiu, id_peticio: ctx.idPeticio ?? null,
         detalls: { activitat_id: placa.activitat_id, sollicitud_id: placa.sollicitud_id, des: placa.estat, cap: accio.cap, ...origen?.detalls },
       }, ara, condicio),
+      ...(extres?.(operacio) ?? []),
     ]);
     if (!r || r.canvis !== 1) {
       const actual = await this.repos.adjudicacio.placa(casalId, placaId);

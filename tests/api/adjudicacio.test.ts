@@ -47,6 +47,34 @@ type Grup = { activitat_id: string; resultats: { participant: { cognom1: string 
 const resum = (grups: Grup[], id: string) =>
   grups.find((x) => x.activitat_id === id)!.resultats.map((r) => `${r.participant.cognom1}:${r.resultat}${r.posicio_espera ? r.posicio_espera : ""}`);
 
+describe("adjudicació: grups d'activitats", () => {
+  it("respecta el màxim d'activitats per grup desat al cicle", async () => {
+    const { A, B, base, cicle, g, desa, proposa } = await escenari();
+    await env.DB.prepare("UPDATE activitats SET capacitat = 2 WHERE id = ?").bind(A.id).run();
+    for (const a of [A, B]) {
+      const actual = await g.json(`${base}/activitats/${a.id}`);
+      const r = await g.json(`${base}/activitats/${a.id}`, { method: "PATCH", json: { grup: 1, versio: actual.cos.activitat.versio } });
+      expect(r.status).toBe(200);
+      expect(r.cos.activitat.grup).toBe(1);
+    }
+    const c = await g.json(`${base}/cicles/${cicle.id}`);
+    expect((await g.json(`${base}/cicles/${cicle.id}`, { method: "PATCH", json: { versio: c.cos.cicle.versio, limits_grups: { 1: 0 } } })).status).toBe(400);
+    const desat = await g.json(`${base}/cicles/${cicle.id}`, { method: "PATCH", json: { versio: c.cos.cicle.versio, limits_grups: { 1: 1 } } });
+    expect(desat.status).toBe(200);
+    expect(desat.cos.cicle.limits_grups).toEqual({ 1: 1 });
+
+    await desa();
+    const p = await proposa();
+    expect(p.status).toBe(201);
+    const det = await g.json(`${base}/adjudicacions/${p.cos.execucio.id}`);
+    // Àvila obté B (1a preferència) i ja no pot tenir A, del mateix grup, encara que hi hagi plaça.
+    expect(resum(det.cos.grups, B.id)).toEqual(["Àvila:admesa", "Bosch:llista_espera1"]);
+    expect(resum(det.cos.grups, A.id)).toEqual(["Zapata:admesa", "Àvila:no_adjudicada"]);
+    const avila = det.cos.grups.find((x: Grup) => x.activitat_id === A.id).resultats.find((r: { participant: { cognom1: string } }) => r.participant.cognom1 === "Àvila");
+    expect(avila.motiu).toBe("maxim_grup");
+  });
+});
+
 describe("adjudicació: paràmetres versionats", () => {
   it("exigeix desar els paràmetres abans de calcular i en crea versions sense sobreescriure", async () => {
     const { casal, adj, g, desa, proposa } = await escenari();
@@ -89,7 +117,7 @@ describe("adjudicació: proposta, confirmació i substitució", () => {
     const p = await proposa();
     expect(p.status).toBe(201);
     expect(p.cos.execucio).toMatchObject({ versio: 1, estat: "proposta", configuracio_versio: 1 });
-    expect(p.cos.execucio.resum).toMatchObject({ sollicituds: 3, places_adjudicades: 2, versio_motor: 2 });
+    expect(p.cos.execucio.resum).toMatchObject({ sollicituds: 3, places_adjudicades: 2, versio_motor: 3 });
 
     const det = await g.json(`${base}/adjudicacions/${p.cos.execucio.id}`);
     expect(resum(det.cos.grups, A.id)).toEqual(["Zapata:admesa", "Àvila:llista_espera1"]);

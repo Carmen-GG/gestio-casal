@@ -11,8 +11,8 @@ import { serveiGestio } from "../../services/gestio";
 import type { Cicle } from "../../types/gestio";
 
 /**
- * Resum d'assistència del cicle: activitats amb sessions i percentatges,
- * llindar configurable, graelles XLSX i exportació de les dades.
+ * Entrada de les graelles d'assistència: totes les activitats del cicle (cada una porta
+ * a la seva graella) i, al final, imprimir-les. També el llindar i les exportacions.
  */
 export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
   casalId: string; cicle: Cicle; pot: (p: string) => boolean; onCanviCicle: () => void;
@@ -21,7 +21,6 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
   const [exit, setExit] = useState("");
   const [error, setError] = useState<ErrorClientApi | Error | null>(null);
   const [enCurs, setEnCurs] = useState(false);
-  const [telefon, setTelefon] = useState(false);
   const [llindar, setLlindar] = useState(cicle.llindar_assistencia?.toString() ?? "");
 
   async function accio(fer: () => Promise<unknown>, missatge: string) {
@@ -40,7 +39,7 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
   }
 
   const graelles = () => accio(async () => {
-    const dades = await serveiGestio.graelles(casalId, cicle.id, telefon);
+    const dades = await serveiGestio.graelles(casalId, cicle.id);
     if (dades.graelles.length === 0) throw new Error("No hi ha cap activitat amb places adjudicades.");
     const buffer = await generaGraelles(dades);
     // Validació del fitxer abans de lliurar-lo.
@@ -72,28 +71,7 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
         {error && (error instanceof ErrorClientApi ? <MissatgeError error={error} /> : <p className="avis avis--error" role="alert">{error.message}</p>)}
       </div>
 
-      {pot("dades.exportar") && (
-        <>
-          <h3 className="subseccio">Graelles d'assistència (XLSX)</h3>
-          <p className="text-secundari">
-            Un full per activitat amb les persones admeses per ordre alfabètic, una columna per sessió i la llista d'espera a part.
-            Preparat per imprimir. Si es modifica fora de l'aplicació, els canvis no es traslladen sols: cal registrar-los aquí.
-          </p>
-          <div className="botonera">
-            {pot("sollicituds.dades_contacte") && (
-              <label className="casella">
-                <input type="checkbox" checked={telefon} onChange={(e) => setTelefon(e.target.checked)} /> Inclou el telèfon
-              </label>
-            )}
-            <button type="button" className="boto" disabled={enCurs} onClick={() => void graelles()}>
-              {enCurs ? "Generant…" : "Descarrega les graelles"}
-            </button>
-            <button type="button" className="boto boto--secundari" disabled={enCurs} onClick={() => void exporta()}>Exporta les dades d'assistència</button>
-          </div>
-        </>
-      )}
-
-      <h3 className="subseccio">Assistència per activitat</h3>
+      <p className="text-secundari">Entreu a una activitat per passar llista (X, F o FJ per dia) i per registrar les baixes voluntàries.</p>
       {consulta.tipus === "carregant" && <Carregant text="Carregant l'assistència…" />}
       {consulta.tipus === "error" && <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />}
       {consulta.tipus === "dades" && (consulta.dades.activitats.length === 0 ? <p>No hi ha activitats en aquest cicle.</p> : (
@@ -127,9 +105,26 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
         </div>
       ))}
       <p className="text-secundari">
-        El percentatge compta les presències sobre totes les sessions registrades (totes les absències compten igual)
-        i només es calcula a partir de {MINIM_SESSIONS_PERCENTATGE} sessions. No comporta cap pèrdua de plaça automàtica.
+        El percentatge compta les assistències (X) sobre tots els dies marcats; la F i la FJ compten igual com a falta.
+        Es calcula a partir de {MINIM_SESSIONS_PERCENTATGE} dies marcats i no comporta cap pèrdua de plaça automàtica.
       </p>
+
+      {pot("dades.exportar") && pot("sollicituds.consultar") && (
+        <>
+          <h3 className="subseccio">Imprimir</h3>
+          <p className="text-secundari">
+            Una pàgina A4 apaïsada per activitat amb totes les dates: les persones admeses per ordre alfabètic i, a sota, la llista d'espera
+            per ordre d'adjudicació, amb nom, cognoms i telèfon.
+          </p>
+          <div className="botonera">
+            <Link className="boto" to={`/gestio/${casalId}/cicles/${cicle.id}/graelles`}>Imprimeix les graelles</Link>
+            <button type="button" className="boto boto--secundari" disabled={enCurs} onClick={() => void graelles()}>
+              {enCurs ? "Generant…" : "Descarrega-les en Excel"}
+            </button>
+            <button type="button" className="boto boto--secundari" disabled={enCurs} onClick={() => void exporta()}>Exporta les dades d'assistència</button>
+          </div>
+        </>
+      )}
 
       {pot("cicles.gestionar") && cicle.estat !== "arxivat" && (
         <form onSubmit={desaLlindar} className="botonera botonera--camp">

@@ -1,4 +1,5 @@
 /** Tipus de les respostes de l'API de gestió (coincideixen amb worker/repositories/tipus.ts). */
+import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import type { EstatCicle, TipusTransicio } from "../../shared/domain/cicles";
 import type { ConfiguracioFormulari } from "../../shared/domain/formulari";
 import type { ParametresAdjudicacio } from "../../shared/domain/adjudicacio";
@@ -11,14 +12,19 @@ export interface Casal {
 
 export interface CasalAccessible {
   id: string; codi: string; nom: string; actiu: boolean; permisos: string[];
+  /** Superadministració en un casal amb responsable: només hi pot consultar. */
+  nomes_consulta: boolean;
 }
 
 export interface Jo {
   usuari: { id: string; nom_visible: string; email: string };
   administracio_central: boolean;
+  /** Superadministració: assigna responsables i veu tots els casals. */
+  superadministracio: boolean;
+  /** Pot veure el quadre de comandament de tots els casals. */
+  quadre_global: boolean;
   /** Té una contrasenya per entrar al panell. */
   te_contrasenya: boolean;
-  pot_crear_casals: boolean;
   /** Pot carregar i modificar les plantilles comunes a tots els casals (administració central). */
   pot_gestionar_plantilles_comunes: boolean;
   casals: CasalAccessible[];
@@ -27,7 +33,7 @@ export interface Jo {
 export interface Cicle {
   id: string; casal_id: string; nom: string; any: number; data_inici: string; data_fi: string;
   obertura_inscripcions: string; tancament_inscripcions: string; data_resolucio_prevista: string;
-  estat: EstatCicle; configuracio_formulari: Record<string, unknown>; llindar_assistencia: number | null; versio: number;
+  estat: EstatCicle; configuracio_formulari: Record<string, unknown>; llindar_assistencia: number | null; limits_grups: Record<string, number>; versio: number;
   creat_el: string; actualitzat_el: string;
 }
 
@@ -43,7 +49,7 @@ export type EstatActivitat = "esborrany" | "activa" | "inactiva" | "arxivada";
 export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
-  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; capacitat: number;
+  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; grup: number | null; capacitat: number;
   nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 
@@ -53,6 +59,38 @@ export interface EntradaHistorial {
 
 export interface AssignacioRol {
   id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string; casal_id: string | null; atorgat_el: string;
+  te_contrasenya?: boolean; darrer_acces_el?: string | null; codi_pendent_fins?: string | null;
+}
+
+/** Codi de primer accés: només es mostra una vegada. */
+export interface CodiAcces { codi: string; caduca_el: string }
+export type AccesAlta = { estat: "codi"; codi: CodiAcces } | { estat: "te_contrasenya" } | { estat: "altres_casals" };
+
+export interface ResponsableCasal {
+  assignacio_id: string; usuari_id: string; email: string; nom_visible: string; atorgat_el: string;
+  te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null;
+}
+export interface CasalResponsables {
+  id: string; codi: string; nom: string; municipi: string; actiu: boolean; responsables: ResponsableCasal[];
+}
+
+export interface RecomptesGlobals {
+  activitats: number; places_ofertes: number; sollicituds: number; persones: number; admeses: number; espera: number;
+  renuncies: number; baixes: number; baixes_voluntaries: number; sessions_realitzades: number;
+  presencies: number; absencies: number; absencies_justificades: number; percentatge_assistencia: number | null;
+}
+export interface QuadreGlobal {
+  any: number | null;
+  anys: number[];
+  totals: RecomptesGlobals & {
+    casals: number; casals_amb_responsable: number; casals_amb_cicles: number; cicles: number;
+    persones_diferents: number; persones_plataforma: number; equip: number;
+  };
+  casals: (RecomptesGlobals & {
+    casal_id: string; casal: string; municipi: string; actiu: boolean; cicles: number;
+    persones_diferents: number; persones_plataforma: number; equip: number; responsables: number;
+  })[];
+  cicles: (RecomptesGlobals & { casal_id: string; casal: string; cicle_id: string; cicle: string; any: number; estat: EstatCicle; data_inici: string; data_fi: string })[];
 }
 
 export type EstatSollicitud = "rebuda" | "validada" | "pendent_revisio" | "anullada";
@@ -183,14 +221,35 @@ export interface Sessio {
   id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada"; motiu_cancellacio: string | null; versio: number; marques: number;
 }
-export interface ResumAssistencia { presents: number; absents: number; percentatge: number | null }
+export interface ResumAssistencia { presents: number; absents: number; justificades: number; percentatge: number | null }
 export interface PersonaAssistencia extends FilaPlaca {
   marques: Record<string, { estat: EstatAssistencia; versio: number }>; resum: ResumAssistencia; sota_llindar: boolean;
+  baixa_voluntaria: { data: string; motiu: string } | null;
 }
 export interface FullAssistencia {
-  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null };
+  casal: { nom: string };
+  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null };
   cicle: { id: string; nom: string; estat: EstatCicle; llindar_assistencia: number | null; data_inici: string; data_fi: string };
-  sessions: Sessio[]; persones: PersonaAssistencia[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
+  sessions: Sessio[]; persones: PersonaAssistencia[]; espera: FilaPlaca[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
+}
+export interface ComunicacioPlaca {
+  placa_id: string; tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio;
+  motiu: MotiuNoContacte | null; nota: string | null; actualitzat_el: string;
+}
+export interface PersonaComunicacio {
+  placa_id: string; sollicitud_id: string; participant_id: string; numero: number;
+  situacio: "admesa" | "espera"; oferta_pendent: boolean; posicio: number | null;
+  nom: string; cognoms: string; telefon: string | null; comunicacio: ComunicacioPlaca | null;
+}
+export interface DadesComunicacions {
+  casal: string; cicle: { id: string; nom: string; estat: EstatCicle }; avui: string;
+  activitats: { activitat_id: string; activitat: string; horari: string | null; espai: string | null; data_inici: string; persones: PersonaComunicacio[] }[];
+}
+export interface ResultatBaixaVoluntaria {
+  data: string;
+  missatge: { casal: string; activitat: string; horari: string | null; espai: string | null; data_inici: string | null };
+  sense_oferta: string | null;
+  oferta: { placa_id: string; numero: number; posicio: number | null; nom: string | null; cognom1: string | null; cognom2: string | null; telefon: string | null } | null;
 }
 export interface ResumAssistenciaCicle {
   llindar_assistencia: number | null;
@@ -201,10 +260,10 @@ export interface DadesGraelles {
   casal: string; cicle: string; telefon: boolean; llegenda: string;
   totals: { activitats: number; admeses: number; espera: number };
   graelles: {
-    activitat: string; horari: string | null; capacitat: number; espai: string | null;
+    activitat_id: string; activitat: string; horari: string | null; capacitat: number; espai: string | null; data_inici: string; data_fi: string;
     sessions: { id: string; data: string }[]; columnes_buides: number;
-    admeses: { ordre: number; numero: number; persona: string; telefon: string | null; marques: string[] }[];
-    espera: { posicio: number | null; numero: number; persona: string; telefon: string | null; oferta_pendent: boolean }[];
+    admeses: { ordre: number; numero: number; nom: string; cognoms: string; telefon: string | null; marques: string[] }[];
+    espera: { posicio: number | null; numero: number; nom: string; cognoms: string; telefon: string | null; oferta_pendent: boolean }[];
   }[];
 }
 
@@ -216,12 +275,12 @@ export interface IndicadorsCicle {
   totals: {
     activitats: number; activitats_no_actives: number; sollicituds: number;
     sollicituds_per_estat: { rebuda: number; validada: number; pendent_revisio: number; anullada: number };
-    persones: number; places_disponibles: number; places_ocupades: number; places_lliures: number; admeses: number; espera: number;
+    persones: number; places_disponibles: number; places_ocupades: number; places_lliures: number; admeses: number; espera: number; baixes_voluntaries: number;
     activitats_sense_inscripcions: number; activitats_mes_demanda: number;
   };
   activitats: {
     id: string; nom: string; capacitat: number; minim_participants: number | null; sollicituds: number; primera_preferencia: number;
-    admeses: number; ofertes: number; espera: number; lliures: number; sense_inscripcions: boolean; mes_demanda: boolean;
+    admeses: number; ofertes: number; espera: number; baixes_voluntaries: number; lliures: number; sense_inscripcions: boolean; mes_demanda: boolean;
   }[];
 }
 
@@ -239,4 +298,43 @@ export interface PlantillaCartells {
   linies_titol: number; amb_qr: boolean; tematica: string | null; identitat_grafica: string | null; estat: EstatPlantilla;
   pagina_amplada: number; pagina_alcada: number; format_sortida: FormatSortida; camps: CampPlantilla[];
   versio: number; creat_per: string; creat_el: string; actualitzat_el: string;
+}
+
+// ---------- Buscar usuari/a (persones de la PGEc) ----------
+export interface ResumPersonaPlataforma {
+  id: string;
+  nom: string;
+  cognoms: string;
+  nom_sentit: string | null;
+  document: string | null;
+  data_naixement: string | null;
+  localitat_naixement: string | null;
+  numero_soci: string | null;
+  telefon: string | null;
+  origens: string[];
+  coincidencies: string[];
+}
+
+export interface CercaPersonesPlataforma {
+  persones: ResumPersonaPlataforma[];
+  total: number;
+  mes_resultats: boolean;
+  resum: { total: number; darrera_importacio: string | null };
+}
+
+export interface FitxaPersonaPlataforma {
+  persona: { id: string; nom: string; cognoms: string; origens: string[]; actualitzat_el: string };
+  grups: { grup: string; titol: string; camps: { camp: string; etiqueta: string; valor: string; tipus: string }[] }[];
+  dades_restringides: boolean;
+  participacio: {
+    cicle_id: string; cicle: string; data_inici: string | null; sollicituds: number[];
+    activitats: { activitat_id: string; activitat: string; preferencia: number; estat: string | null; posicio_espera: number | null; sollicitud_anullada: boolean }[];
+  }[];
+}
+
+export interface ResultatImportacioPersones {
+  creades: number;
+  actualitzades: number;
+  sense_canvis: number;
+  omeses: { fila: number; motiu: string }[];
 }

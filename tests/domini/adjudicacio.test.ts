@@ -194,3 +194,36 @@ describe("regla del casal: espera anterior, preferència i sorteig per activitat
     expect(normalitzaParametres(antics as ParametresAdjudicacio)).toMatchObject({ prioritat_espera_anterior: false, criteri_ordre: "inscripcio" });
   });
 });
+
+describe("grups d'activitats que no es poden acumular", () => {
+  // E1 i E2 són esportives (grup 1), B1, B2 i B3 de ball (grup 2), L lliure.
+  const activitats = [
+    { ...act("E1", 5), grup: 1 }, { ...act("E2", 5), grup: 1 },
+    { ...act("B1", 5), grup: 2 }, { ...act("B2", 5), grup: 2 }, { ...act("B3", 5), grup: 2 }, act("L", 5),
+  ];
+
+  it("no dona a una persona més activitats d'un grup que el màxim, ni la posa en llista d'espera", () => {
+    const sollicituds = [s(1, "Abad", ["E1", "E2", "B1", "B2", "B3", "L"])];
+    const r = adjudica({ sollicituds, activitats, parametres: params(), limits_grups: { 1: 1, 2: 2 } });
+    expect(mapa(r)).toEqual({
+      "s1/E1": "admesa", "s1/E2": "no (maxim_grup)",
+      "s1/B1": "admesa", "s1/B2": "admesa", "s1/B3": "no (maxim_grup)",
+      "s1/L": "admesa",
+    });
+  });
+
+  it("una llista d'espera no ocupa el màxim del grup: la persona pot obtenir la següent del grup", () => {
+    const plena = [{ ...act("E1", 1), grup: 1 }, { ...act("E2", 5), grup: 1 }];
+    const sollicituds = [s(1, "Abad", ["E1"]), s(2, "Bosch", ["E1", "E2"])];
+    const r = adjudica({ sollicituds, activitats: plena, parametres: params(), limits_grups: { 1: 1 } });
+    expect(mapa(r)).toEqual({ "s1/E1": "admesa", "s2/E1": "espera 1", "s2/E2": "admesa" });
+  });
+
+  it("compta per persona encara que tingui dues sol·licituds, i sense límit el grup no té efecte", () => {
+    const sollicituds = [s(1, "Abad", ["E1"], "p"), s(2, "Abad", ["E2"], "p")];
+    expect(mapa(adjudica({ sollicituds, activitats, parametres: params(), limits_grups: { 1: 1 } })))
+      .toEqual({ "s1/E1": "admesa", "s2/E2": "no (maxim_grup)" });
+    expect(mapa(adjudica({ sollicituds, activitats, parametres: params() })))
+      .toEqual({ "s1/E1": "admesa", "s2/E2": "admesa" });
+  });
+});

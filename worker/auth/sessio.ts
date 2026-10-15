@@ -26,6 +26,7 @@ export async function iniciarSessio(c: Context<Entorn>, usuariId: string): Promi
     ara.toISOString(),
     new Date(ara.getTime() + DURADA_SESSIO_MS).toISOString(),
   );
+  await c.get("repos").usuaris.marcarAcces(usuariId, ara.toISOString());
   setCookie(c, NOM_GALETA, valor, {
     prefix: "host",
     httpOnly: true,

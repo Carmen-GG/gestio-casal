@@ -1,5 +1,5 @@
 import { errors } from "../http/errors";
-import type { CanvisCasal, Casal, NouCasal, Repositoris } from "../repositories/tipus";
+import type { CanvisCasal, Casal, Repositoris } from "../repositories/tipus";
 import { isoAra, type Rellotge } from "../lib/rellotge";
 import { nouId } from "../lib/ids";
 import { diferencies, escriuAmbTraca, type ContextOperacio } from "./traca";
@@ -11,23 +11,6 @@ export class ServeiCasals {
     const casal = await this.repos.casals.perId(id);
     if (!casal) throw errors.noTrobat("No s'ha trobat el casal.");
     return casal;
-  }
-
-  async crear(dades: NouCasal, ctx: ContextOperacio): Promise<Casal> {
-    if (await this.repos.casals.perCodi(dades.codi)) {
-      throw errors.conflicte("codi_duplicat", "Ja existeix un casal amb aquest codi.");
-    }
-    const ara = isoAra(this.rellotge);
-    const id = nouId();
-    const operacio = nouId();
-    await escriuAmbTraca(this.repos, ara, {
-      principal: this.repos.casals.operacioCrear(id, dades, ara, operacio),
-      condicio: { taula: "casals", id, operacio },
-      historial: { casal_id: id, entitat: "casal", entitat_id: id, accio: "creacio", canvis: { codi: dades.codi, nom: dades.nom }, motiu: null },
-      auditoria: { casal_id: id, tipus_operacio: "casal.creacio", entitat: "casal", entitat_id: id },
-      ctx,
-    });
-    return this.obtenir(id);
   }
 
   async actualitzar(id: string, canvis: CanvisCasal, opcions: ContextOperacio & { motiu?: string | null }): Promise<Casal> {

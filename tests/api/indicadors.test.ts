@@ -44,7 +44,7 @@ describe("quadre de comandament del cicle", () => {
     expect(r.cos.totals).toEqual({
       activitats: 3, activitats_no_actives: 1, sollicituds: 3,
       sollicituds_per_estat: { rebuda: 3, validada: 0, pendent_revisio: 0, anullada: 1 },
-      persones: 3, places_disponibles: 10, places_ocupades: 0, places_lliures: 10, admeses: 0, espera: 0,
+      persones: 3, places_disponibles: 10, places_ocupades: 0, places_lliures: 10, admeses: 0, espera: 0, baixes_voluntaries: 0,
       activitats_sense_inscripcions: 1, activitats_mes_demanda: 1,
     });
     const fila = (cos: { activitats: { id: string }[] }, id: string) => cos.activitats.find((a) => a.id === id);

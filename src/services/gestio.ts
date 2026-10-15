@@ -1,8 +1,10 @@
 import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
-  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
-  EstatSorteig, IndicadorsCicle, SorteigActivitat,
+  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
+  EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
+  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal,
 } from "../types/gestio";
+import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
 
 const g = (casalId: string) => `/gestio/casals/${encodeURIComponent(casalId)}`;
@@ -14,11 +16,12 @@ export const serveiAuth = {
     api.post<{ ok: true }>("/auth/entrar-contrasenya", { email, contrasenya }),
   canviarContrasenya: (dades: { actual?: string; nova: string }) => api.post<{ ok: true }>("/auth/contrasenya", dades),
   sortir: () => api.post<{ ok: true }>("/auth/sortir"),
+  entrarSuperadministracio: (contrasenya: string) => api.post<{ ok: true }>("/auth/superadministracio", { contrasenya }),
+  primerAcces: (dades: { email: string; codi: string; contrasenya: string }) => api.post<{ ok: true }>("/auth/primer-acces", dades),
 };
 
 export const serveiGestio = {
   casal: (casalId: string, s?: AbortSignal) => api.get<{ casal: Casal }>(g(casalId), s),
-  crearCasal: (dades: unknown) => api.post<{ casal: Casal }>("/gestio/casals", dades),
 
   cicles: (casalId: string, s?: AbortSignal) => api.get<{ cicles: Cicle[] }>(`${g(casalId)}/cicles`, s),
   cicle: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<DetallCicle>(`${g(casalId)}/cicles/${cicleId}`, s),
@@ -78,6 +81,19 @@ export const serveiGestio = {
     api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/numeros-sorteig`),
   places: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<RespostaPlaces>(`${g(casalId)}/cicles/${cicleId}/places`, s),
   mourePlaca: (casalId: string, placaId: string, dades: unknown) => api.post<unknown>(`${g(casalId)}/places/${placaId}/moviments`, dades),
+  cercaPersones: (casalId: string, q: string, camp: string, s?: AbortSignal) =>
+    api.get<CercaPersonesPlataforma>(`${g(casalId)}/persones-plataforma?${new URLSearchParams({ q, camp })}`, s),
+  fitxaPersona: (casalId: string, id: string, s?: AbortSignal) =>
+    api.get<FitxaPersonaPlataforma>(`${g(casalId)}/persones-plataforma/${encodeURIComponent(id)}`, s),
+  importarPersones: (casalId: string, dades: { origen: "usuaris" | "carnets" | "altres"; nom_fitxer?: string; primera_fila: number; files: Record<string, string>[] }) =>
+    api.post<ResultatImportacioPersones>(`${g(casalId)}/persones-plataforma/importacio`, dades),
+  comunicacions: (casalId: string, cicleId: string, s?: AbortSignal) =>
+    api.get<DadesComunicacions>(`${g(casalId)}/cicles/${cicleId}/comunicacions`, s),
+  registrarComunicacio: (casalId: string, placaId: string, dades: { tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio; motiu?: MotiuNoContacte | null; nota?: string | null }) =>
+    api.put<{ comunicacio: ComunicacioPlaca }>(`${g(casalId)}/places/${placaId}/comunicacio`, dades),
+  desferComunicacio: (casalId: string, placaId: string) => api.post<{ ok: true }>(`${g(casalId)}/places/${placaId}/comunicacio/desfer`),
+  baixaVoluntaria: (casalId: string, placaId: string, dades: { versio: number; motiu: string }) =>
+    api.post<ResultatBaixaVoluntaria>(`${g(casalId)}/places/${placaId}/baixa-voluntaria`, dades),
   baixaPerAssistencia: (casalId: string, placaId: string, dades: { versio: number; motiu?: string }) =>
     api.post<unknown>(`${g(casalId)}/places/${placaId}/baixa-assistencia`, dades),
   movimentsPlaca: (casalId: string, placaId: string, s?: AbortSignal) =>
@@ -97,14 +113,24 @@ export const serveiGestio = {
   cancellarSessio: (casalId: string, sessioId: string, dades: unknown) => api.post<{ ok: true }>(`${g(casalId)}/sessions/${sessioId}/cancellacio`, dades),
   registrarAssistencia: (casalId: string, sessioId: string, dades: unknown) =>
     api.put<{ noves: number; modificades: number }>(`${g(casalId)}/sessions/${sessioId}/assistencia`, dades),
-  graelles: (casalId: string, cicleId: string, telefon: boolean) =>
-    api.get<DadesGraelles>(`${g(casalId)}/cicles/${cicleId}/exportacions/graelles${telefon ? "?telefon=1" : ""}`),
+  graelles: (casalId: string, cicleId: string, telefon = true, s?: AbortSignal) =>
+    api.get<DadesGraelles>(`${g(casalId)}/cicles/${cicleId}/exportacions/graelles${telefon ? "" : "?telefon=0"}`, s),
   exportacioAssistencia: (casalId: string, cicleId: string) => api.get<TaulaExportacio>(`${g(casalId)}/cicles/${cicleId}/exportacions/assistencia`),
 
   historial: (casalId: string, entitat: string, id: string, s?: AbortSignal) =>
     api.get<{ historial: EntradaHistorial[] }>(`${g(casalId)}/historial/${entitat}/${id}`, s),
 
   assignacions: (casalId: string, s?: AbortSignal) => api.get<{ assignacions: AssignacioRol[] }>(`${g(casalId)}/usuaris`, s),
-  assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol }>(`${g(casalId)}/usuaris`, dades),
+  assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`${g(casalId)}/usuaris`, dades),
+  nouCodiUsuari: (casalId: string, id: string) => api.post<{ codi: CodiAcces }>(`${g(casalId)}/usuaris/${id}/codi-acces`),
+  responsables: (s?: AbortSignal) => api.get<{ casals: CasalResponsables[] }>("/gestio/administracio/responsables", s),
+  assignarResponsable: (casalId: string, dades: { email: string; nom_visible: string }) =>
+    api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`/gestio/administracio/casals/${casalId}/responsables`, dades),
+  revocarResponsable: (casalId: string, id: string, motiu: string) =>
+    api.post<{ ok: true }>(`/gestio/administracio/casals/${casalId}/responsables/${id}/revocar`, { motiu }),
+  nouCodiResponsable: (casalId: string, id: string) =>
+    api.post<{ codi: CodiAcces }>(`/gestio/administracio/casals/${casalId}/responsables/${id}/codi-acces`),
+  quadreGlobal: (any: number | null, s?: AbortSignal) =>
+    api.get<QuadreGlobal>(`/gestio/administracio/quadre${any ? `?any=${any}` : ""}`, s),
   revocarRol: (casalId: string, id: string, motiu: string) => api.post<{ ok: true }>(`${g(casalId)}/usuaris/${id}/revocar`, { motiu }),
 };

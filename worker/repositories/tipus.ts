@@ -5,6 +5,8 @@
  * PostgreSQL o a una base de dades corporativa n'hi ha prou amb una implementació
  * nova de cada repositori (vegeu docs/adr/0003-capa-de-repositoris.md).
  */
+import type { DadesPersona } from "../../shared/domain/persones-plataforma";
+import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte, TipusComunicacio } from "../../shared/schemas/comunicacions";
 import type { EstatCicle } from "../../shared/domain/cicles";
 import type { CampPersonal } from "../../shared/domain/formulari";
 import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMotor } from "../../shared/domain/adjudicacio";
@@ -46,12 +48,14 @@ export interface Cicle {
   estat: EstatCicle;
   configuracio_formulari: Record<string, unknown>;
   llindar_assistencia: number | null;
+  /** Màxim d'activitats de cada grup per persona a l'adjudicació ({"1": 1, "2": 3}). */
+  limits_grups: Record<string, number>;
   versio: number;
   creat_el: string;
   actualitzat_el: string;
 }
 
-export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia"> & {
+export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia" | "limits_grups"> & {
   configuracio_formulari?: Record<string, unknown>;
   /** Sense valor: el llindar per defecte de la regla del casal. Null: sense llindar. */
   llindar_assistencia?: number | null;
@@ -76,6 +80,8 @@ export interface Activitat {
   espai: string | null;
   /** Persones a qui va dirigida (text de la PGEc). */
   destinataris: string | null;
+  /** Grup d'activitats que no es poden acumular (vegeu `cicles.limits_grups`). */
+  grup: number | null;
   capacitat: number;
   nombre_sessions: number | null;
   /** Mínim de participants perquè es faci. Només genera avisos. */
@@ -94,7 +100,7 @@ export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "c
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "destinataris" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;
@@ -163,6 +169,19 @@ export interface Usuari {
 export interface PermisosUsuari {
   globals: string[];
   perCasal: Record<string, string[]>;
+  /** Casals amb alguna persona responsable vigent (només es carrega per a qui té permisos globals). */
+  casalsAmbResponsable: string[];
+}
+
+export interface ResponsableCasal {
+  assignacio_id: string;
+  usuari_id: string;
+  email: string;
+  nom_visible: string;
+  atorgat_el: string;
+  te_contrasenya: boolean;
+  darrer_acces_el: string | null;
+  codi_pendent_fins: string | null;
 }
 
 export interface AssignacioRol {
@@ -182,16 +201,29 @@ export interface RepositoriUsuaris {
   permisos(usuariId: string): Promise<PermisosUsuari>;
   /** Resum desat de la contrasenya (null si no en té). */
   resumContrasenya(usuariId: string): Promise<string | null>;
+  /** Persones actives de la superadministració amb contrasenya (per a l'accés només amb contrasenya). */
+  superadministracio(): Promise<{ id: string; contrasenya_resum: string }[]>;
   fixarContrasenya(usuariId: string, resum: string, ara: string): Promise<void>;
   assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
   assignacioPerId(id: string): Promise<AssignacioRol | null>;
   rolExisteix(codi: string): Promise<{ abast: "casal" | "global" } | null>;
+  /** Responsables vigents de tots els casals. */
+  responsables(): Promise<(ResponsableCasal & { casal_id: string })[]>;
+  /** Assignacions vigents de la persona (per saber si té accés a altres casals o global). */
+  assignacionsUsuari(usuariId: string): Promise<{ rol_codi: string; casal_id: string | null }[]>;
+  /** Estat d'accés de les persones: si tenen contrasenya i si tenen un codi de primer accés vigent. */
+  estatAcces(usuariIds: string[], ara: string): Promise<Record<string, { te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null }>>;
+  marcarAcces(usuariId: string, ara: string): Promise<void>;
   operacioAssignar(dades: { id: string; usuari_id: string; rol_codi: string; casal_id: string | null; atorgat_per: string; motiu: string | null }, ara: string): Operacio;
   operacioRevocar(id: string, revocatPer: string, motiu: string | null, ara: string): Operacio;
 }
 
 export interface RepositoriSessions {
   crearTestimoni(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
+  /** Nou codi de primer accés: invalida els anteriors de la mateixa persona. */
+  crearCodiPrimerAcces(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
+  /** Consumeix un codi de primer accés vàlid de la persona. */
+  consumirCodiPrimerAcces(resum: string, usuariId: string, ara: string): Promise<boolean>;
   /** Marca el testimoni com a usat si és vàlid i retorna l'usuari. Un testimoni només serveix una vegada. */
   consumirTestimoni(resum: string, ara: string): Promise<string | null>;
   crearSessio(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
@@ -202,7 +234,7 @@ export interface RepositoriSessions {
 
 export type CanvisCicle = Partial<Pick<Cicle,
   | "nom" | "any" | "data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions"
-  | "data_resolucio_prevista" | "configuracio_formulari" | "llindar_assistencia">>;
+  | "data_resolucio_prevista" | "configuracio_formulari" | "llindar_assistencia" | "limits_grups">>;
 
 export interface RepositoriCicles {
   /** Sempre filtra per casal per evitar accessos horitzontals. */
@@ -476,6 +508,7 @@ export interface MovimentPlaca {
 export interface DadesMotor {
   sollicituds: (SollicitudMotor & { estat: EstatSollicitud })[];
   activitats: (ActivitatMotor & { nom: string; estat: EstatActivitat; minim_participants: number | null })[];
+  limits_grups: Record<string, number>;
 }
 
 /** Sorteig d'una activitat (número o lletra). No s'esborra: s'anul·la amb motiu. */
@@ -591,6 +624,9 @@ export interface RepositoriAssistencia {
    */
   operacioHistorialMarca(d: { casal_id: string; sessio_id: string; placa_id: string; data: string; abans: EstatAssistencia; despres: EstatAssistencia; motiu: string; usuari_id: string; operacio: string }, ara: string): Operacio;
   operacioSessioRealitzada(sessioId: string, ara: string): Operacio;
+  /** Desa el motiu i la data d'una baixa voluntària, condicionat al canvi d'estat de la plaça de la mateixa operació. */
+  baixesVoluntaries(activitatId: string): Promise<{ placa_id: string; data: string; motiu: string }[]>;
+  operacioBaixaVoluntaria(d: { placa_id: string; casal_id: string; estat_anterior: "admesa" | "oferta_pendent"; data: string; motiu: string; usuari_id: string | null; operacio: string }, ara: string): Operacio;
 }
 
 /** Executa un conjunt d'operacions de manera atòmica (tot o res). */
@@ -604,13 +640,104 @@ export interface DadesIndicadors {
   persones: number;
   activitats: {
     id: string; nom: string; estat: EstatActivitat; capacitat: number; minim_participants: number | null;
-    sollicituds: number; primera_preferencia: number; admeses: number; ofertes: number; espera: number;
+    sollicituds: number; primera_preferencia: number; admeses: number; ofertes: number; espera: number; baixes_voluntaries: number;
   }[];
   darrera_execucio: { versio: number; estat: "proposta" | "confirmada"; executada_el: string; confirmada_el: string | null } | null;
 }
 
+export interface ComunicacioPlaca {
+  placa_id: string;
+  tipus: TipusComunicacio;
+  canal: CanalComunicacio;
+  estat: EstatComunicacio;
+  motiu: MotiuNoContacte | null;
+  nota: string | null;
+  actualitzat_el: string;
+}
+
+export interface RepositoriComunicacions {
+  llistar(casalId: string, cicleId: string): Promise<ComunicacioPlaca[]>;
+  desar(d: ComunicacioPlaca & { casal_id: string; cicle_id: string; usuari_id: string | null }): Promise<void>;
+  esborrar(casalId: string, placaId: string): Promise<number>;
+}
+
+export interface PersonaPlataforma {
+  id: string;
+  clau: string;
+  document_norm: string | null;
+  nom: string | null;
+  cognom1: string | null;
+  cognom2: string | null;
+  clau_ordenacio: string;
+  data_naixement: string | null;
+  dades: DadesPersona;
+  origens: string[];
+  text_basic: string;
+  text_contacte: string;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface ParticipacioPersona {
+  cicle_id: string;
+  cicle: string;
+  cicle_data_inici: string | null;
+  sollicitud_numero: number;
+  sollicitud_estat: string;
+  activitat_id: string;
+  activitat: string;
+  preferencia: number;
+  placa_estat: string | null;
+  posicio_espera: number | null;
+}
+
+export interface RepositoriPersonesPlataforma {
+  perClaus(casalId: string, claus: string[]): Promise<PersonaPlataforma[]>;
+  desar(casalId: string, persones: PersonaPlataforma[]): Promise<void>;
+  cercar(casalId: string, f: { paraules: string[]; data_naixement: string | null; contacte: boolean; limit: number }): Promise<{ persones: PersonaPlataforma[]; total: number }>;
+  perId(casalId: string, id: string): Promise<PersonaPlataforma | null>;
+  resum(casalId: string): Promise<{ total: number; darrera_importacio: string | null }>;
+  /** Sol·licituds i places de l'aplicació de la mateixa persona (per document o per nom i data de naixement). */
+  participacions(casalId: string, documentNorm: string | null, clauOrdenacio: string, dataNaixement: string | null): Promise<ParticipacioPersona[]>;
+}
+
+/** Recomptes d'un cicle per al quadre de comandament global. */
+export interface IndicadorsCicleGlobal {
+  casal_id: string;
+  cicle_id: string;
+  cicle: string;
+  any: number;
+  estat: string;
+  data_inici: string;
+  data_fi: string;
+  activitats: number;
+  places_ofertes: number;
+  sollicituds: number;
+  persones: number;
+  admeses: number;
+  espera: number;
+  renuncies: number;
+  baixes: number;
+  baixes_voluntaries: number;
+  sessions_realitzades: number;
+  presencies: number;
+  absencies: number;
+  absencies_justificades: number;
+}
+
+/** Recomptes per casal que no depenen del cicle. */
+export interface IndicadorsCasalGlobal {
+  casal_id: string;
+  persones_diferents: number;
+  persones_plataforma: number;
+  equip: number;
+  responsables: number;
+}
+
 export interface RepositoriIndicadors {
   cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
+  /** Tots els casals i cicles (filtrats per any del cicle si se'n dona). */
+  global(any: number | null): Promise<{ cicles: IndicadorsCicleGlobal[]; casals: IndicadorsCasalGlobal[]; anys: number[] }>;
 }
 
 export interface Repositoris {
@@ -625,6 +752,8 @@ export interface Repositoris {
   gestioSollicituds: RepositoriGestioSollicituds;
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
+  comunicacions: RepositoriComunicacions;
+  personesPlataforma: RepositoriPersonesPlataforma;
   indicadors: RepositoriIndicadors;
   cartells: RepositoriCartells;
   unitat: UnitatDeTreball;

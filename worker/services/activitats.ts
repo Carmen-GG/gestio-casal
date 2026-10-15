@@ -140,7 +140,7 @@ export class ServeiActivitats {
     const nom = opcions.nom ?? (cicleDesti === o.cicle_id ? `${o.nom} (còpia)` : o.nom);
     return this.crear(casalId, cicleDesti, {
       nom, descripcio: o.descripcio, categoria: o.categoria, dies_setmana: o.dies_setmana, hora_inici: o.hora_inici,
-      hora_fi: o.hora_fi, horari_text: o.horari_text, data_inici: o.data_inici, data_fi: o.data_fi, espai: o.espai, destinataris: o.destinataris,
+      hora_fi: o.hora_fi, horari_text: o.horari_text, data_inici: o.data_inici, data_fi: o.data_fi, espai: o.espai, destinataris: o.destinataris, grup: o.grup,
       capacitat: o.capacitat, nombre_sessions: o.nombre_sessions, minim_participants: o.minim_participants, informacio_difusio: o.informacio_difusio,
       configuracio_continuitat: o.configuracio_continuitat, codi_extern: null,
     }, opcions, "duplicacio", o.id);

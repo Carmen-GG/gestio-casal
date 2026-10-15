@@ -172,21 +172,3 @@ describe("persones autoritzades", () => {
     expect((await c.peticio(`/api/gestio/casals/${casal.id}/usuaris`)).status).toBe(403);
   });
 });
-
-describe("alta de casals", () => {
-  it("només l'administració central pot crear casals, i el codi queda en majúscules", async () => {
-    const { casal } = await crearEscenari();
-    const gestora = await clientAutenticat("gestor_casal", casal.id);
-    const nou = { codi: "nou-casal", nom: "Casal fictici nou", municipi: "Terrassa" };
-    expect((await gestora.json("/api/gestio/casals", { method: "POST", json: nou })).status).toBe(403);
-
-    const admin = await clientAutenticat("admin_central", null);
-    const creat = await admin.json("/api/gestio/casals", { method: "POST", json: nou });
-    expect(creat.status).toBe(201);
-    expect(creat.cos.casal.codi).toBe("NOU-CASAL");
-    const jo = await admin.json("/api/auth/jo");
-    expect(jo.cos.casals.map((k: { codi: string }) => k.codi)).toContain("NOU-CASAL");
-    // El codi no es pot repetir.
-    expect((await admin.json("/api/gestio/casals", { method: "POST", json: nou })).status).toBe(409);
-  });
-});

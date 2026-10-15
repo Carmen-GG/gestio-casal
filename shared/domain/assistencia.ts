@@ -6,23 +6,26 @@
  * implica la pèrdua de la plaça. Mai s'aplica automàticament: cal que una persona
  * autoritzada ho confirmi plaça per plaça, i el servidor comprova que és per sota.
  *
- * El casal no fa servir absències justificades: totes les absències compten igual.
+ * Marques de la graella (decisió de 2026-10-15): X (assisteix), F (falta) i FJ (falta
+ * justificada). La FJ és informativa per al casal, però per al percentatge compta
+ * com una falta, igual que la F.
  */
-export const ESTATS_ASSISTENCIA = ["present", "absent"] as const;
+export const ESTATS_ASSISTENCIA = ["present", "absent", "absencia_justificada"] as const;
 export type EstatAssistencia = (typeof ESTATS_ASSISTENCIA)[number];
 
 export const ETIQUETES_ASSISTENCIA: Record<EstatAssistencia, string> = {
-  present: "Present",
-  absent: "Absent",
+  present: "Assisteix",
+  absent: "Falta",
+  absencia_justificada: "Falta justificada",
 };
 
-/** Abreviatures per a les graelles impreses. */
-export const ABREVIATURES_ASSISTENCIA: Record<EstatAssistencia, string> = { present: "P", absent: "A" };
+/** Abreviatures de la graella, en pantalla i impresa. */
+export const ABREVIATURES_ASSISTENCIA: Record<EstatAssistencia, string> = { present: "X", absent: "F", absencia_justificada: "FJ" };
 
 /** Llindar d'assistència (%) dels cicles nous, segons la regla del casal. Es pot canviar per cicle. */
 export const LLINDAR_ASSISTENCIA_PER_DEFECTE = 80;
 
-/** Nombre mínim de sessions computables (present + absent) per calcular un percentatge. */
+/** Nombre mínim de sessions computables (totes les marques) per calcular un percentatge. */
 export const MINIM_SESSIONS_PERCENTATGE = 3;
 /** Màxim de sessions que es generen d'un cop (protecció davant de dates errònies). */
 export const MAXIM_SESSIONS_GENERADES = 200;
@@ -49,7 +52,10 @@ export function datesSessions(dies: number[], inici: string, fi: string): string
 
 export interface ResumAssistencia {
   presents: number;
+  /** Faltes, incloses les justificades. */
   absents: number;
+  /** De les faltes, quantes són justificades (informatiu). */
+  justificades: number;
   /** Presències sobre totes les sessions amb marca. Null si encara no n'hi ha prou. */
   percentatge: number | null;
 }
@@ -60,7 +66,7 @@ export function resumAssistencia(marques: EstatAssistencia[]): ResumAssistencia 
   const absents = marques.length - presents;
   const computables = marques.length;
   return {
-    presents, absents,
+    presents, absents, justificades: marques.filter((m) => m === "absencia_justificada").length,
     percentatge: computables >= MINIM_SESSIONS_PERCENTATGE ? Math.round((presents / computables) * 100) : null,
   };
 }

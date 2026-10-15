@@ -34,14 +34,14 @@ export function GestioDisseny() {
     try {
       await serveiAuth.sortir();
     } finally {
-      navegar("/gestio/entrar", { replace: true });
+      navegar("/", { replace: true });
     }
   }
 
   return (
     <div className="gestio">
-      <nav className="barra-gestio" aria-label="Panell de gestió">
-        <Link to="/gestio" className="barra-gestio__titol">Panell de gestió</Link>
+      <nav className="barra-gestio" aria-label={jo.superadministracio ? "Superadministració" : "Administració"}>
+        <Link to="/gestio" className="barra-gestio__titol">{jo.superadministracio ? "Superadministració" : "Administració"}</Link>
         {jo.casals.length > 0 && (
           <label className="barra-gestio__casal">
             <span>Casal:</span>
@@ -68,6 +68,11 @@ export function GestioDisseny() {
         <p className="avis" role="status">
           Encara no teniu contrasenya: cada vegada caldria un codi d'accés nou.{" "}
           <Link to="/gestio/compte">Fixeu una contrasenya</Link> per entrar amb el vostre correu.
+        </p>
+      )}
+      {casalActual?.nomes_consulta && (
+        <p className="avis avis--info mode-consulta" role="status">
+          Mode consulta: aquest casal té persona responsable. Podeu veure'n totes les dades, però no modificar-les.
         </p>
       )}
       {casalActual ? (

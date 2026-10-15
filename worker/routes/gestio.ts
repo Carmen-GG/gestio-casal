@@ -4,8 +4,8 @@ import { requereixSessio } from "../auth/sessio";
 import { errors } from "../http/errors";
 import { cosValidat, idRuta } from "../http/validacio";
 import {
-  activitatActualitzar, activitatCanviEstat, activitatCrear, activitatDuplicar, assignarRol, casalActualitzar,
-  casalCrear, cicleActualitzar, cicleCanviEstat, cicleCrear, revocarRol,
+  activitatActualitzar, activitatCanviEstat, activitatCrear, activitatDuplicar, assignarResponsable, assignarRol, casalActualitzar,
+  cicleActualitzar, cicleCanviEstat, cicleCrear, revocarRol,
 } from "../../shared/schemas/gestio";
 import { transicionsPermeses } from "../../shared/domain/cicles";
 import { configuracioFormulariEfectiva } from "../../shared/domain/formulari";
@@ -13,12 +13,18 @@ import { ServeiCasals } from "../services/casals";
 import { ServeiCicles } from "../services/cicles";
 import { ServeiActivitats } from "../services/activitats";
 import { ServeiUsuaris } from "../services/usuaris";
+import { ServeiAdministracio } from "../services/administracio";
 import { ServeiGestioSollicituds, emmascaraDocument, filtraParticipant, taulaSollicituds, visibilitat } from "../services/gestio-sollicituds";
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
 import { ServeiIndicadors } from "../services/indicadors";
-import { baixaAssistencia, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
+import { ServeiComunicacions } from "../services/comunicacions";
+import { registreComunicacio } from "../../shared/schemas/comunicacions";
+import { ServeiPersonesPlataforma } from "../services/persones-plataforma";
+import { cercaPersones, importacioPersones } from "../../shared/schemas/persones-plataforma";
+import type { CampPersona } from "../../shared/domain/persones-plataforma";
+import { baixaAssistencia, baixaVoluntaria, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
   consultaSollicituds, importacioConfirmacio, importacioPeticio, revisioDuplicat, sollicitudActualitzarDades,
@@ -36,6 +42,8 @@ const sollicituds = (c: C) => new ServeiGestioSollicituds(c.get("repos"), c.get(
 const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rellotge"));
 const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
 const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
+const comunicacions = (c: C) => new ServeiComunicacions(c.get("repos"), c.get("rellotge"));
+const personesPlataforma = (c: C) => new ServeiPersonesPlataforma(c.get("repos"), c.get("rellotge"));
 const indicadors = (c: C) => new ServeiIndicadors(c.get("repos"), c.get("rellotge"));
 
 /** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
@@ -51,6 +59,15 @@ async function exportacioAuditada(c: C, casalId: string, tipus: string, entitat:
 async function detallVisible(c: C, casalId: string, id: string) {
   const detall = await sollicituds(c).obtenir(casalId, id);
   return filtraParticipant(detall, visibilitat(c.get("usuari"), casalId));
+}
+
+const proveidor = (c: C): "dev" | "entra_id" => (c.env.APP_ENV === "production" ? "entra_id" : "dev");
+const usuarisCasal = (c: C) => new ServeiUsuaris(c.get("repos"), c.get("rellotge"), proveidor(c));
+const administracio = (c: C) => new ServeiAdministracio(c.get("repos"), c.get("rellotge"), proveidor(c));
+
+/** Superadministració: permís global de gestionar persones (rol admin_central). */
+function exigeixSuperadministracio(c: C) {
+  if (!c.get("usuari").esGlobal("usuaris.gestionar")) throw errors.sensePermis();
 }
 
 /** Comprova el permís al casal de la ruta i en retorna l'id. */
@@ -74,11 +91,7 @@ export const rutesGestio = new Hono<Entorn>()
     const ids = c.get("usuari").casalsAccessibles();
     return c.json({ casals: await c.get("repos").casals.llistar(ids === null ? {} : { ids }) });
   })
-  .post("/casals", async (c) => {
-    if (!c.get("usuari").esGlobal("casal.configurar")) throw errors.sensePermis();
-    const dades = await cosValidat(c, casalCrear);
-    return c.json({ casal: await casals(c).crear(dades, ctx(c)) }, 201);
-  })
+  // Els casals són fixos (llista oficial carregada per migració): no es poden crear des de l'aplicació.
   .get("/casals/:casalId", async (c) => {
     const casalId = casalAutoritzat(c, "casal.consultar");
     return c.json({ casal: await casals(c).obtenir(casalId) });
@@ -335,6 +348,51 @@ export const rutesGestio = new Hono<Entorn>()
     const cos = await cosValidat(c, movimentPlaca);
     return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
   })
+  // ---------- Buscar usuari/a: persones importades de la PGEc ----------
+  .get("/casals/:casalId/persones-plataforma", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    const consulta = cercaPersones.safeParse(c.req.query());
+    if (!consulta.success) throw errors.peticioInvalida("Paràmetres de consulta no vàlids.", errorsPerCamp(consulta.error));
+    const servei = personesPlataforma(c);
+    const [resultat, resum] = await Promise.all([
+      servei.cercar(casalId, consulta.data.q, consulta.data.camp as CampPersona | "tots", visibilitat(c.get("usuari"), casalId)),
+      servei.resum(casalId),
+    ]);
+    return c.json({ ...resultat, resum });
+  })
+  .get("/casals/:casalId/persones-plataforma/:personaId", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    return c.json(await personesPlataforma(c).fitxa(casalId, idRuta(c, "personaId"), visibilitat(c.get("usuari"), casalId)));
+  })
+  // Els llistats de la PGEc porten telèfons i adreces: per importar-los cal poder-los veure.
+  .post("/casals/:casalId/persones-plataforma/importacio", async (c) => {
+    const casalId = casalAutoritzat(c, "dades.importar");
+    c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
+    const cos = await cosValidat(c, importacioPersones);
+    return c.json(await personesPlataforma(c).importar(casalId, cos, ctx(c)));
+  })
+  // Comunicació de l'assignació: cal poder veure el telèfon de les persones.
+  .get("/casals/:casalId/cicles/:cicleId/comunicacions", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    return c.json(await comunicacions(c).assignacions(casalId, idRuta(c, "cicleId")));
+  })
+  .put("/casals/:casalId/places/:placaId/comunicacio", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
+    const cos = await cosValidat(c, registreComunicacio);
+    return c.json(await comunicacions(c).registrar(casalId, idRuta(c, "placaId"), cos, ctx(c)));
+  })
+  .post("/casals/:casalId/places/:placaId/comunicacio/desfer", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
+    return c.json(await comunicacions(c).esborrar(casalId, idRuta(c, "placaId"), ctx(c)));
+  })
+  .post("/casals/:casalId/places/:placaId/baixa-voluntaria", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    const cos = await cosValidat(c, baixaVoluntaria);
+    return c.json(await assistencia(c).baixaVoluntaria(casalId, idRuta(c, "placaId"), cos, visibilitat(c.get("usuari"), casalId), ctx(c)));
+  })
   .post("/casals/:casalId/places/:placaId/baixa-assistencia", async (c) => {
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, baixaAssistencia);
@@ -392,7 +450,7 @@ export const rutesGestio = new Hono<Entorn>()
     c.get("usuari").exigeix("sollicituds.consultar", casalId);
     const cicleId = idRuta(c, "cicleId");
     const vis = visibilitat(c.get("usuari"), casalId);
-    const dades = await assistencia(c).graelles(casalId, cicleId, vis, c.req.query("telefon") === "1");
+    const dades = await assistencia(c).graelles(casalId, cicleId, vis, c.req.query("telefon") !== "0");
     await c.get("repos").auditoria.registrar({
       casal_id: casalId, usuari_id: c.get("usuari").id, tipus_operacio: "exportacio.graelles", entitat: "cicle", entitat_id: cicleId,
       resultat: "exit", id_peticio: c.get("idPeticio"), detalls: { ...dades.totals, telefon: dades.telefon },
@@ -420,20 +478,57 @@ export const rutesGestio = new Hono<Entorn>()
   // ---------- Persones autoritzades ----------
   .get("/casals/:casalId/usuaris", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
-    return c.json({ assignacions: await c.get("repos").usuaris.assignacionsCasal(casalId) });
+    const repos = c.get("repos");
+    const assignacions = await repos.usuaris.assignacionsCasal(casalId);
+    const estat = await repos.usuaris.estatAcces(assignacions.map((a) => a.usuari_id), new Date(c.get("rellotge").ara()).toISOString());
+    return c.json({ assignacions: assignacions.map((a) => ({ ...a, ...estat[a.usuari_id] })) });
   })
   .post("/casals/:casalId/usuaris", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
     const dades = await cosValidat(c, assignarRol);
-    const servei = new ServeiUsuaris(c.get("repos"), c.get("rellotge"), c.env.APP_ENV === "production" ? "entra_id" : "dev");
-    return c.json({ assignacio: await servei.assignarRol(casalId, dades, ctx(c)) }, 201);
+    const servei = usuarisCasal(c);
+    const assignacio = await servei.assignarRol(casalId, dades, ctx(c));
+    // El codi de primer accés només es retorna aquí, una vegada.
+    const acces = await servei.accesAlta(assignacio.usuari_id, casalId, ctx(c), false);
+    return c.json({ assignacio, acces }, 201);
   })
   .post("/casals/:casalId/usuaris/:assignacioId/revocar", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
     const { motiu } = await cosValidat(c, revocarRol);
-    const servei = new ServeiUsuaris(c.get("repos"), c.get("rellotge"), c.env.APP_ENV === "production" ? "entra_id" : "dev");
-    await servei.revocar(casalId, idRuta(c, "assignacioId"), { ...ctx(c), motiu });
+    await usuarisCasal(c).revocar(casalId, idRuta(c, "assignacioId"), { ...ctx(c), motiu });
     return c.json({ ok: true });
+  })
+  .post("/casals/:casalId/usuaris/:assignacioId/codi-acces", async (c) => {
+    const casalId = casalAutoritzat(c, "usuaris.gestionar");
+    return c.json({ codi: await usuarisCasal(c).nouCodi(casalId, idRuta(c, "assignacioId"), ctx(c), false) });
+  })
+
+  // ---------- Superadministració ----------
+  .get("/administracio/responsables", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await administracio(c).responsables());
+  })
+  .post("/administracio/casals/:casalId/responsables", async (c) => {
+    exigeixSuperadministracio(c);
+    const casalId = idRuta(c, "casalId");
+    const dades = await cosValidat(c, assignarResponsable);
+    return c.json(await administracio(c).assignarResponsable(casalId, dades, ctx(c)), 201);
+  })
+  .post("/administracio/casals/:casalId/responsables/:assignacioId/revocar", async (c) => {
+    exigeixSuperadministracio(c);
+    const { motiu } = await cosValidat(c, revocarRol);
+    await administracio(c).revocarResponsable(idRuta(c, "casalId"), idRuta(c, "assignacioId"), { ...ctx(c), motiu });
+    return c.json({ ok: true });
+  })
+  .post("/administracio/casals/:casalId/responsables/:assignacioId/codi-acces", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json({ codi: await administracio(c).nouCodiResponsable(idRuta(c, "casalId"), idRuta(c, "assignacioId"), ctx(c)) });
+  })
+  .get("/administracio/quadre", async (c) => {
+    if (!c.get("usuari").esGlobal("estadistiques.consultar")) throw errors.sensePermis();
+    const any = c.req.query("any");
+    const valor = any && /^\d{4}$/.test(any) ? Number(any) : null;
+    return c.json(await administracio(c).quadre(valor, ctx(c)));
   })
 
   // ---------- Auditoria ----------

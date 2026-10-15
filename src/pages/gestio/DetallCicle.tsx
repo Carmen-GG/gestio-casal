@@ -150,8 +150,8 @@ export function DetallCicle() {
         {activitats.tipus === "carregant" && <Carregant />}
         {activitats.tipus === "error" && <MissatgeError error={activitats.error} onReintentar={activitats.reintentar} />}
         {activitats.tipus === "dades" && (
-          <GestioActivitats casalId={casalId} cicleId={cicleId} activitats={activitats.dades.activitats}
-            potGestionar={pot("activitats.gestionar")} potCartells={pot("cartells.generar")}
+          <GestioActivitats casalId={casalId} cicle={cicle} activitats={activitats.dades.activitats}
+            potGestionar={pot("activitats.gestionar")} potCartells={pot("cartells.generar")} potCicle={pot("cicles.gestionar")}
             editable={!["finalitzat", "arxivat"].includes(cicle.estat)} onCanvi={recarrega} />
         )}
       </Seccio>

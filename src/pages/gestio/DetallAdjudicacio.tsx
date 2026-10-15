@@ -14,6 +14,7 @@ import { serveiGestio } from "../../services/gestio";
 import type { FilaResultat, PersonaSenseActivitat } from "../../types/gestio";
 import { formataDataHora } from "../../utils/format";
 import { usePermisos } from "./context";
+import { GraellaAssignacions } from "./GraellaAssignacions";
 import { nomComplet } from "./Sollicituds";
 
 const ORDRE_RESULTAT = { admesa: 0, llista_espera: 1, no_adjudicada: 2 } as const;
@@ -116,6 +117,17 @@ export function DetallAdjudicacio() {
             És només un avís: l'aplicació no anul·la cap activitat.
           </p>
         )}
+      </Seccio>
+
+      <Seccio titol="Graella d'admesos i exclosos">
+        <GraellaAssignacions titol="Graella d'admesos i exclosos" columnes={grups.map((g) => ({
+          activitat_id: g.activitat_id, activitat: g.activitat,
+          files: g.resultats.map((f) => ({
+            sollicitud_id: f.sollicitud_id, participant: f.participant,
+            valor: f.resultat === "admesa" ? "Admesa" : f.resultat === "llista_espera" ? `Espera ${f.posicio_espera ?? ""}`.trim()
+              : f.motiu === "maxim_grup" ? "No assignada (màxim del grup)" : "No assignada",
+          })),
+        }))} />
       </Seccio>
 
       <Seccio titol={`Persones sense cap activitat (${sense_activitat.length})`} obertaInicial={sense_activitat.length > 0}>

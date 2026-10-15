@@ -1,4 +1,4 @@
-import type { AssignacioRol, PermisosUsuari, RepositoriSessions, RepositoriUsuaris, Usuari } from "../tipus";
+import type { AssignacioRol, PermisosUsuari, RepositoriSessions, RepositoriUsuaris, ResponsableCasal, Usuari } from "../tipus";
 import { comOperacio } from "./util";
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
@@ -40,6 +40,16 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
     return f?.contrasenya_resum ?? null;
   }
 
+  async superadministracio() {
+    const { results } = await this.db.prepare(
+      `SELECT DISTINCT u.id, u.contrasenya_resum FROM usuaris u
+       JOIN assignacions_rols a ON a.usuari_id = u.id AND a.casal_id IS NULL AND a.revocat_el IS NULL
+       JOIN rols_permisos rp ON rp.rol_codi = a.rol_codi AND rp.permis_codi = 'usuaris.gestionar'
+       WHERE u.actiu = 1 AND u.contrasenya_resum IS NOT NULL ORDER BY u.creat_el`,
+    ).all<{ id: string; contrasenya_resum: string }>();
+    return results;
+  }
+
   async fixarContrasenya(usuariId: string, resum: string, ara: string) {
     await this.db.prepare("UPDATE usuaris SET contrasenya_resum = ?, contrasenya_canviada_el = ?, actualitzat_el = ? WHERE id = ?")
       .bind(resum, ara, ara, usuariId).run();
@@ -59,12 +69,21 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
       .bind(usuariId)
       .all<{ casal_id: string | null; permis_codi: string }>();
     const globals = new Set<string>();
+    let casalsAmbResponsable: string[] = [];
     const perCasal: Record<string, Set<string>> = {};
     for (const f of results) {
       if (f.casal_id === null) globals.add(f.permis_codi);
       else (perCasal[f.casal_id] ??= new Set()).add(f.permis_codi);
     }
+    if (globals.size > 0) {
+      const r = await this.db.prepare(
+        `SELECT DISTINCT a.casal_id FROM assignacions_rols a JOIN usuaris u ON u.id = a.usuari_id AND u.actiu = 1
+         WHERE a.rol_codi = 'responsable_casal' AND a.revocat_el IS NULL AND a.casal_id IS NOT NULL`,
+      ).all<{ casal_id: string }>();
+      casalsAmbResponsable = r.results.map((f) => f.casal_id);
+    }
     return {
+      casalsAmbResponsable,
       globals: [...globals].sort(),
       perCasal: Object.fromEntries(Object.entries(perCasal).map(([k, v]) => [k, [...v].sort()])),
     };
@@ -90,6 +109,46 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
 
   async rolExisteix(codi: string) {
     return this.db.prepare("SELECT abast FROM rols WHERE codi = ?").bind(codi).first<{ abast: "casal" | "global" }>();
+  }
+
+  async responsables() {
+    const { results } = await this.db.prepare(
+      `SELECT a.id AS assignacio_id, a.casal_id, u.id AS usuari_id, u.email, u.nom_visible, a.atorgat_el,
+         u.contrasenya_resum IS NOT NULL AS te_contrasenya, u.darrer_acces_el,
+         (SELECT max(t.caduca_el) FROM testimonis_acces t WHERE t.usuari_id = u.id AND t.tipus = 'primer_acces'
+           AND t.usat_el IS NULL AND t.caduca_el > ?) AS codi_pendent_fins
+       FROM assignacions_rols a JOIN usuaris u ON u.id = a.usuari_id
+       WHERE a.rol_codi = 'responsable_casal' AND a.revocat_el IS NULL AND u.actiu = 1
+       ORDER BY u.nom_visible`,
+    ).bind(isoAra(this.rellotge)).all<Omit<ResponsableCasal, "te_contrasenya"> & { casal_id: string; te_contrasenya: number }>();
+    return results.map((f) => ({ ...f, te_contrasenya: Number(f.te_contrasenya) === 1 }));
+  }
+
+  async assignacionsUsuari(usuariId: string) {
+    const { results } = await this.db.prepare(
+      "SELECT rol_codi, casal_id FROM assignacions_rols WHERE usuari_id = ? AND revocat_el IS NULL",
+    ).bind(usuariId).all<{ rol_codi: string; casal_id: string | null }>();
+    return results;
+  }
+
+  async estatAcces(usuariIds: string[], ara: string) {
+    const unics = [...new Set(usuariIds)];
+    const resultat: Record<string, { te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null }> = {};
+    for (let i = 0; i < unics.length; i += 90) {
+      const bloc = unics.slice(i, i + 90);
+      const { results } = await this.db.prepare(
+        `SELECT u.id, u.contrasenya_resum IS NOT NULL AS te_contrasenya, u.darrer_acces_el,
+           (SELECT max(t.caduca_el) FROM testimonis_acces t WHERE t.usuari_id = u.id AND t.tipus = 'primer_acces'
+             AND t.usat_el IS NULL AND t.caduca_el > ?) AS codi_pendent_fins
+         FROM usuaris u WHERE u.id IN (${bloc.map(() => "?").join(", ")})`,
+      ).bind(ara, ...bloc).all<{ id: string; te_contrasenya: number; darrer_acces_el: string | null; codi_pendent_fins: string | null }>();
+      for (const f of results) resultat[f.id] = { te_contrasenya: Number(f.te_contrasenya) === 1, darrer_acces_el: f.darrer_acces_el, codi_pendent_fins: f.codi_pendent_fins };
+    }
+    return resultat;
+  }
+
+  async marcarAcces(usuariId: string, ara: string) {
+    await this.db.prepare("UPDATE usuaris SET darrer_acces_el = ? WHERE id = ?").bind(ara, usuariId).run();
   }
 
   operacioAssignar(
@@ -128,12 +187,30 @@ export class D1RepositoriSessions implements RepositoriSessions {
       .run();
   }
 
+  async crearCodiPrimerAcces(resum: string, usuariId: string, ara: string, caducaEl: string) {
+    await this.db.batch([
+      this.db.prepare("UPDATE testimonis_acces SET usat_el = ? WHERE usuari_id = ? AND tipus = 'primer_acces' AND usat_el IS NULL")
+        .bind(ara, usuariId),
+      this.db.prepare("INSERT INTO testimonis_acces (resum, usuari_id, creat_el, caduca_el, tipus) VALUES (?, ?, ?, ?, 'primer_acces')")
+        .bind(resum, usuariId, ara, caducaEl),
+    ]);
+  }
+
+  async consumirCodiPrimerAcces(resum: string, usuariId: string, ara: string) {
+    const f = await this.db.prepare(
+      `UPDATE testimonis_acces SET usat_el = ?
+       WHERE resum = ? AND usuari_id = ? AND tipus = 'primer_acces' AND usat_el IS NULL AND caduca_el > ?
+       RETURNING usuari_id`,
+    ).bind(ara, resum, usuariId, ara).first<{ usuari_id: string }>();
+    return f !== null;
+  }
+
   async consumirTestimoni(resum: string, ara: string) {
     // L'UPDATE condicionat garanteix l'ús únic encara que arribin dues peticions alhora.
     const f = await this.db
       .prepare(
         `UPDATE testimonis_acces SET usat_el = ?
-         WHERE resum = ? AND usat_el IS NULL AND caduca_el > ?
+         WHERE resum = ? AND usat_el IS NULL AND caduca_el > ? AND tipus = 'acces'
          RETURNING usuari_id`,
       )
       .bind(ara, resum, ara)

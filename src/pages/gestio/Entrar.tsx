@@ -16,6 +16,8 @@ export function Entrar() {
   const [testimoni, setTestimoni] = useState("");
   const [email, setEmail] = useState("");
   const [contrasenya, setContrasenya] = useState("");
+  const [primer, setPrimer] = useState({ email: "", codi: "", contrasenya: "", repeticio: "" });
+  const [errorPrimer, setErrorPrimer] = useState("");
   const [enviant, setEnviant] = useState(false);
   const [error, setError] = useState<ErrorClientApi | null>(null);
   const automatic = useRef(false);
@@ -34,6 +36,15 @@ export function Entrar() {
     }
   }
 
+  // Si ja hi ha sessió (p. ex. des de la pàgina principal), anem directament al destí.
+  useEffect(() => {
+    if (window.location.hash.includes("testimoni=")) return;
+    const c = new AbortController();
+    serveiAuth.jo(c.signal).then(() => navegar(desti, { replace: true }), () => undefined);
+    return () => c.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const t = hash.get("testimoni");
@@ -44,6 +55,23 @@ export function Entrar() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function enviaPrimer(e: FormEvent) {
+    e.preventDefault();
+    setErrorPrimer("");
+    if (primer.contrasenya.length < 12) { setErrorPrimer("La contrasenya ha de tenir almenys 12 caràcters."); return; }
+    if (primer.contrasenya !== primer.repeticio) { setErrorPrimer("Les dues contrasenyes no coincideixen."); return; }
+    setEnviant(true);
+    setError(null);
+    try {
+      await serveiAuth.primerAcces({ email: primer.email.trim(), codi: primer.codi.trim(), contrasenya: primer.contrasenya });
+      navegar(desti, { replace: true });
+    } catch (err) {
+      setError(err instanceof ErrorClientApi ? err : new ErrorClientApi(0, "error", "No s'ha pogut completar el primer accés."));
+    } finally {
+      setEnviant(false);
+    }
+  }
 
   const envia = (e: FormEvent) => {
     e.preventDefault();
@@ -56,7 +84,7 @@ export function Entrar() {
 
   return (
     <section aria-labelledby="titol-entrar" className="estret">
-      <h1 id="titol-entrar">Accés al panell de gestió</h1>
+      <h1 id="titol-entrar">Accés a l'administració</h1>
       {error && <MissatgeError error={error} />}
       <form onSubmit={enviaContrasenya} noValidate className="formulari">
         <CampText etiqueta="Correu electrònic" type="email" obligatori autoComplete="username" value={email}
@@ -67,12 +95,30 @@ export function Entrar() {
           {enviant ? "Comprovant…" : "Entra"}
         </button>
       </form>
-      <details className="acces-codi">
-        <summary>Encara no teniu contrasenya? Entreu amb un codi d'accés</summary>
+      <details className="acces-codi" open={params.has("primer")}>
+        <summary>Primer accés o contrasenya oblidada</summary>
         <p>
-          Escriviu el codi d'accés que us ha facilitat la persona administradora. Cada codi només serveix una vegada
-          i caduca. Un cop dins, fixeu la vostra contrasenya a «El meu compte».
+          Escriviu el vostre correu i el codi que us ha fet arribar la persona responsable del casal (o la superadministració),
+          i creeu la vostra contrasenya. El codi només serveix una vegada i caduca.
         </p>
+        <form onSubmit={(e) => void enviaPrimer(e)} noValidate className="formulari">
+          {errorPrimer && <p className="avis avis--error" role="alert">{errorPrimer}</p>}
+          <CampText etiqueta="Correu electrònic" type="email" obligatori autoComplete="username" value={primer.email}
+            onChange={(e) => setPrimer({ ...primer, email: e.target.value })} />
+          <CampText etiqueta="Codi de primer accés" obligatori autoComplete="one-time-code" value={primer.codi}
+            onChange={(e) => setPrimer({ ...primer, codi: e.target.value })} ajuda="Per exemple: ABCD-EFGH-JKLM" />
+          <CampText etiqueta="Nova contrasenya" type="password" obligatori autoComplete="new-password" value={primer.contrasenya}
+            onChange={(e) => setPrimer({ ...primer, contrasenya: e.target.value })} ajuda="Almenys 12 caràcters. Una frase que recordeu és una bona contrasenya." />
+          <CampText etiqueta="Repetiu la contrasenya" type="password" obligatori autoComplete="new-password" value={primer.repeticio}
+            onChange={(e) => setPrimer({ ...primer, repeticio: e.target.value })} />
+          <button type="submit" className="boto" disabled={enviant || !primer.email.trim() || !primer.codi.trim() || !primer.contrasenya}>
+            {enviant ? "Comprovant…" : "Crea la contrasenya i entra"}
+          </button>
+        </form>
+      </details>
+      <details className="acces-codi">
+        <summary>Teniu un codi d'accés de proves?</summary>
+        <p>Només per als entorns de proves: el codi d'accés provisional d'un sol ús.</p>
         <form onSubmit={envia} noValidate className="formulari">
           <CampText etiqueta="Codi d'accés" obligatori autoComplete="off" value={testimoni}
             onChange={(e) => setTestimoni(e.target.value)} />

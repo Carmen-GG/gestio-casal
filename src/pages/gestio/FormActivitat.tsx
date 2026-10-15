@@ -11,13 +11,13 @@ const NOMS_DIES = ["", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", 
 
 type Valors = {
   nom: string; descripcio: string; categoria: string; dies_setmana: number[]; hora_inici: string; hora_fi: string;
-  horari_text: string; data_inici: string; data_fi: string; espai: string; destinataris: string; capacitat: string; nombre_sessions: string; minim_participants: string; codi_extern: string;
+  horari_text: string; data_inici: string; data_fi: string; espai: string; destinataris: string; grup: string; capacitat: string; nombre_sessions: string; minim_participants: string; codi_extern: string;
 };
 
 const desDe = (a?: Activitat): Valors => ({
   nom: a?.nom ?? "", descripcio: a?.descripcio ?? "", categoria: a?.categoria ?? "", dies_setmana: a?.dies_setmana ?? [],
   hora_inici: a?.hora_inici ?? "", hora_fi: a?.hora_fi ?? "", horari_text: a?.horari_text ?? "",
-  data_inici: a?.data_inici ?? "", data_fi: a?.data_fi ?? "", espai: a?.espai ?? "", destinataris: a?.destinataris ?? "",
+  data_inici: a?.data_inici ?? "", data_fi: a?.data_fi ?? "", espai: a?.espai ?? "", destinataris: a?.destinataris ?? "", grup: a?.grup != null ? String(a.grup) : "",
   capacitat: a ? String(a.capacitat) : "", nombre_sessions: a?.nombre_sessions != null ? String(a.nombre_sessions) : "",
   minim_participants: a?.minim_participants != null ? String(a.minim_participants) : "",
   codi_extern: a?.codi_extern ?? "",
@@ -42,7 +42,7 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
     const dades = {
       nom: v.nom, descripcio: nul(v.descripcio), categoria: nul(v.categoria), dies_setmana: v.dies_setmana,
       hora_inici: nul(v.hora_inici), hora_fi: nul(v.hora_fi), horari_text: nul(v.horari_text),
-      data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai), destinataris: nul(v.destinataris),
+      data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai), destinataris: nul(v.destinataris), grup: v.grup === "" ? null : Number(v.grup),
       capacitat: v.capacitat === "" ? Number.NaN : Number(v.capacitat),
       nombre_sessions: v.nombre_sessions === "" ? null : Number(v.nombre_sessions),
       minim_participants: v.minim_participants === "" ? null : Number(v.minim_participants), codi_extern: nul(v.codi_extern),
@@ -91,6 +91,8 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
         <CampText etiqueta="Data d'inici" type="date" value={v.data_inici} onChange={canvia("data_inici")} error={errors.data_inici} />
         <CampText etiqueta="Data de finalització" type="date" value={v.data_fi} onChange={canvia("data_fi")} error={errors.data_fi} />
         <CampText etiqueta="Aula o espai" value={v.espai} onChange={canvia("espai")} error={errors.espai} />
+        <CampText etiqueta="Grup" type="number" min={1} max={99} value={v.grup} onChange={canvia("grup")} error={errors.grup}
+          ajuda="Activitats que no es poden acumular: per exemple 1 per a totes les esportives i 2 per a totes les de ball. El màxim de cada grup es posa sota la llista d'activitats." />
         <CampText etiqueta="Persones a qui va dirigida" value={v.destinataris} onChange={canvia("destinataris")} error={errors.destinataris} maxLength={200} />
         <CampText etiqueta="Codi FA (PGEC)" value={v.codi_extern} onChange={canvia("codi_extern")} error={errors.codi_extern} />
         <div className="camp--ample">
