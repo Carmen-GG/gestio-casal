@@ -251,6 +251,24 @@ describe("importacions", () => {
   });
 });
 
+describe("importació del llistat d'activitats de la PGEc", () => {
+  it("treu el cicle del nom de l'activitat", async () => {
+    const { casal, cicle, base } = await escenari();
+    const g = await clientAutenticat("gestor_casal", casal.id);
+    const ruta = `${base}/cicles/${cicle.id}/importacions/activitats`;
+    const files = [
+      { codi_extern: "FA563/2026/06262", nom: "Pilates 1. 3r Cicle 2026", capacitat: "25" },
+      { codi_extern: "FA563/2026/06266", nom: "Reciclem la nostra roba. 3r Cicle 2026.", capacitat: "20" },
+      { codi_extern: "FA563/2026/07464", nom: "En Forma! 3r Cicle 2026", capacitat: "25" },
+    ];
+    const conf = await g.json(ruta, { method: "POST", json: { files, clau: crypto.randomUUID(), confirmacio: true, files_esperades: 3 } });
+    expect(conf.status).toBe(201);
+    const { results } = await env.DB.prepare("SELECT nom FROM activitats WHERE cicle_id = ? AND codi_extern LIKE 'FA563/%' ORDER BY codi_extern")
+      .bind(cicle.id).all<{ nom: string }>();
+    expect(results.map((r) => r.nom)).toEqual(["Pilates 1", "Reciclem la nostra roba", "En Forma!"]);
+  });
+});
+
 describe("exportacions", () => {
   it("exporta el mateix nombre de sol·licituds que hi ha a la base de dades i ho audita", async () => {
     const { casal, cicle, base, segona } = await escenari();

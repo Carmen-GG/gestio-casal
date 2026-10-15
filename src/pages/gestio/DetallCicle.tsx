@@ -11,7 +11,9 @@ import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type { Activitat, Cicle, EstatActivitat } from "../../types/gestio";
 import { formataData, formataDataHora, formataHorari } from "../../utils/format";
-import { usePermisos } from "./context";
+import { useGestio, usePermisos } from "./context";
+import { EstatFormulariPublic } from "./EstatFormulariPublic";
+import { HorarisActivitats } from "./HorarisActivitats";
 import { FormActivitat } from "./FormActivitat";
 import { FormCicle } from "./FormCicle";
 import { Historial } from "./Historial";
@@ -43,6 +45,7 @@ type Pendent =
 export function DetallCicle() {
   const { casalId = "", cicleId = "" } = useParams();
   const pot = usePermisos(casalId);
+  const { jo } = useGestio();
   const [versio, setVersio] = useState(0);
   const recarrega = () => setVersio((v) => v + 1);
   const detall = useConsulta((s) => serveiGestio.cicle(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
@@ -136,6 +139,15 @@ export function DetallCicle() {
         </Seccio>
       )}
 
+      {!["finalitzat", "arxivat"].includes(cicle.estat) && activitats.tipus === "dades" && (
+        <Seccio titol="Formulari a la pàgina pública">
+          <EstatFormulariPublic casalId={casalId} codiCasal={jo.casals.find((c) => c.id === casalId)?.codi} cicle={cicle}
+            acceptaSollicituds={accepta_sollicituds} teTextPrivacitat={!!formulari.informacio_privacitat}
+            activitats={activitats.dades.activitats} potGestionar={pot("activitats.gestionar")}
+            onCanvi={(m) => { setExit(m); recarrega(); }} />
+        </Seccio>
+      )}
+
       <Seccio titol="Formulari d'inscripció" obertaInicial={!formulari.informacio_privacitat && ["esborrany", "preparacio"].includes(cicle.estat)}>
         <CampsFormulari formulari={formulari} cicle={cicle} editable={pot("cicles.gestionar") && ["esborrany", "preparacio"].includes(cicle.estat)}
           onDesar={(conf) => accio(() => serveiGestio.actualitzarCicle(casalId, cicleId, { versio: cicle.versio, configuracio_formulari: conf }),
@@ -185,6 +197,13 @@ export function DetallCicle() {
         ))}
       </Seccio>
 
+      {pot("activitats.gestionar") && !["finalitzat", "arxivat"].includes(cicle.estat) && activitats.tipus === "dades" && activitats.dades.activitats.length > 0 && (
+        <Seccio titol="Dies i horaris de les activitats"
+          obertaInicial={activitats.dades.activitats.some((a) => a.estat !== "arxivada" && !a.horari_text && (a.dies_setmana.length === 0 || !a.hora_inici))}>
+          <HorarisActivitats casalId={casalId} activitats={activitats.dades.activitats} onDesat={(m) => { setExit(m); recarrega(); }} />
+        </Seccio>
+      )}
+
       {pot("activitats.gestionar") && !["finalitzat", "arxivat"].includes(cicle.estat) && (
         <Seccio titol="Nova activitat" obertaInicial={false}>
           <FormActivitat textBoto="Crea l'activitat" onDesar={async (dades) => {
@@ -210,7 +229,7 @@ export function DetallCicle() {
 
       {(pot("dades.importar") || pot("dades.exportar")) && (
         <Seccio titol="Importació i exportació" obertaInicial={false}>
-          <ImportacioExportacio casalId={casalId} cicleId={cicleId} pot={pot}
+          <ImportacioExportacio casalId={casalId} cicleId={cicleId} pot={pot} onImportat={recarrega}
             activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
         </Seccio>
       )}
