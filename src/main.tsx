@@ -23,6 +23,7 @@ import { Comunicacions } from "./pages/gestio/Comunicacions";
 import { BuscarUsuari } from "./pages/gestio/BuscarUsuari";
 import { AdministracioCasal, Responsables } from "./pages/gestio/Administracio";
 import { QuadreGlobal } from "./pages/gestio/QuadreGlobal";
+import { EntrarCasal } from "./pages/gestio/EntrarCasal";
 import { FitxaPersona } from "./pages/gestio/FitxaPersona";
 import { PantallaSorteig } from "./pages/gestio/PantallaSorteig";
 import { CartellsInici } from "./pages/cartells/CartellsInici";
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <GestioInici /> },
           { path: "compte", element: <Compte /> },
+          { path: "casal/:codi", element: <EntrarCasal /> },
           { path: "administracio/responsables", element: <Responsables /> },
           { path: "administracio/casal", element: <AdministracioCasal /> },
           { path: "administracio/quadre", element: <QuadreGlobal /> },
