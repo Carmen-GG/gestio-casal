@@ -300,4 +300,18 @@ main:focus { outline: none; }
 .llista-comprovacions { list-style: none; padding: 0; margin: 0.75rem 0; }
 .comprovacio { margin: 0.3rem 0; color: #5c3c00; }
 .comprovacio--feta { color: var(--color-exit); }
-.fila-canviada { background: #fff4d6; }
+
+/* Requadre de signatura del tutor (formulari públic). */
+.signatura { display: block; width: 100%; max-width: 36rem; height: 11rem; border: 2px dashed #8a95a1; border-radius: 6px; background: #fff; touch-action: none; cursor: crosshair; }
+.camp--error .signatura { border-color: var(--color-error); }
+.signatura:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+/* Activitats del cicle. */
+.importa-pgec { margin-bottom: 1rem; }
+.importa-pgec label.boto { display: inline-block; cursor: pointer; }
+.importa-pgec input:focus-visible + label.boto { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.fila--inactiva td { color: var(--color-text-secundari); }
+.signatura-desada { display: block; max-width: 24rem; width: 100%; border: 1px solid var(--color-vora); border-radius: 6px; background: #fff; }
+.sense-salt { white-space: nowrap; }
+.accions-fila--horitzontal { flex-wrap: nowrap; }
+.accions-fila--horitzontal .boto { white-space: nowrap; }

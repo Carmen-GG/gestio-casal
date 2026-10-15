@@ -134,7 +134,7 @@ export function DetallCicle() {
       {!["finalitzat", "arxivat"].includes(cicle.estat) && activitats.tipus === "dades" && (
         <Seccio titol="Formulari a la pàgina pública">
           <EstatFormulariPublic casalId={casalId} codiCasal={jo.casals.find((c) => c.id === casalId)?.codi} cicle={cicle}
-            acceptaSollicituds={accepta_sollicituds} teTextPrivacitat={!!formulari.informacio_privacitat}
+            acceptaSollicituds={accepta_sollicituds} privacitatDeProva={!formulari.informacio_privacitat}
             activitats={activitats.dades.activitats} potGestionar={pot("activitats.gestionar")}
             onCanvi={(m) => { setExit(m); recarrega(); }} />
         </Seccio>
@@ -252,7 +252,7 @@ function CampsFormulari({ formulari, editable, onDesar }: {
     setCamps((c) => ({ ...c, [camp]: { ...c[camp], [clau]: valor, ...(clau === "actiu" && !valor ? { obligatori: false } : {}) } }));
   return (
     <div>
-      <p>Recolliu només les dades estrictament necessàries. Activar camps com el DNI/NIE o la data de naixement requereix una justificació validada pel responsable del tractament.</p>
+      <p>Trieu quins camps surten al formulari i quins són obligatoris. Recolliu només les dades necessàries. La data de naixement sempre es demana: si la persona és menor d'edat, el formulari demana les dades, el DNI i la signatura del pare, mare o tutor.</p>
       {!editable && <p className="text-secundari">Els camps només es poden modificar mentre el cicle és en esborrany o preparació.</p>}
       <div className="taula-contenidor">
         <table className="taula">
@@ -276,9 +276,9 @@ function CampsFormulari({ formulari, editable, onDesar }: {
       <h3 className="subseccio">Informació sobre protecció de dades</h3>
       <p className="text-secundari">
         Es mostra al formulari públic i la persona l'ha d'acceptar abans d'enviar. L'ha de redactar o validar el responsable
-        del tractament (vegeu docs/validacio-institucional.md). Mentre estigui buida, el formulari públic no accepta sol·licituds.
+        del tractament (vegeu docs/validacio-institucional.md). Mentre estigui buida, el formulari públic mostra un text de prova.
       </p>
-      {!formulari.informacio_privacitat && <p className="avis avis--alerta">Aquest cicle encara no té la informació de protecció de dades.</p>}
+      {!formulari.informacio_privacitat && <p className="avis avis--alerta">Aquest cicle encara no té la informació de protecció de dades: el formulari mostra el text de prova.</p>}
       <CampAreaText etiqueta="Text informatiu" value={privacitat} rows={8} maxLength={MIDA_MAXIMA_PRIVACITAT}
         disabled={!editable} onChange={(e) => setPrivacitat(e.target.value)} />
       {editable && <button type="button" className="boto" onClick={() => onDesar({ camps, informacio_privacitat: privacitat })}>Desa la configuració del formulari</button>}

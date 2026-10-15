@@ -2,14 +2,15 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type {
   ActivitatPublica, CasalPublic, CiclePublic, FormulariPublic, RespostaSollicitudRegistrada,
 } from "../../shared/api/public";
-import { ETIQUETES_CAMPS, type CampPersonal } from "../../shared/domain/formulari";
+import { ETIQUETES_CAMPS, esMenorEnData, type CampPersonal } from "../../shared/domain/formulari";
 import {
-  activitatsAmbPreferenciaDuplicada, missatgeErrorPreferencies, validaPreferencies, type Preferencia,
+  activitatsAmbPreferenciaDuplicada, MAX_ACTIVITATS_FORMULARI, missatgeErrorPreferencies, validaPreferencies, type Preferencia,
 } from "../../shared/domain/preferencies";
 import { errorsPerCamp } from "../../shared/schemas/comuns";
-import { dadesPersonalsSollicitud } from "../../shared/schemas/public";
+import { autoritzacioTutor, dadesPersonalsSollicitud } from "../../shared/schemas/public";
 import { MissatgeError } from "../components/EstatsConsulta";
 import { CampText } from "../components/Formulari";
+import { Signatura } from "../components/Signatura";
 import { ErrorClientApi } from "../services/api";
 import { serveiPublic } from "../services/public";
 import { formataData, formataDataHora, formataHorari } from "../utils/format";
@@ -30,6 +31,28 @@ const ATRIBUTS: Partial<Record<CampPersonal, { type?: string; autoComplete?: str
 
 const novaClau = () => crypto.randomUUID();
 
+/** Data d'avui al casal (AAAA-MM-DD), la mateixa que fa servir el servidor. */
+const avuiMadrid = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
+
+interface DadesTutor { nom: string; cognoms: string; document_identitat: string; autoritza: boolean; signatura: string | null }
+const TUTOR_BUIT: DadesTutor = { nom: "", cognoms: "", document_identitat: "", autoritza: false, signatura: null };
+
+/** Avisos de la tria d'activitats que es mostren mentre la persona les marca. */
+function avisosPreferencies(seleccio: Preferencia[], activitats: ActivitatPublica[]): string[] {
+  const nom = (id: string) => activitats.find((a) => a.id === id)?.nom ?? "";
+  const avisos: string[] = [];
+  if (seleccio.length > MAX_ACTIVITATS_FORMULARI) {
+    avisos.push(`Heu triat ${seleccio.length} activitats i el màxim és ${MAX_ACTIVITATS_FORMULARI}. Desmarqueu-ne ${seleccio.length - MAX_ACTIVITATS_FORMULARI}.`);
+  }
+  const duplicades = activitatsAmbPreferenciaDuplicada(seleccio);
+  if (duplicades.ordres.length) {
+    avisos.push(`Hi ha prioritats repetides (${duplicades.ordres.join(", ")}): ${duplicades.activitats.map(nom).join(", ")}. Cada activitat ha de tenir una prioritat diferent.`);
+  }
+  const senseOrdre = seleccio.filter((p) => p.ordre == null).map((p) => nom(p.activitat_id));
+  if (senseOrdre.length) avisos.push(`Falta posar la prioritat a: ${senseOrdre.join(", ")}.`);
+  return avisos;
+}
+
 /**
  * Formulari públic d'inscripció d'un cicle. Ajuda a omplir-lo bé (validació
  * immediata amb les mateixes regles que el servidor), però només mostra la
@@ -41,6 +64,7 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
   const [dades, setDades] = useState<Partial<Record<CampPersonal, string>>>({});
   const [seleccio, setSeleccio] = useState<Preferencia[]>([]);
   const [acceptacio, setAcceptacio] = useState(false);
+  const [tutor, setTutor] = useState<DadesTutor>(TUTOR_BUIT);
   const [parany, setParany] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [errorServidor, setErrorServidor] = useState<ErrorClientApi | null>(null);
@@ -66,18 +90,26 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
   }, [resultat]);
 
   const duplicades = activitatsAmbPreferenciaDuplicada(seleccio);
-  const errorPreferencies = errors.preferencies ?? (duplicades.activitats.length
-    ? missatgeErrorPreferencies({ tipus: "duplicades", ...duplicades }) : undefined);
+  const avisos = avisosPreferencies(seleccio, activitats);
+  const errorPreferencies = errors.preferencies;
+  const naixement = dades.data_naixement ?? "";
+  const menor = /^\d{4}-\d{2}-\d{2}$/.test(naixement) && naixement <= avuiMadrid() && esMenorEnData(naixement, avuiMadrid());
 
   function marcaActivitat(id: string, marcada: boolean) {
     setSeleccio((s) => {
-      if (marcada) return [...s, { activitat_id: id, ordre: s.length + 1 }];
-      // En treure una activitat, les preferències posteriors pugen una posició (1, 2, 3... sense salts).
+      // La prioritat la tria la persona: una activitat nova arriba sense número.
+      if (marcada) return [...s, { activitat_id: id, ordre: null }];
+      // En treure una activitat, les prioritats posteriors pugen una posició (1, 2, 3... sense salts).
       const treta = s.find((p) => p.activitat_id === id)?.ordre ?? null;
       return s.filter((p) => p.activitat_id !== id)
         .map((p) => (treta != null && p.ordre != null && p.ordre > treta ? { ...p, ordre: p.ordre - 1 } : p));
     });
     setErrors(({ preferencies: _, ...resta }) => resta);
+  }
+
+  function canviaTutor<K extends keyof DadesTutor>(camp: K, valor: DadesTutor[K]) {
+    setTutor((t) => ({ ...t, [camp]: valor }));
+    setErrors(({ tutor: _t, [`tutor.${camp}`]: _c, ...resta }) => resta);
   }
 
   function canviaOrdre(id: string, ordre: number | null) {
@@ -99,8 +131,16 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
     for (const { camp, obligatori } of formulari.camps) {
       if (obligatori && !(dades[camp] ?? "").trim()) e[`dades.${camp}`] = "Aquest camp és obligatori.";
     }
-    const ep = validaPreferencies(seleccio);
+    const ep = validaPreferencies(seleccio, MAX_ACTIVITATS_FORMULARI);
     if (ep) e.preferencies = missatgeErrorPreferencies(ep);
+    if (menor) {
+      const t = autoritzacioTutor.safeParse({ ...tutor, signatura: tutor.signatura ?? "" });
+      if (!t.success) {
+        for (const [k, v] of Object.entries(errorsPerCamp(t.error))) {
+          e[`tutor.${k}`] = k === "signatura" ? "Cal signar dins del requadre." : k === "autoritza" ? "Cal marcar la casella d'autorització." : v;
+        }
+      }
+    }
     if (!acceptacio) e.acceptacio_privacitat = "Cal llegir i acceptar la informació sobre protecció de dades.";
     return e;
   }
@@ -113,6 +153,13 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
         const input = document.querySelector<HTMLInputElement>(`[name="${primerCamp.camp}"]`);
         input?.scrollIntoView({ behavior: "smooth", block: "center" });
         input?.focus({ preventScroll: true });
+        return;
+      }
+      const primerTutor = ["nom", "cognoms", "document_identitat", "autoritza", "signatura"].find((k) => e[`tutor.${k}`]) ?? (e.tutor ? "nom" : null);
+      if (primerTutor) {
+        const el = document.getElementById(`tutor-${primerTutor}`) ?? document.querySelector<HTMLElement>(`[name="tutor-${primerTutor}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        el?.focus({ preventScroll: true });
         return;
       }
       if (e.preferencies) {
@@ -141,6 +188,7 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
         dades: Object.fromEntries(formulari.camps.map(({ camp }) => [camp, (dades[camp] ?? "").trim()])),
         preferencies: [...seleccio].sort((a, b) => a.ordre! - b.ordre!),
         acceptacio_privacitat: true,
+        ...(menor ? { tutor: { ...tutor, nom: tutor.nom.trim(), cognoms: tutor.cognoms.trim(), document_identitat: tutor.document_identitat.trim() } } : {}),
         ...(parany ? { web: parany } : {}),
       };
       const r = await serveiPublic.enviarSollicitud(casal.codi, cicle.id, cos, clau.current);
@@ -161,6 +209,7 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
     setDades({});
     setSeleccio([]);
     setAcceptacio(false);
+    setTutor(TUTOR_BUIT);
     setErrors({});
     setErrorServidor(null);
     setResultat(null);
@@ -221,19 +270,58 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
         </div>
       </fieldset>
 
+      {menor && (
+        <fieldset className="grup">
+          <legend>Autorització del pare, mare o tutor legal</legend>
+          <p className="text-secundari">La persona participant és menor d'edat. Cal que el pare, la mare o el tutor legal l'autoritzi.</p>
+          {errors.tutor && <p className="avis avis--error" role="alert">{errors.tutor}</p>}
+          <div className="graella-camps">
+            <CampText name="tutor-nom" etiqueta="Nom del pare, mare o tutor" obligatori autoComplete="off" maxLength={80}
+              value={tutor.nom} onChange={(e) => canviaTutor("nom", e.target.value)} error={errors["tutor.nom"]} />
+            <CampText name="tutor-cognoms" etiqueta="Cognoms del pare, mare o tutor" obligatori autoComplete="off" maxLength={160}
+              value={tutor.cognoms} onChange={(e) => canviaTutor("cognoms", e.target.value)} error={errors["tutor.cognoms"]} />
+            <CampText name="tutor-document_identitat" etiqueta="DNI/NIE del pare, mare o tutor" obligatori autoComplete="off"
+              maxLength={12} value={tutor.document_identitat} onChange={(e) => canviaTutor("document_identitat", e.target.value)}
+              error={errors["tutor.document_identitat"]} />
+          </div>
+          <div className={`camp ${errors["tutor.autoritza"] ? "camp--error" : ""}`}>
+            <label className="casella">
+              <input id="tutor-autoritza" type="checkbox" checked={tutor.autoritza} aria-invalid={!!errors["tutor.autoritza"]}
+                onChange={(e) => canviaTutor("autoritza", e.target.checked)} />
+              <span>
+                Autoritzo {[dades.nom, dades.cognom1].filter(Boolean).join(" ") || "la persona menor"} a inscriure's a les activitats triades.{" "}
+                <span className="camp__obligatori">(obligatori)</span>
+              </span>
+            </label>
+            {errors["tutor.autoritza"] && <p className="camp__missatge" role="alert">{errors["tutor.autoritza"]}</p>}
+          </div>
+          <Signatura id="tutor-signatura" etiqueta="Signatura del pare, mare o tutor" error={errors["tutor.signatura"]}
+            onChange={(png) => canviaTutor("signatura", png)} />
+        </fieldset>
+      )}
+
       <fieldset className="grup" ref={refActivitats} aria-describedby={errorPreferencies ? "error-preferencies" : "ajuda-preferencies"}>
         <legend>Activitats i ordre de preferència</legend>
         <p id="ajuda-preferencies" className="text-secundari">
-          Marqueu les activitats que us interessen i indiqueu l'ordre de preferència: 1 per a la que més us interessa, 2 per a la següent, i així successivament.
+          Marqueu fins a {MAX_ACTIVITATS_FORMULARI} activitats i poseu a cadascuna la seva prioritat: 1 per a la que més us interessa, 2 per a la següent, i així successivament.
         </p>
         {errorPreferencies && <p id="error-preferencies" className="avis avis--error" role="alert">{errorPreferencies}</p>}
+        {!errorPreferencies && avisos.length > 0 && (
+          <div className="avis avis--alerta" role="status">
+            {avisos.map((a) => <p key={a}>{a}</p>)}
+          </div>
+        )}
+        {seleccio.length > 0 && avisos.length === 0 && (
+          <p className="text-secundari" role="status">Activitats triades: {seleccio.length} de {MAX_ACTIVITATS_FORMULARI} com a màxim.</p>
+        )}
         <ul className="llista-targetes">
           {activitats.map((a) => {
             const pref = seleccio.find((p) => p.activitat_id === a.id);
             const duplicada = duplicades.activitats.includes(a.id);
+            const senseOrdre = !!pref && pref.ordre == null;
             const idSelect = `ordre-${a.id}`;
             return (
-              <li key={a.id} className={`targeta targeta--activitat ${pref ? "targeta--triada" : ""} ${duplicada ? "targeta--error" : ""}`}>
+              <li key={a.id} className={`targeta targeta--activitat ${pref ? "targeta--triada" : ""} ${duplicada || senseOrdre ? "targeta--error" : ""}`}>
                 <label className="targeta__marca">
                   <input type="checkbox" checked={!!pref} onChange={(e) => marcaActivitat(a.id, e.target.checked)} />
                   <span><strong>{a.nom}</strong></span>
@@ -242,16 +330,18 @@ export function FormulariInscripcio({ casal, cicle, activitats, formulari }: {
                 <p>{formataHorari(a)}</p>
                 {a.data_inici && a.data_fi && <p className="text-secundari">Del {formataData(a.data_inici)} al {formataData(a.data_fi)}</p>}
                 {a.espai && <p className="text-secundari">Espai: {a.espai}</p>}
+                {a.destinataris && <p className="text-secundari">Adreçada a: {a.destinataris}</p>}
                 {a.descripcio && <p>{a.descripcio}</p>}
                 {pref && (
                   <div className="camp camp--compacte">
-                    <label htmlFor={idSelect}>Preferència</label>
-                    <select id={idSelect} value={pref.ordre ?? ""} aria-invalid={duplicada}
+                    <label htmlFor={idSelect}>Prioritat</label>
+                    <select id={idSelect} value={pref.ordre ?? ""} aria-invalid={duplicada || senseOrdre}
                       onChange={(e) => canviaOrdre(a.id, e.target.value ? Number(e.target.value) : null)}>
-                      <option value="">—</option>
-                      {seleccio.map((_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
+                      <option value="">Tria</option>
+                      {Array.from({ length: Math.min(seleccio.length, MAX_ACTIVITATS_FORMULARI) }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
                     </select>
-                    {duplicada && <p className="camp__missatge">Aquest número de preferència està repetit.</p>}
+                    {duplicada && <p className="camp__missatge">Aquesta prioritat està repetida.</p>}
+                    {senseOrdre && <p className="camp__missatge">Falta posar-hi la prioritat.</p>}
                   </div>
                 )}
               </li>

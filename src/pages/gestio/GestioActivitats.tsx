@@ -8,10 +8,14 @@ import { llegeixFitxer } from "../../fitxers/xlsx";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type { Activitat, ResultatImportacioActivitats } from "../../types/gestio";
-import { formataData, formataHorari } from "../../utils/format";
+import { formataHorari } from "../../utils/format";
 import { FormActivitat } from "./FormActivitat";
 
 const MAX_FILES = 400;
+
+/** Data curta per a la taula (DD/MM/AAAA). */
+const dataCurta = (d: string) => d.split("-").reverse().join("/");
+const teHorari = (a: Activitat) => !!a.horari_text || a.dies_setmana.length > 0 || !!a.hora_inici;
 
 /**
  * Activitats del cicle (decisió de 2026-10-15): s'importa el llistat de la PGEc
@@ -135,14 +139,14 @@ export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, p
                 <tr key={a.id} className={a.estat !== "activa" ? "fila--inactiva" : undefined}>
                   <td className="text-secundari">{a.codi_extern ?? "—"}</td>
                   <td><strong>{a.nom}</strong></td>
-                  <td>{formataHorari(a)}</td>
-                  <td>{a.data_inici ? `${formataData(a.data_inici)}${a.data_fi ? ` – ${formataData(a.data_fi)}` : ""}` : "—"}</td>
+                  <td>{teHorari(a) ? formataHorari(a) : "—"}</td>
+                  <td className="sense-salt">{a.data_inici ? <>{dataCurta(a.data_inici)}{a.data_fi && <><br />{dataCurta(a.data_fi)}</>}</> : "—"}</td>
                   <td>{a.capacitat}</td>
                   <td>{a.espai ?? "—"}</td>
                   <td>{a.destinataris ?? "—"}</td>
                   <td>{a.estat === "activa" ? "Al formulari" : "No surt al formulari"}</td>
                   {(pot || potCartells) && (
-                    <td><div className="accions-fila">
+                    <td><div className="accions-fila accions-fila--horitzontal">
                       {pot && <button type="button" className="boto boto--secundari boto--petit" onClick={() => setEditant(a.id)}>Edita</button>}
                       {potCartells && (
                         <Link className="boto boto--secundari boto--petit"
