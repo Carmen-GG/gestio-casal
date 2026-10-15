@@ -10,6 +10,8 @@ import { Entrar } from "./pages/gestio/Entrar";
 import { GestioDisseny } from "./pages/gestio/GestioDisseny";
 import { GestioInici } from "./pages/gestio/GestioInici";
 import { Compte } from "./pages/gestio/Compte";
+import { AnarASeccio } from "./pages/gestio/AnarASeccio";
+import { Properament } from "./pages/gestio/Properament";
 import { CasalCicles } from "./pages/gestio/CasalCicles";
 import { DetallCicle } from "./pages/gestio/DetallCicle";
 import { Usuaris } from "./pages/gestio/Usuaris";
@@ -39,6 +41,8 @@ const router = createBrowserRouter([
           { path: "compte", element: <Compte /> },
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
+          { path: ":casalId/anar/:seccio", element: <AnarASeccio /> },
+          { path: ":casalId/properament/:clau", element: <Properament /> },
           { path: ":casalId/cicles/:cicleId/sorteig", element: <PantallaSorteig /> },
           { path: ":casalId/usuaris", element: <Usuaris /> },
           { path: ":casalId/sollicituds/:sollicitudId", element: <DetallSollicitud /> },

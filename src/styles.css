@@ -86,6 +86,21 @@ main:focus { outline: none; }
 /* Els noms de casal són llargs: el desplegable s'encongeix i no fa sortir la pàgina de la pantalla. */
 .barra-gestio__casal select { flex: 1; min-width: 0; width: 100%; text-overflow: ellipsis; }
 .barra-gestio__usuari { margin-left: auto; color: var(--color-text-secundari); }
+/* Menú del panell d'un casal */
+.gestio__amb-menu { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.gestio__contingut { min-width: 0; }
+.menu-casal__plegable > summary { cursor: pointer; font-weight: 700; padding: 0.4rem 0; }
+.menu-casal__llista { list-style: none; margin: 0; padding: 0; }
+.menu-casal__llista--2, .menu-casal__llista--3 { padding-left: 0.9rem; border-left: 2px solid var(--color-vora); margin: 0.15rem 0 0.3rem 0.4rem; }
+.menu-casal__enllac { display: block; padding: 0.3rem 0.5rem; border-radius: 6px; text-decoration: none; }
+.menu-casal__llista--1 > li > .menu-casal__enllac { font-weight: 600; }
+.menu-casal__enllac:hover { background: var(--color-fons); text-decoration: underline; }
+.menu-casal__enllac.active { background: var(--color-primari); color: #fff; }
+@media (min-width: 60rem) {
+  .gestio__amb-menu { grid-template-columns: 15rem minmax(0, 1fr); align-items: start; }
+  .menu-casal { position: sticky; top: 0.5rem; max-height: calc(100vh - 1rem); overflow-y: auto; }
+  .menu-casal__plegable > summary { display: none; }
+}
 
 .seccio { background: var(--color-superficie); border: 1px solid var(--color-vora); border-radius: var(--radi); margin-bottom: var(--espai); }
 .seccio__capcalera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.25rem 0.75rem; }
