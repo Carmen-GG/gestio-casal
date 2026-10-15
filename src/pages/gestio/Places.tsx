@@ -10,6 +10,7 @@ import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type { FilaPlaca, RespostaPlaces } from "../../types/gestio";
 import { formataDataHora } from "../../utils/format";
+import { GraellaAssignacions } from "./GraellaAssignacions";
 import { nomComplet } from "./Sollicituds";
 
 type Grup = RespostaPlaces["grups"][number];
@@ -74,6 +75,16 @@ export function Places({ casalId, cicleId, pot, versioCicle, onCanvi }: {
           <button type="button" className="boto boto--secundari boto--petit" disabled={enCurs} onClick={() => void exporta("espera")}>Exporta la llista d'espera (XLSX)</button>
         </div>
       )}
+      <details className="grup-activitat" open>
+        <summary>Graella d'admesos i exclosos</summary>
+        <GraellaAssignacions titol="Graella d'admesos i exclosos" columnes={d.grups.map((g) => ({
+          activitat_id: g.activitat_id, activitat: g.activitat,
+          files: g.places.map((pl) => ({
+            sollicitud_id: pl.sollicitud_id, participant: pl.participant,
+            valor: pl.estat === "llista_espera" ? `Espera ${pl.posicio_espera ?? ""}`.trim() : ETIQUETES_ESTAT_PLACA[pl.estat],
+          })),
+        }))} />
+      </details>
       <div className="grups-activitat">
         {d.grups.map((g) => (
           <details key={g.activitat_id} className="grup-activitat" open={d.grups.length <= 4}>

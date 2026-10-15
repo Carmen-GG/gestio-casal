@@ -69,7 +69,7 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
   }
 
   async dadesMotor(casalId: string, cicleId: string): Promise<DadesMotor> {
-    const [sollicituds, preferencies, activitats] = await this.db.batch([
+    const [sollicituds, preferencies, activitats, cicle] = await this.db.batch([
       this.db.prepare(`SELECT s.id, s.participant_id, s.numero, s.rebuda_el, s.estat, p.clau_ordenacio, ns.numero AS numero_sorteig
                        FROM sollicituds s JOIN participants p ON p.id = s.participant_id
                        LEFT JOIN numeros_sorteig ns ON ns.sollicitud_id = s.id AND ns.cicle_id = s.cicle_id
@@ -77,8 +77,9 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
       this.db.prepare(`SELECT pr.sollicitud_id, pr.activitat_id, pr.ordre FROM preferencies pr
                        JOIN sollicituds s ON s.id = pr.sollicitud_id
                        WHERE s.casal_id = ? AND s.cicle_id = ? ORDER BY pr.sollicitud_id, pr.ordre`).bind(casalId, cicleId),
-      this.db.prepare(`SELECT id, nom, capacitat, estat, minim_participants FROM activitats WHERE casal_id = ? AND cicle_id = ? AND estat <> 'arxivada'
+      this.db.prepare(`SELECT id, nom, capacitat, estat, minim_participants, grup FROM activitats WHERE casal_id = ? AND cicle_id = ? AND estat <> 'arxivada'
                        ORDER BY nom COLLATE NOCASE, id`).bind(casalId, cicleId),
+      this.db.prepare("SELECT limits_grups FROM cicles WHERE id = ? AND casal_id = ?").bind(cicleId, casalId),
     ]);
     const prefs = new Map<string, { activitat_id: string; ordre: number }[]>();
     for (const p of preferencies!.results as { sollicitud_id: string; activitat_id: string; ordre: number }[]) {
@@ -88,6 +89,7 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
       sollicituds: (sollicituds!.results as DadesMotor["sollicituds"]).map((s) => ({ ...s, preferencies: prefs.get(s.id) ?? [] })),
       activitats: (activitats!.results as Omit<DadesMotor["activitats"][number], "disponible">[])
         .map((a) => ({ ...a, disponible: a.estat === "activa" })),
+      limits_grups: jsonObjecte((cicle!.results[0] as { limits_grups?: string } | undefined)?.limits_grups ?? "{}") as Record<string, number>,
     };
   }
 

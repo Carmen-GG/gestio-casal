@@ -120,11 +120,12 @@ export class ServeiAdjudicacio {
     const mapaSortejos = new Map<string, Sorteig>(vigents.map((so) => [so.activitat_id, { tipus: so.tipus, valor: so.valor }]));
     const entrada: Omit<EntradaMotor, "lletra" | "llavor"> = {
       sollicituds: sollicituds.map(({ estat: _e, ...s }) => s),
-      activitats: dades.activitats.map(({ id, capacitat, disponible }) => ({ id, capacitat, disponible })),
+      activitats: dades.activitats.map(({ id, capacitat, disponible, grup }) => ({ id, capacitat, disponible, grup })),
+      limits_grups: dades.limits_grups,
       parametres, continuitat: continuitat.parelles, excloses, espera_anterior: esperaAnterior.parelles, sortejos: mapaSortejos,
     };
     const empremta = await resumSha256(JSON.stringify({
-      s: entrada.sollicituds, a: entrada.activitats, p: parametres,
+      s: entrada.sollicituds, a: entrada.activitats, p: parametres, lg: entrada.limits_grups,
       c: [...continuitat.parelles].sort(), e: [...excloses].sort(), ea: [...esperaAnterior.parelles].sort(),
       so: [...mapaSortejos.entries()].sort(([a], [b]) => (a < b ? -1 : 1)),
     }));

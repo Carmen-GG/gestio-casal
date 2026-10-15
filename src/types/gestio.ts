@@ -27,7 +27,7 @@ export interface Jo {
 export interface Cicle {
   id: string; casal_id: string; nom: string; any: number; data_inici: string; data_fi: string;
   obertura_inscripcions: string; tancament_inscripcions: string; data_resolucio_prevista: string;
-  estat: EstatCicle; configuracio_formulari: Record<string, unknown>; llindar_assistencia: number | null; versio: number;
+  estat: EstatCicle; configuracio_formulari: Record<string, unknown>; llindar_assistencia: number | null; limits_grups: Record<string, number>; versio: number;
   creat_el: string; actualitzat_el: string;
 }
 
@@ -43,7 +43,7 @@ export type EstatActivitat = "esborrany" | "activa" | "inactiva" | "arxivada";
 export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
-  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; capacitat: number;
+  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; grup: number | null; capacitat: number;
   nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 

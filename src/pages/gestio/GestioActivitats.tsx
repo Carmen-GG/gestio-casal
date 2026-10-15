@@ -7,7 +7,7 @@ import { AvisExit } from "../../components/Formulari";
 import { llegeixFitxer } from "../../fitxers/xlsx";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
-import type { Activitat, ResultatImportacioActivitats } from "../../types/gestio";
+import type { Activitat, Cicle, ResultatImportacioActivitats } from "../../types/gestio";
 import { formataHorari } from "../../utils/format";
 import { FormActivitat } from "./FormActivitat";
 
@@ -22,8 +22,10 @@ const teHorari = (a: Activitat) => !!a.horari_text || a.dies_setmana.length > 0 
  * tal com surt de la plataforma, sense passos de confirmació, i cada filera es
  * pot corregir amb «Edita».
  */
-export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, potCartells, editable, onCanvi }: {
-  casalId: string; cicleId: string; activitats: Activitat[]; potGestionar: boolean; potCartells: boolean;
+export function GestioActivitats({ casalId, cicle, activitats, potGestionar, potCartells, potCicle, editable, onCanvi }: {
+  casalId: string; cicle: Cicle; activitats: Activitat[]; potGestionar: boolean; potCartells: boolean;
+  /** Pot canviar el màxim per grup (dada del cicle). */
+  potCicle: boolean;
   /** El cicle encara admet canvis d'activitats. */
   editable: boolean;
   onCanvi: () => void;
@@ -37,6 +39,7 @@ export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, p
   const [enCurs, setEnCurs] = useState<string | null>(null);
   const visibles = activitats.filter((a) => a.estat !== "arxivada");
   const pot = potGestionar && editable;
+  const cicleId = cicle.id;
 
   async function importa(fitxer: File | undefined) {
     setError(null); setExit(""); setResultat(null);
@@ -121,13 +124,13 @@ export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, p
             <thead>
               <tr>
                 <th scope="col">Codi FA</th><th scope="col">Activitat</th><th scope="col">Dies i horari</th><th scope="col">Dates</th>
-                <th scope="col">Places</th><th scope="col">Aula</th><th scope="col">A qui va dirigida</th><th scope="col">Estat</th>
+                <th scope="col">Places</th><th scope="col">Grup</th><th scope="col">Aula</th><th scope="col">A qui va dirigida</th><th scope="col">Estat</th>
                 {(pot || potCartells) && <th scope="col">Accions</th>}
               </tr>
             </thead>
             <tbody>
               {visibles.map((a) => editant === a.id ? (
-                <tr key={a.id}><td colSpan={9}>
+                <tr key={a.id}><td colSpan={10}>
                   <FormActivitat activitat={a} textBoto="Desa l'activitat" onCancelar={() => setEditant(null)} onDesar={async (dades) => {
                     await serveiGestio.actualitzarActivitat(casalId, a.id, { ...dades, versio: a.versio });
                     setEditant(null);
@@ -142,6 +145,7 @@ export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, p
                   <td>{teHorari(a) ? formataHorari(a) : "—"}</td>
                   <td className="sense-salt">{a.data_inici ? <>{dataCurta(a.data_inici)}{a.data_fi && <><br />{dataCurta(a.data_fi)}</>}</> : "—"}</td>
                   <td>{a.capacitat}</td>
+                  <td>{a.grup ?? "—"}</td>
                   <td>{a.espai ?? "—"}</td>
                   <td>{a.destinataris ?? "—"}</td>
                   <td>{a.estat === "activa" ? "Al formulari" : "No surt al formulari"}</td>
@@ -166,6 +170,8 @@ export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, p
         </div>
       )}
 
+      <LimitsGrups casalId={casalId} cicle={cicle} activitats={visibles} editable={potCicle && editable} onCanvi={(m) => { setExit(m); onCanvi(); }} />
+
       {pot && (nova ? (
         <div>
           <h3 className="subseccio">Nova activitat</h3>
@@ -182,6 +188,67 @@ export function GestioActivitats({ casalId, cicleId, activitats, potGestionar, p
           <button type="button" className="boto boto--secundari" onClick={() => setNova(true)}>Afegeix una activitat a mà</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Màxim d'activitats de cada grup que pot obtenir una mateixa persona a l'adjudicació
+ * (per exemple, grup 1 = 1 vol dir una sola activitat esportiva per persona).
+ */
+function LimitsGrups({ casalId, cicle, activitats, editable, onCanvi }: {
+  casalId: string; cicle: Cicle; activitats: Activitat[]; editable: boolean; onCanvi: (missatge: string) => void;
+}) {
+  const grups = [...new Set([...activitats.flatMap((a) => (a.grup != null ? [a.grup] : [])), ...Object.keys(cicle.limits_grups).map(Number)])]
+    .sort((a, b) => a - b);
+  const [valors, setValors] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(cicle.limits_grups).map(([g, n]) => [g, String(n)])));
+  const [error, setError] = useState<ErrorClientApi | null>(null);
+  const [desant, setDesant] = useState(false);
+  if (grups.length === 0) {
+    return <p className="text-secundari">Si hi ha activitats que una persona no pot acumular (per exemple, només una d'esportiva), poseu-los el mateix número a «Grup» amb «Edita» i aquí podreu indicar el màxim de cada grup.</p>;
+  }
+
+  async function desa() {
+    setError(null);
+    setDesant(true);
+    try {
+      const limits = Object.fromEntries(grups.flatMap((g) => {
+        const v = valors[String(g)]?.trim();
+        return v ? [[String(g), Number(v)]] : [];
+      }));
+      await serveiGestio.actualitzarCicle(casalId, cicle.id, { versio: cicle.versio, limits_grups: limits });
+      onCanvi("S'ha desat el màxim d'activitats per grup.");
+    } catch (e) {
+      if (e instanceof ErrorClientApi) setError(e); else throw e;
+    } finally {
+      setDesant(false);
+    }
+  }
+
+  return (
+    <div className="limits-grups">
+      <h3 className="subseccio">Màxim d'activitats per grup</h3>
+      <p className="text-secundari">Quantes activitats de cada grup pot obtenir una mateixa persona a l'assignació. Deixeu-ho buit si no hi ha límit.</p>
+      {error && <MissatgeError error={error} />}
+      <div className="limits-grups__llista">
+        {grups.map((g) => {
+          const noms = activitats.filter((a) => a.grup === g).map((a) => a.nom);
+          return (
+            <div key={g} className="camp camp--compacte">
+              <label htmlFor={`limit-grup-${g}`}>Grup {g}</label>
+              <input id={`limit-grup-${g}`} type="number" min={1} max={20} inputMode="numeric" disabled={!editable}
+                value={valors[String(g)] ?? ""} onChange={(e) => setValors((v) => ({ ...v, [String(g)]: e.target.value }))} />
+              <p className="camp__ajuda">{noms.length ? noms.join(", ") : "Cap activitat en aquest grup"}</p>
+            </div>
+          );
+        })}
+      </div>
+      {editable && (
+        <button type="button" className="boto boto--secundari" disabled={desant} onClick={() => void desa()}>
+          {desant ? "Desant…" : "Desa el màxim per grup"}
+        </button>
+      )}
     </div>
   );
 }

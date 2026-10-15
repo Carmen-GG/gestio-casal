@@ -315,3 +315,16 @@ main:focus { outline: none; }
 .sense-salt { white-space: nowrap; }
 .accions-fila--horitzontal { flex-wrap: nowrap; }
 .accions-fila--horitzontal .boto { white-space: nowrap; }
+.limits-grups { margin: 1.25rem 0; }
+.limits-grups__llista { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem; }
+.limits-grups__llista input { max-width: 6rem; }
+/* Graella d'admesos i exclosos. */
+.boto-enllac { background: none; border: 0; padding: 0; color: var(--color-primari); text-decoration: underline; cursor: pointer; font: inherit; }
+.filtre-columna summary { cursor: pointer; white-space: nowrap; list-style: none; }
+.filtre-columna summary::-webkit-details-marker { display: none; }
+.filtre-columna summary::after { content: " ▾"; color: var(--color-text-secundari); }
+.filtre-columna[open] summary::after { content: " ▴"; }
+.filtre-columna__actiu { font-weight: 400; color: var(--color-primari); }
+.filtre-columna__panell { display: grid; gap: 0.35rem; margin-top: 0.4rem; min-width: 10rem; font-weight: 400; }
+.cel-admesa { background: var(--color-exit-fons); color: var(--color-exit); font-weight: 600; }
+.cel-espera { background: #fff4d6; color: #5c3c00; }
