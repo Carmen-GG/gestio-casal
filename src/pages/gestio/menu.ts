@@ -31,7 +31,7 @@ export const MENU: ElementMenu[] = [
     ],
   },
   { text: "Gestionar assistència", desti: { seccio: "assistencia" } },
-  { text: "Buscar usuari/a", desti: { properament: "buscar-usuari" } },
+  { text: "Buscar usuari/a", desti: { ruta: "persones" }, permis: "sollicituds.consultar" },
   { text: "Prescripció social", desti: { properament: "prescripcio-social" } },
   {
     text: "Comunicacions", desti: { properament: "comunicacions" },
@@ -50,7 +50,6 @@ export const MENU: ElementMenu[] = [
 
 /** Títols i descripció de les funcions que encara no estan disponibles. */
 export const PROPERAMENT: Record<string, { titol: string; descripcio: string }> = {
-  "buscar-usuari": { titol: "Buscar usuari/a", descripcio: "Cercar una persona i veure en quines activitats i cicles ha participat." },
   "prescripcio-social": { titol: "Prescripció social", descripcio: "Registrar les derivacions de persones des de serveis socials o de salut." },
   comunicacions: { titol: "Comunicacions", descripcio: "Preparar els missatges als participants per WhatsApp i les publicacions d'Instagram." },
   whatsapp: { titol: "WhatsApp", descripcio: "Preparar missatges de WhatsApp per als participants." },

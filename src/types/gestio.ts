@@ -262,3 +262,42 @@ export interface PlantillaCartells {
   pagina_amplada: number; pagina_alcada: number; format_sortida: FormatSortida; camps: CampPlantilla[];
   versio: number; creat_per: string; creat_el: string; actualitzat_el: string;
 }
+
+// ---------- Buscar usuari/a (persones de la PGEc) ----------
+export interface ResumPersonaPlataforma {
+  id: string;
+  nom: string;
+  cognoms: string;
+  nom_sentit: string | null;
+  document: string | null;
+  data_naixement: string | null;
+  localitat_naixement: string | null;
+  numero_soci: string | null;
+  telefon: string | null;
+  origens: string[];
+  coincidencies: string[];
+}
+
+export interface CercaPersonesPlataforma {
+  persones: ResumPersonaPlataforma[];
+  total: number;
+  mes_resultats: boolean;
+  resum: { total: number; darrera_importacio: string | null };
+}
+
+export interface FitxaPersonaPlataforma {
+  persona: { id: string; nom: string; cognoms: string; origens: string[]; actualitzat_el: string };
+  grups: { grup: string; titol: string; camps: { camp: string; etiqueta: string; valor: string; tipus: string }[] }[];
+  dades_restringides: boolean;
+  participacio: {
+    cicle_id: string; cicle: string; data_inici: string | null; sollicituds: number[];
+    activitats: { activitat_id: string; activitat: string; preferencia: number; estat: string | null; posicio_espera: number | null; sollicitud_anullada: boolean }[];
+  }[];
+}
+
+export interface ResultatImportacioPersones {
+  creades: number;
+  actualitzades: number;
+  sense_canvis: number;
+  omeses: { fila: number; motiu: string }[];
+}
