@@ -25,8 +25,35 @@ export const ETIQUETES_CAMPS: Record<CampPersonal, string> = {
   barri: "Barri o districte",
 };
 
-/** Camps que no es poden desactivar perquè identifiquen la sol·licitud. */
-export const CAMPS_SEMPRE_OBLIGATORIS: CampPersonal[] = ["nom", "cognom1"];
+/**
+ * Camps que no es poden desactivar: nom i primer cognom identifiquen la sol·licitud,
+ * i la data de naixement determina si cal l'autorització d'un tutor (decisió de 2026-10-15).
+ */
+export const CAMPS_SEMPRE_OBLIGATORIS: CampPersonal[] = ["nom", "cognom1", "data_naixement"];
+
+/** Edat a partir de la qual no cal l'autorització del pare, mare o tutor. */
+export const MAJORIA_EDAT = 18;
+
+/** Edat en anys complerts en una data (AAAA-MM-DD). */
+export function edatEnData(naixement: string, data: string): number {
+  const [an, mn, dn] = naixement.split("-").map(Number) as [number, number, number];
+  const [a, m, d] = data.split("-").map(Number) as [number, number, number];
+  return a - an - (m < mn || (m === mn && d < dn) ? 1 : 0);
+}
+
+export const esMenorEnData = (naixement: string, data: string) => edatEnData(naixement, data) < MAJORIA_EDAT;
+
+/**
+ * Text provisional de protecció de dades (petició de 2026-10-15): es mostra mentre
+ * el cicle no tingui el text definitiu, que ha de redactar o validar el responsable del tractament.
+ */
+export const TEXT_PRIVACITAT_PROVA = [
+  "TEXT DE PROVA. Aquest text s'ha de substituir per la informació definitiva sobre protecció de dades.",
+  "Les dades que ens faciliteu s'utilitzaran només per gestionar la inscripció a les activitats del casal.",
+].join("\n\n");
+
+/** Text de protecció de dades que veu la persona: el del cicle o, si no n'hi ha, el de prova. */
+export const textPrivacitatPublic = (config: ConfiguracioFormulari) => config.informacio_privacitat || TEXT_PRIVACITAT_PROVA;
 
 export interface ConfigCamp {
   actiu: boolean;

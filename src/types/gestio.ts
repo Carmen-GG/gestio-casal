@@ -43,7 +43,7 @@ export type EstatActivitat = "esborrany" | "activa" | "inactiva" | "arxivada";
 export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
-  data_inici: string | null; data_fi: string | null; espai: string | null; capacitat: number;
+  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; capacitat: number;
   nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 
@@ -91,6 +91,11 @@ export interface Previsualitzacio {
   files: ResultatFilaImportacio[];
   resum: { total: number; valides: number; amb_avisos: number; errors: number; buides: number };
   columnes_absents: string[];
+}
+export interface AutoritzacioTutor { nom: string; cognoms: string; document_identitat: string | null; signatura: string; creat_el: string }
+export interface ResultatImportacioActivitats {
+  creades: number; actualitzades: number; sense_canvis: number; omeses: number;
+  avisos: { fila: number; activitat: string; avisos: string[] }[];
 }
 export interface TaulaExportacio { titol: string; fitxer: string; columnes: string[]; files: (string | number | null)[][] }
 

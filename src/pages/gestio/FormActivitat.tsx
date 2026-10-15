@@ -11,13 +11,13 @@ const NOMS_DIES = ["", "Dilluns", "Dimarts", "Dimecres", "Dijous", "Divendres", 
 
 type Valors = {
   nom: string; descripcio: string; categoria: string; dies_setmana: number[]; hora_inici: string; hora_fi: string;
-  horari_text: string; data_inici: string; data_fi: string; espai: string; capacitat: string; nombre_sessions: string; minim_participants: string; codi_extern: string;
+  horari_text: string; data_inici: string; data_fi: string; espai: string; destinataris: string; capacitat: string; nombre_sessions: string; minim_participants: string; codi_extern: string;
 };
 
 const desDe = (a?: Activitat): Valors => ({
   nom: a?.nom ?? "", descripcio: a?.descripcio ?? "", categoria: a?.categoria ?? "", dies_setmana: a?.dies_setmana ?? [],
   hora_inici: a?.hora_inici ?? "", hora_fi: a?.hora_fi ?? "", horari_text: a?.horari_text ?? "",
-  data_inici: a?.data_inici ?? "", data_fi: a?.data_fi ?? "", espai: a?.espai ?? "",
+  data_inici: a?.data_inici ?? "", data_fi: a?.data_fi ?? "", espai: a?.espai ?? "", destinataris: a?.destinataris ?? "",
   capacitat: a ? String(a.capacitat) : "", nombre_sessions: a?.nombre_sessions != null ? String(a.nombre_sessions) : "",
   minim_participants: a?.minim_participants != null ? String(a.minim_participants) : "",
   codi_extern: a?.codi_extern ?? "",
@@ -42,7 +42,7 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
     const dades = {
       nom: v.nom, descripcio: nul(v.descripcio), categoria: nul(v.categoria), dies_setmana: v.dies_setmana,
       hora_inici: nul(v.hora_inici), hora_fi: nul(v.hora_fi), horari_text: nul(v.horari_text),
-      data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai),
+      data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai), destinataris: nul(v.destinataris),
       capacitat: v.capacitat === "" ? Number.NaN : Number(v.capacitat),
       nombre_sessions: v.nombre_sessions === "" ? null : Number(v.nombre_sessions),
       minim_participants: v.minim_participants === "" ? null : Number(v.minim_participants), codi_extern: nul(v.codi_extern),
@@ -66,7 +66,7 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
     <form onSubmit={envia} noValidate className="formulari">
       {errorServidor && <MissatgeError error={errorServidor} />}
       <div className="graella-camps">
-        <CampText etiqueta="Nom" obligatori value={v.nom} onChange={canvia("nom")} error={errors.nom} maxLength={150} />
+        <CampText etiqueta="Títol" obligatori value={v.nom} onChange={canvia("nom")} error={errors.nom} maxLength={150} />
         <CampText etiqueta="Categoria" value={v.categoria} onChange={canvia("categoria")} error={errors.categoria} maxLength={80} />
         <CampText etiqueta="Capacitat (places)" obligatori type="number" min={0} value={v.capacitat} onChange={canvia("capacitat")} error={errors.capacitat} />
         <CampText etiqueta="Nombre de sessions" type="number" min={0} value={v.nombre_sessions} onChange={canvia("nombre_sessions")} error={errors.nombre_sessions} />
@@ -90,8 +90,9 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
           ajuda="Només si l'horari no és regular. Substitueix els dies i hores a la pàgina pública." />
         <CampText etiqueta="Data d'inici" type="date" value={v.data_inici} onChange={canvia("data_inici")} error={errors.data_inici} />
         <CampText etiqueta="Data de finalització" type="date" value={v.data_fi} onChange={canvia("data_fi")} error={errors.data_fi} />
-        <CampText etiqueta="Espai o sala" value={v.espai} onChange={canvia("espai")} error={errors.espai} />
-        <CampText etiqueta="Codi extern (PGEc)" value={v.codi_extern} onChange={canvia("codi_extern")} error={errors.codi_extern} />
+        <CampText etiqueta="Aula o espai" value={v.espai} onChange={canvia("espai")} error={errors.espai} />
+        <CampText etiqueta="Persones a qui va dirigida" value={v.destinataris} onChange={canvia("destinataris")} error={errors.destinataris} maxLength={200} />
+        <CampText etiqueta="Codi FA (PGEC)" value={v.codi_extern} onChange={canvia("codi_extern")} error={errors.codi_extern} />
         <div className="camp--ample">
           <CampAreaText etiqueta="Descripció" value={v.descripcio} onChange={canvia("descripcio")} error={errors.descripcio} maxLength={2000} rows={3} />
         </div>

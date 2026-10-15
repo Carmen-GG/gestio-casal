@@ -22,7 +22,7 @@ async function escenari() {
   for (const [nom, cognom1, prefs] of [["Marta", "Zapata", [A.id]], ["Jordi", "Àvila", [A.id, B.id]], ["Núria", "Bosch", [A.id]], ["Pere", "Puig", [A.id]]] as const) {
     const r = await publica.json(`/api/public/casals/${e.casal.codi}/cicles/${e.cicle.id}/sollicituds`, {
       method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() },
-      json: { dades: { nom, cognom1 }, preferencies: prefs.map((activitat_id, i) => ({ activitat_id, ordre: i + 1 })), acceptacio_privacitat: true },
+      json: { dades: { data_naixement: "1980-05-01", nom, cognom1 }, preferencies: prefs.map((activitat_id, i) => ({ activitat_id, ordre: i + 1 })), acceptacio_privacitat: true },
     });
     if (r.status !== 201) throw new Error(JSON.stringify(r.cos));
   }

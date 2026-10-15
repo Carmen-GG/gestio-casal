@@ -1,6 +1,6 @@
 import type {
-  Activitat, AssignacioRol, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
-  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, TaulaExportacio,
+  Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
+  DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat,
 } from "../types/gestio";
 import { api } from "./api";
@@ -46,6 +46,10 @@ export const serveiGestio = {
   duplicats: (casalId: string, cicleId: string, s?: AbortSignal) =>
     api.get<{ parelles: ParellaDuplicada[] }>(`${g(casalId)}/cicles/${cicleId}/duplicats`, s),
   revisarDuplicat: (casalId: string, cicleId: string, dades: unknown) => api.post<{ ok: true }>(`${g(casalId)}/cicles/${cicleId}/duplicats/revisio`, dades),
+  autoritzacioTutor: (casalId: string, id: string, s?: AbortSignal) =>
+    api.get<{ autoritzacio: AutoritzacioTutor | null }>(`${g(casalId)}/sollicituds/${id}/autoritzacio-tutor`, s),
+  importarActivitatsPgec: (casalId: string, cicleId: string, dades: { files: Record<string, string>[]; nom_fitxer?: string }) =>
+    api.post<ResultatImportacioActivitats>(`${g(casalId)}/cicles/${cicleId}/importacions/activitats-pgec`, dades),
   previsualitzarImportacio: (casalId: string, cicleId: string, tipus: "sollicituds" | "activitats", dades: unknown) =>
     api.post<Previsualitzacio>(`${g(casalId)}/cicles/${cicleId}/importacions/${tipus}/previsualitzacio`, dades),
   confirmarImportacio: (casalId: string, cicleId: string, tipus: "sollicituds" | "activitats", dades: unknown) =>

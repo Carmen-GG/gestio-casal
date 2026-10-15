@@ -67,7 +67,7 @@ describe("API pública: cicles i activitats", () => {
     expect(cos.activitats.map((a) => a.id)).toEqual([activa.id]);
     // Llista blanca: cap camp intern.
     expect(Object.keys(cos.activitats[0]!).sort()).toEqual([
-      "categoria", "data_fi", "data_inici", "descripcio", "dies_setmana", "espai", "hora_fi", "hora_inici",
+      "categoria", "data_fi", "data_inici", "descripcio", "destinataris", "dies_setmana", "espai", "hora_fi", "hora_inici",
       "horari_text", "id", "nom",
     ]);
     expect(Object.keys(cos.casal).sort()).toEqual(["codi", "municipi", "nom"]);

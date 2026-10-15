@@ -1,8 +1,10 @@
 import type { RespostaSollicitudRegistrada } from "../../shared/api/public";
 import { acceptaSollicituds } from "../../shared/domain/cicles";
-import { CAMPS_PERSONALS, configuracioFormulariEfectiva, errorsDadesSegonsConfiguracio, type CampPersonal } from "../../shared/domain/formulari";
+import {
+  CAMPS_PERSONALS, configuracioFormulariEfectiva, errorsDadesSegonsConfiguracio, esMenorEnData, textPrivacitatPublic, type CampPersonal,
+} from "../../shared/domain/formulari";
 import { clauOrdenacioPersona } from "../../shared/domain/ordenacio";
-import { missatgeErrorPreferencies, validaPreferencies } from "../../shared/domain/preferencies";
+import { MAX_ACTIVITATS_FORMULARI, missatgeErrorPreferencies, validaPreferencies } from "../../shared/domain/preferencies";
 import type { SollicitudPublica } from "../../shared/schemas/public";
 import { ErrorAplicacio, errors } from "../http/errors";
 import { resumSha256 } from "../lib/cripto";
@@ -51,17 +53,17 @@ export class ServeiSollicitudsPubliques {
 
     const dades = Object.fromEntries(CAMPS_PERSONALS.map((c) => [c, cos.dades[c] ?? null])) as Record<CampPersonal, string | null>;
     const preferencies = [...cos.preferencies].sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0));
-    const resum = await resumSha256(JSON.stringify({ dades, preferencies }));
+    const avui = dataMadrid(this.rellotge.ara());
+    // L'autorització del tutor només es desa si la persona és menor d'edat avui.
+    const menor = !!dades.data_naixement && esMenorEnData(dades.data_naixement, avui);
+    const tutor = menor ? cos.tutor ?? null : null;
+    const resum = await resumSha256(JSON.stringify({ dades, preferencies, ...(tutor ? { tutor } : {}) }));
 
     // Reintent (doble clic, connexió tallada): mateixa clau → mateixa confirmació.
     const previa = await this.repos.sollicituds.perClauIdempotencia(casal.id, cicle.id, clau);
     if (previa) return this.respostaRepetida(previa, resum, cicle);
 
     const config = configuracioFormulariEfectiva(cicle.configuracio_formulari);
-    if (!config.informacio_privacitat) {
-      throw errors.conflicte("privacitat_no_configurada",
-        "Aquest formulari encara no està disponible. Torneu-ho a provar més endavant o adreceu-vos al casal.");
-    }
     if (!acceptaSollicituds(cicle, this.rellotge.ara())) {
       throw errors.conflicte("cicle_tancat", "El període d'inscripció d'aquest cicle no està obert.");
     }
@@ -69,11 +71,14 @@ export class ServeiSollicitudsPubliques {
     const errorsCamps: Record<string, string> = Object.fromEntries(
       Object.entries(errorsDadesSegonsConfiguracio(dades, config)).map(([k, v]) => [`dades.${k}`, v]),
     );
-    const avui = isoAra(this.rellotge).slice(0, 10);
     if (dades.data_naixement && dades.data_naixement > avui) {
       errorsCamps["dades.data_naixement"] = "La data de naixement no pot ser posterior a avui.";
+    } else if (menor && !tutor) {
+      errorsCamps.tutor = "La persona participant és menor d'edat: cal l'autorització i la signatura del pare, mare o tutor.";
+    } else if (tutor && !esPngValid(tutor.signatura)) {
+      errorsCamps["tutor.signatura"] = "La signatura no s'ha pogut llegir. Esborreu-la i torneu a signar.";
     }
-    const errorPreferencies = validaPreferencies(preferencies);
+    const errorPreferencies = validaPreferencies(preferencies, MAX_ACTIVITATS_FORMULARI);
     if (errorPreferencies) errorsCamps.preferencies = missatgeErrorPreferencies(errorPreferencies);
     if (Object.keys(errorsCamps).length) {
       throw errors.peticioInvalida("Hi ha dades no vàlides. Reviseu els camps marcats.", errorsCamps);
@@ -82,7 +87,7 @@ export class ServeiSollicitudsPubliques {
     const actives = new Set((await this.repos.activitats.llistarPerCicle(casal.id, cicle.id, { estats: ["activa"] })).map((a) => a.id));
     if (preferencies.some((p) => !actives.has(p.activitat_id))) throw errorActivitat();
 
-    const privacitatResum = await resumSha256(config.informacio_privacitat);
+    const privacitatResum = await resumSha256(textPrivacitatPublic(config));
     for (let intent = 1; ; intent++) {
       const rebudaEl = isoAra(this.rellotge);
       let resultat;
@@ -93,6 +98,7 @@ export class ServeiSollicitudsPubliques {
           privacitat_resum: privacitatResum, rebuda_el: rebudaEl, dades,
           clau_ordenacio: clauOrdenacioPersona({ nom: dades.nom!, cognom1: dades.cognom1!, cognom2: dades.cognom2 }),
           preferencies: preferencies.map((p) => ({ activitat_id: p.activitat_id, ordre: p.ordre! })),
+          tutor: tutor && { nom: tutor.nom, cognoms: tutor.cognoms, document_identitat: tutor.document_identitat, signatura: tutor.signatura },
           id_peticio: idPeticio,
         });
       } catch (e) {
@@ -118,6 +124,21 @@ export class ServeiSollicitudsPubliques {
         "Aquest enviament ja s'havia fet amb unes dades diferents. Recarregueu la pàgina per fer una sol·licitud nova.");
     }
     return resposta(previa, cicle, true);
+  }
+}
+
+/** Data d'avui a la zona del casal (AAAA-MM-DD). */
+function dataMadrid(instant: number | Date): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(instant);
+}
+
+/** Comprova que la signatura és realment una imatge PNG (capçalera del fitxer). */
+function esPngValid(dataUrl: string): boolean {
+  try {
+    const bytes = atob(dataUrl.slice(dataUrl.indexOf(",") + 1, dataUrl.indexOf(",") + 1 + 24));
+    return bytes.startsWith("\x89PNG\r\n\x1a\n");
+  } catch {
+    return false;
   }
 }
 

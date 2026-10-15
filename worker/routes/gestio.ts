@@ -13,7 +13,7 @@ import { ServeiCasals } from "../services/casals";
 import { ServeiCicles } from "../services/cicles";
 import { ServeiActivitats } from "../services/activitats";
 import { ServeiUsuaris } from "../services/usuaris";
-import { ServeiGestioSollicituds, filtraParticipant, taulaSollicituds, visibilitat } from "../services/gestio-sollicituds";
+import { ServeiGestioSollicituds, emmascaraDocument, filtraParticipant, taulaSollicituds, visibilitat } from "../services/gestio-sollicituds";
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
@@ -178,6 +178,14 @@ export const rutesGestio = new Hono<Entorn>()
     const casalId = casalAutoritzat(c, "sollicituds.consultar");
     return c.json({ sollicitud: await detallVisible(c, casalId, idRuta(c, "sollicitudId")) });
   })
+  // Autorització del tutor d'una persona menor: només per a qui pot veure les dades de contacte.
+  .get("/casals/:casalId/sollicituds/:sollicitudId/autoritzacio-tutor", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    const id = idRuta(c, "sollicitudId");
+    await sollicituds(c).obtenir(casalId, id);
+    const a = await c.get("repos").sollicituds.autoritzacioTutor(casalId, id);
+    return c.json({ autoritzacio: a && { ...a, document_identitat: emmascaraDocument(a.document_identitat) } });
+  })
   .patch("/casals/:casalId/sollicituds/:sollicitudId/dades", async (c) => {
     const casalId = casalAutoritzat(c, "sollicituds.gestionar");
     const { versio_participant, dades, motiu } = await cosValidat(c, sollicitudActualitzarDades);
@@ -203,6 +211,12 @@ export const rutesGestio = new Hono<Entorn>()
   })
 
   // ---------- Importacions ----------
+  // Llistat d'activitats de la PGEc: s'importa tot directament, sense previsualització.
+  .post("/casals/:casalId/cicles/:cicleId/importacions/activitats-pgec", async (c) => {
+    const casalId = casalAutoritzat(c, "activitats.gestionar");
+    const { files } = await cosValidat(c, importacioPeticio);
+    return c.json(await importacions(c).importarActivitatsDirecte(casalId, idRuta(c, "cicleId"), files, ctx(c)), 201);
+  })
   .post("/casals/:casalId/cicles/:cicleId/importacions/:tipus/previsualitzacio", async (c) => {
     const casalId = casalAutoritzat(c, "dades.importar");
     const { files } = await cosValidat(c, importacioPeticio);

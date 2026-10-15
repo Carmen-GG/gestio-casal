@@ -17,7 +17,7 @@ async function escenari() {
   const envia = async (dades: Record<string, string>, activitats: string[]) => {
     const r = await publica.json(`/api/public/casals/${e.casal.codi}/cicles/${e.cicle.id}/sollicituds`, {
       method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() },
-      json: { dades, preferencies: activitats.map((activitat_id, i) => ({ activitat_id, ordre: i + 1 })), acceptacio_privacitat: true },
+      json: { dades: { data_naixement: "1980-05-01", ...dades }, preferencies: activitats.map((activitat_id, i) => ({ activitat_id, ordre: i + 1 })), acceptacio_privacitat: true },
     });
     if (r.status !== 201) throw new Error(JSON.stringify(r.cos));
   };
@@ -152,7 +152,7 @@ describe("possibles duplicats", () => {
     const publica = client(undefined, { LIMIT_SOLLICITUDS: undefined });
     await publica.json(`/api/public/casals/${casal.codi}/cicles/${cicle.id}/sollicituds`, {
       method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() },
-      json: { dades: { nom: "nuria", cognom1: "BOSCH" }, preferencies: [{ activitat_id: activa.id, ordre: 1 }], acceptacio_privacitat: true },
+      json: { dades: { data_naixement: "1980-05-01", nom: "nuria", cognom1: "BOSCH" }, preferencies: [{ activitat_id: activa.id, ordre: 1 }], acceptacio_privacitat: true },
     });
     const g = await clientAutenticat("gestor_casal", casal.id);
     const r = await g.json(`${base}/cicles/${cicle.id}/duplicats`);
@@ -174,7 +174,7 @@ describe("importacions", () => {
     const { casal, cicle, base, activa } = await escenari();
     const g = await clientAutenticat("gestor_casal", casal.id);
     const files = [
-      { nom: "Pere", cognom1: "Fuster", data_registre: "15/10/2026 09:30", preferencia_1: "taller ficticí", preferencia_2: "IOGA-1", codi_participant_intern: "P-1" },
+      { nom: "Pere", cognom1: "Fuster", data_naixement: "02/03/1975", data_registre: "15/10/2026 09:30", preferencia_1: "taller ficticí", preferencia_2: "IOGA-1", codi_participant_intern: "P-1" },
       { nom: "", cognom1: "Sense nom", preferencia_1: "Taller fictici" },
       { nom: "Laia", cognom1: "Roca", data_registre: "31/02/2026", preferencia_1: "Taller fictici" },
       { nom: "Joan", cognom1: "Mas", preferencia_1: "Activitat inexistent" },
@@ -266,6 +266,44 @@ describe("importació del llistat d'activitats de la PGEc", () => {
     const { results } = await env.DB.prepare("SELECT nom FROM activitats WHERE cicle_id = ? AND codi_extern LIKE 'FA563/%' ORDER BY codi_extern")
       .bind(cicle.id).all<{ nom: string }>();
     expect(results.map((r) => r.nom)).toEqual(["Pilates 1", "Reciclem la nostra roba", "En Forma!"]);
+  });
+
+  it("importa directament tot el llistat de la PGEc, actiu, i en tornar-lo a importar actualitza pel codi FA", async () => {
+    const { casal, cicle, base } = await escenari();
+    const g = await clientAutenticat("gestor_casal", casal.id);
+    const ruta = `${base}/cicles/${cicle.id}/importacions/activitats-pgec`;
+    const files = [
+      { codi_extern: "FA563/2026/06262", nom: "Pilates 1. 3r Cicle 2026", capacitat: "25", dies: "Dilluns i dimecres", hora_inici: "10:00",
+        hora_fi: "11:00", dates: "05/10/2026 - 16/12/2026", espai: "Aula 2", destinataris: "Adults" },
+      { codi_extern: "FA563/2026/07464", nom: "En Forma! 3r Cicle 2026", capacitat: "vint", hora_inici: "12:00", hora_fi: "11:00" },
+      { codi_extern: "", nom: "", capacitat: "" },
+    ];
+    const r = await g.json(ruta, { method: "POST", json: { files } });
+    expect(r.status).toBe(201);
+    expect(r.cos).toMatchObject({ creades: 2, actualitzades: 0, omeses: 0 });
+    expect(r.cos.avisos).toHaveLength(1);
+    expect(r.cos.avisos[0].avisos.join(" ")).toContain("Capacitat no reconeguda");
+    const pilates = await env.DB.prepare("SELECT * FROM activitats WHERE cicle_id = ? AND codi_extern = 'FA563/2026/06262'").bind(cicle.id)
+      .first<Record<string, unknown>>();
+    expect(pilates).toMatchObject({
+      nom: "Pilates 1", capacitat: 25, dies_setmana: "[1,3]", hora_inici: "10:00", hora_fi: "11:00", data_inici: "2026-10-05",
+      data_fi: "2026-12-16", espai: "Aula 2", destinataris: "Adults", estat: "activa",
+    });
+    const forma = await env.DB.prepare("SELECT capacitat, hora_inici, estat FROM activitats WHERE cicle_id = ? AND codi_extern = 'FA563/2026/07464'")
+      .bind(cicle.id).first();
+    expect(forma).toEqual({ capacitat: 0, hora_inici: null, estat: "activa" });
+
+    // Segona importació: s'actualitza per codi, sense duplicar.
+    const r2 = await g.json(ruta, { method: "POST", json: { files: [{ codi_extern: "fa563/2026/06262", nom: "Pilates 1", capacitat: "30", espai: "Sala gran" }] } });
+    expect(r2.status).toBe(201);
+    expect(r2.cos).toMatchObject({ creades: 0, actualitzades: 1 });
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n, MAX(capacitat) AS c, MAX(espai) AS e FROM activitats WHERE cicle_id = ? AND codi_extern LIKE 'FA563/%'")
+      .bind(cicle.id).first();
+    expect(n).toEqual({ n: 2, c: 30, e: "Sala gran" });
+
+    // Cal permís per gestionar activitats.
+    const consulta = await clientAutenticat("consulta_casal", casal.id);
+    expect((await consulta.json(ruta, { method: "POST", json: { files } })).status).toBe(403);
   });
 });
 

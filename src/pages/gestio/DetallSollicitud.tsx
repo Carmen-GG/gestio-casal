@@ -104,6 +104,7 @@ export function DetallSollicitud() {
             })}
           </dl>
         )}
+        {pot("sollicituds.dades_contacte") && <AutoritzacioTutorSollicitud casalId={casalId} sollicitudId={s.id} />}
       </Seccio>
 
       <Seccio titol="Activitats sol·licitades" accions={gestiona && !editant ? (
@@ -208,5 +209,23 @@ function FormPreferencies({ casalId, s, onDesar, onCancelar }: { casalId: string
         <button type="button" className="boto boto--secundari" onClick={onCancelar}>Cancel·la</button>
       </div>
     </form>
+  );
+}
+
+/** Autorització i signatura del pare, mare o tutor, si la persona era menor en enviar la sol·licitud. */
+function AutoritzacioTutorSollicitud({ casalId, sollicitudId }: { casalId: string; sollicitudId: string }) {
+  const consulta = useConsulta((sg) => serveiGestio.autoritzacioTutor(casalId, sollicitudId, sg), [casalId, sollicitudId]);
+  if (consulta.tipus !== "dades" || !consulta.dades.autoritzacio) return null;
+  const a = consulta.dades.autoritzacio;
+  return (
+    <div className="autoritzacio-tutor">
+      <h3 className="subseccio">Autorització del pare, mare o tutor</h3>
+      <dl className="dades">
+        <div><dt>Nom i cognoms</dt><dd>{a.nom} {a.cognoms}</dd></div>
+        <div><dt>DNI/NIE</dt><dd>{a.document_identitat}</dd></div>
+        <div><dt>Autoritza la inscripció</dt><dd>Sí, el {formataDataHora(a.creat_el)}</dd></div>
+      </dl>
+      <img className="signatura-desada" src={a.signatura} alt={`Signatura de ${a.nom} ${a.cognoms}`} />
+    </div>
   );
 }

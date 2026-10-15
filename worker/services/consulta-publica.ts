@@ -2,7 +2,7 @@ import { acceptaSollicituds, type EstatCicle } from "../../shared/domain/cicles"
 import type {
   ActivitatPublica, CasalPublic, CiclePublic, RespostaActivitatsPubliques, RespostaCiclesPubliques,
 } from "../../shared/api/public";
-import { CAMPS_PERSONALS, configuracioFormulariEfectiva } from "../../shared/domain/formulari";
+import { CAMPS_PERSONALS, configuracioFormulariEfectiva, textPrivacitatPublic } from "../../shared/domain/formulari";
 import { errors } from "../http/errors";
 import type { Activitat, Casal, Cicle, Repositoris } from "../repositories/tipus";
 import type { Rellotge } from "../lib/rellotge";
@@ -37,7 +37,7 @@ export class ServeiConsultaPublica {
     return {
       id: a.id, nom: a.nom, descripcio: a.descripcio, categoria: a.categoria, dies_setmana: a.dies_setmana,
       hora_inici: a.hora_inici, hora_fi: a.hora_fi, horari_text: a.horari_text,
-      data_inici: a.data_inici, data_fi: a.data_fi, espai: a.espai,
+      data_inici: a.data_inici, data_fi: a.data_fi, espai: a.espai, destinataris: a.destinataris,
     };
   }
 
@@ -73,7 +73,7 @@ export class ServeiConsultaPublica {
       activitats: activitats.map(ServeiConsultaPublica.activitatPublica),
       formulari: {
         camps: CAMPS_PERSONALS.filter((c) => config.camps[c].actiu).map((c) => ({ camp: c, obligatori: config.camps[c].obligatori })),
-        informacio_privacitat: config.informacio_privacitat,
+        informacio_privacitat: textPrivacitatPublic(config),
       },
     };
   }

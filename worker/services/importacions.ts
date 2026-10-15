@@ -1,7 +1,8 @@
 import type { EstatCicle } from "../../shared/domain/cicles";
 import { CAMPS_PERSONALS, configuracioFormulariEfectiva, ETIQUETES_CAMPS, type CampPersonal } from "../../shared/domain/formulari";
 import {
-  interpretaData, interpretaDataHoraLocal, interpretaDies, interpretaEnter, interpretaHora, localMadridAIso, netejaNomActivitat,
+  interpretaData, interpretaDataHoraLocal, interpretaDies, interpretaEnter, interpretaHora, interpretaRangDates, interpretaRangHores,
+  localMadridAIso, netejaNomActivitat,
 } from "../../shared/domain/importacio";
 import { clauOrdenacioPersona, normalitzaText } from "../../shared/domain/ordenacio";
 import { errorsPerCamp } from "../../shared/schemas/comuns";
@@ -13,9 +14,9 @@ import {
 import { ErrorAplicacio, errors } from "../http/errors";
 import { nouId } from "../lib/ids";
 import { isoAra, type Rellotge } from "../lib/rellotge";
-import type { Activitat, Cicle, FilaImportacioSollicitud, NovaActivitat, Repositoris } from "../repositories/tipus";
+import type { Activitat, CanvisActivitat, Cicle, FilaImportacioSollicitud, NovaActivitat, Operacio, Repositoris } from "../repositories/tipus";
 import { codiConfirmacioAleatori } from "./sollicituds-publiques";
-import type { ContextOperacio } from "./traca";
+import { diferencies, type ContextOperacio } from "./traca";
 
 export type EstatFila = "valida" | "avis" | "error" | "buida";
 
@@ -37,6 +38,18 @@ export interface Previsualitzacio {
 /** Estats del cicle que admeten importar sol·licituds (abans de l'adjudicació). */
 const ESTATS_IMPORTACIO_SOLLICITUDS: EstatCicle[] = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"];
 const ESTATS_IMPORTACIO_ACTIVITATS: EstatCicle[] = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"];
+/** Màxim de files del llistat de la PGEc que s'importen d'una vegada (un sol lot atòmic). */
+export const MAX_FILES_IMPORTACIO_DIRECTA = 400;
+
+/** Resultat de la importació directa del llistat d'activitats de la PGEc. */
+export interface ResultatImportacioDirecta {
+  creades: number;
+  actualitzades: number;
+  sense_canvis: number;
+  omeses: number;
+  /** Detalls per fila: valors que no s'han pogut llegir i s'han de completar a mà. */
+  avisos: { fila: number; activitat: string; avisos: string[] }[];
+}
 
 const valor = (f: Record<string, string>, camp: string) => (f[camp] ?? "").trim();
 const esBuida = (f: Record<string, string>) => Object.values(f).every((v) => !v.trim());
@@ -285,7 +298,7 @@ export class ServeiImportacions {
       const avisos: string[] = [];
       const cand: Record<string, unknown> = { nom: netejaNomActivitat(valor(f, "nom")) };
       const text = (camp: string) => { const v = valor(f, camp); if (v) cand[camp] = v; };
-      ["descripcio", "categoria", "horari_text", "espai", "codi_extern"].forEach(text);
+      ["descripcio", "categoria", "horari_text", "espai", "codi_extern", "destinataris"].forEach(text);
       const capacitat = interpretaEnter(valor(f, "capacitat"));
       if (capacitat === null) errs.push(valor(f, "capacitat") ? `Capacitat no vàlida: «${valor(f, "capacitat")}».` : "Registre incomplet: falta la capacitat.");
       else cand.capacitat = capacitat;
@@ -368,4 +381,185 @@ export class ServeiImportacions {
     }
     return { importacio_id: importacioId, importades: preparades.length, omeses: r.errors + r.buides, resum: r };
   }
+
+  // ---------- Importació directa del llistat de la PGEc ----------
+
+  /**
+   * Importa totes les files del llistat d'activitats sense previsualització
+   * (decisió de 2026-10-15). Cada valor que es pot llegir s'incorpora; els que no,
+   * es deixen buits i es retornen com a avís per completar-los amb «Edita».
+   * Si ja hi ha una activitat amb el mateix codi FA al cicle, s'actualitza.
+   * Les activitats noves queden actives perquè surtin al formulari públic.
+   */
+  async importarActivitatsDirecte(casalId: string, cicleId: string, files: Record<string, string>[],
+    ctx: ContextOperacio & { usuariId: string }): Promise<ResultatImportacioDirecta> {
+    const cicle = await this.cicle(casalId, cicleId, ESTATS_IMPORTACIO_ACTIVITATS);
+    if (files.length > MAX_FILES_IMPORTACIO_DIRECTA) {
+      throw errors.peticioInvalida(`El fitxer té ${files.length} files; el màxim és ${MAX_FILES_IMPORTACIO_DIRECTA}.`);
+    }
+    for (const f of files) {
+      const desconeguts = Object.keys(f).filter((k) => !(CAMPS_IMPORTACIO_ACTIVITATS as readonly string[]).includes(k));
+      if (desconeguts.length) throw errors.peticioInvalida(`Columnes de destinació desconegudes: ${desconeguts.join(", ")}.`);
+    }
+    if (!files.some((f) => "nom" in f)) throw errors.peticioInvalida("El fitxer no té cap columna amb el títol de l'activitat.");
+
+    const existents = await this.repos.activitats.llistarPerCicle(casalId, cicle.id);
+    const perCodi = new Map(existents.filter((a) => a.codi_extern).map((a) => [a.codi_extern!.toLowerCase(), a]));
+    const capacitatBloquejada = ["adjudicacio_en_proces", "adjudicat", "publicat"].includes(cicle.estat);
+    const ara = isoAra(this.rellotge);
+    const operacions: Operacio[] = [];
+    const resultat: ResultatImportacioDirecta = { creades: 0, actualitzades: 0, sense_canvis: 0, omeses: 0, avisos: [] };
+    const codisVistos = new Set<string>();
+
+    for (const [i, f] of files.entries()) {
+      const fila = i + 2;
+      if (esBuida(f)) continue;
+      const nom = netejaNomActivitat(valor(f, "nom")).slice(0, 150);
+      if (!nom) {
+        resultat.omeses++;
+        resultat.avisos.push({ fila, activitat: "(sense títol)", avisos: ["La fila no té títol: no s'ha importat."] });
+        continue;
+      }
+      const avisos: string[] = [];
+      const dades = llegeixFilaActivitat(f, avisos);
+      const codi = dades.codi_extern?.toLowerCase();
+      if (codi && codisVistos.has(codi)) {
+        resultat.omeses++;
+        resultat.avisos.push({ fila, activitat: nom, avisos: ["Codi repetit al fitxer: només s'ha importat la primera fila."] });
+        continue;
+      }
+      if (codi) codisVistos.add(codi);
+      const existent = codi ? perCodi.get(codi) : undefined;
+
+      if (existent) {
+        if (existent.estat === "arxivada") {
+          resultat.omeses++;
+          resultat.avisos.push({ fila, activitat: nom, avisos: ["L'activitat d'aquest codi està arxivada: no s'ha modificat."] });
+          continue;
+        }
+        const canvis: CanvisActivitat = { nom, ...dades };
+        if (capacitatBloquejada && canvis.capacitat !== undefined && canvis.capacitat !== existent.capacitat) {
+          delete canvis.capacitat;
+          avisos.push("La capacitat no s'ha canviat perquè el cicle ja és en adjudicació.");
+        }
+        if (existent.estat === "esborrany") canvis.estat = "activa";
+        const final = { ...existent, ...canvis };
+        if (final.hora_inici && final.hora_fi && final.hora_fi <= final.hora_inici) {
+          delete canvis.hora_inici; delete canvis.hora_fi;
+          avisos.push("L'hora de finalització no és posterior a la d'inici: no s'han canviat les hores.");
+        }
+        if (final.data_inici && final.data_fi && final.data_fi < final.data_inici) {
+          delete canvis.data_inici; delete canvis.data_fi;
+          avisos.push("La data de finalització és anterior a la d'inici: no s'han canviat les dates.");
+        }
+        const diff = diferencies(existent, canvis);
+        if (Object.keys(diff).length === 0) resultat.sense_canvis++;
+        else {
+          const efectius = Object.fromEntries(Object.keys(diff).map((k) => [k, (canvis as Record<string, unknown>)[k]])) as CanvisActivitat;
+          const operacio = nouId();
+          operacions.push(
+            this.repos.activitats.operacioActualitzar(casalId, existent.id, existent.versio, efectius, ara, operacio),
+            this.repos.historial.operacioAfegir({
+              casal_id: casalId, entitat: "activitat", entitat_id: existent.id, accio: "importacio", canvis: diff,
+              usuari_id: ctx.usuariId, motiu: null,
+            }, ara, { taula: "activitats", id: existent.id, operacio }),
+          );
+          resultat.actualitzades++;
+        }
+      } else {
+        if (dades.capacitat === undefined) avisos.push("Sense capacitat: s'ha posat 0 places.");
+        if (dades.hora_inici && dades.hora_fi && dades.hora_fi <= dades.hora_inici) {
+          delete dades.hora_inici; delete dades.hora_fi;
+          avisos.push("L'hora de finalització no és posterior a la d'inici: no s'han importat les hores.");
+        }
+        if (dades.data_inici && dades.data_fi && dades.data_fi < dades.data_inici) {
+          delete dades.data_inici; delete dades.data_fi;
+          avisos.push("La data de finalització és anterior a la d'inici: no s'han importat les dates.");
+        }
+        const id = nouId();
+        const operacio = nouId();
+        operacions.push(
+          this.repos.activitats.operacioCrear(id, {
+            ...dades, nom, capacitat: dades.capacitat ?? 0, casal_id: casalId, cicle_id: cicle.id, estat: "activa",
+          }, ara, operacio),
+          this.repos.historial.operacioAfegir({
+            casal_id: casalId, entitat: "activitat", entitat_id: id, accio: "importacio", canvis: { nom },
+            usuari_id: ctx.usuariId, motiu: null,
+          }, ara),
+        );
+        resultat.creades++;
+      }
+      if (avisos.length) resultat.avisos.push({ fila, activitat: nom, avisos });
+    }
+
+    if (operacions.length) {
+      operacions.push(this.repos.auditoria.operacioRegistrar({
+        casal_id: casalId, usuari_id: ctx.usuariId, tipus_operacio: "importacio.activitats_pgec", entitat: "cicle", entitat_id: cicle.id,
+        resultat: "exit", id_peticio: ctx.idPeticio ?? null,
+        detalls: { creades: resultat.creades, actualitzades: resultat.actualitzades, omeses: resultat.omeses },
+      }, ara));
+      try {
+        await this.repos.unitat.executar(operacions);
+      } catch (e) {
+        if (/UNIQUE constraint failed: activitats/i.test((e as Error).message)) {
+          throw new ErrorAplicacio(409, "codi_duplicat", "Mentrestant s'ha creat una activitat amb un dels codis del fitxer. Torneu a importar-lo.");
+        }
+        throw e;
+      }
+    }
+    return resultat;
+  }
+}
+
+/** Llegeix els camps d'una fila del llistat; els valors il·legibles s'ometen amb un avís. */
+function llegeixFilaActivitat(f: Record<string, string>, avisos: string[]): Partial<Omit<NovaActivitat, "casal_id" | "cicle_id" | "nom">> {
+  const d: Partial<Omit<NovaActivitat, "casal_id" | "cicle_id" | "nom">> = {};
+  const curt = (camp: string, max: number) => { const v = valor(f, camp); return v ? v.slice(0, max) : undefined; };
+  const codi = curt("codi_extern", 80);
+  if (codi) d.codi_extern = codi;
+  for (const [camp, max] of [["descripcio", 2000], ["categoria", 80], ["espai", 120], ["destinataris", 200]] as const) {
+    const v = curt(camp, max);
+    if (v) d[camp] = v;
+  }
+  if (valor(f, "capacitat")) {
+    const n = interpretaEnter(valor(f, "capacitat"));
+    if (n === null || n > 10000) avisos.push(`Capacitat no reconeguda: «${valor(f, "capacitat")}».`);
+    else d.capacitat = n;
+  }
+  if (valor(f, "nombre_sessions")) {
+    const n = interpretaEnter(valor(f, "nombre_sessions"));
+    if (n === null || n > 1000) avisos.push(`Nombre de sessions no reconegut: «${valor(f, "nombre_sessions")}».`);
+    else d.nombre_sessions = n;
+  }
+  if (valor(f, "dies")) {
+    const dies = interpretaDies(valor(f, "dies"));
+    if (!dies) avisos.push(`Dies no reconeguts: «${valor(f, "dies")}».`);
+    else d.dies_setmana = dies;
+  }
+  for (const camp of ["hora_inici", "hora_fi"] as const) {
+    if (!valor(f, camp)) continue;
+    const rang = interpretaRangHores(valor(f, camp));
+    if (rang) { d.hora_inici = rang.inici; d.hora_fi = rang.fi; continue; }
+    const h = interpretaHora(valor(f, camp));
+    if (!h) avisos.push(`Hora no reconeguda: «${valor(f, camp)}».`);
+    else d[camp] = h;
+  }
+  const horari = valor(f, "horari_text");
+  if (horari) {
+    const rang = interpretaRangHores(horari);
+    if (rang && !d.hora_inici && !d.hora_fi) { d.hora_inici = rang.inici; d.hora_fi = rang.fi; }
+    else if (!rang) d.horari_text = horari.slice(0, 200);
+  }
+  if (valor(f, "dates")) {
+    const rang = interpretaRangDates(valor(f, "dates"));
+    if (!rang) avisos.push(`Dates no reconegudes: «${valor(f, "dates")}».`);
+    else { if (rang.inici) d.data_inici = rang.inici; if (rang.fi) d.data_fi = rang.fi; }
+  }
+  for (const camp of ["data_inici", "data_fi"] as const) {
+    if (!valor(f, camp)) continue;
+    const data = interpretaData(valor(f, camp));
+    if (!data) avisos.push(`Data no reconeguda: «${valor(f, camp)}».`);
+    else d[camp] = data;
+  }
+  return d;
 }

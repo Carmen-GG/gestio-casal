@@ -1,5 +1,5 @@
 import { CAMPS_PERSONALS } from "../../../shared/domain/formulari";
-import type { NovaSollicitudPublica, RepositoriSollicituds, ResultatRegistre, SollicitudRegistrada } from "../tipus";
+import type { AutoritzacioTutorDesada, NovaSollicitudPublica, RepositoriSollicituds, ResultatRegistre, SollicitudRegistrada } from "../tipus";
 
 /** Condició: el cicle accepta sol·licituds en l'instant de recepció (comparació de dates ISO en UTC). */
 const CICLE_OBERT = `EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat = 'inscripcions_obertes'
@@ -67,6 +67,16 @@ export class D1RepositoriSollicituds implements RepositoriSollicituds {
         .bind(n.sollicitud_id, n.cicle_id, p.activitat_id, p.activitat_id, n.cicle_id, n.casal_id, p.ordre, n.sollicitud_id),
     );
 
+    const tutor = n.tutor
+      ? [this.db
+        .prepare(
+          `INSERT INTO autoritzacions_tutor (sollicitud_id, casal_id, nom, cognoms, document_identitat, autoritza, signatura, creat_el)
+           SELECT ?, ?, ?, ?, ?, 1, ?, ? WHERE EXISTS (SELECT 1 FROM sollicituds WHERE id = ?)`,
+        )
+        .bind(n.sollicitud_id, n.casal_id, n.tutor.nom, n.tutor.cognoms, n.tutor.document_identitat, n.tutor.signatura,
+          n.rebuda_el, n.sollicitud_id)]
+      : [];
+
     // Auditoria sense dades personals: només identificadors interns i metadades.
     const auditoria = this.db
       .prepare(
@@ -75,12 +85,12 @@ export class D1RepositoriSollicituds implements RepositoriSollicituds {
          WHERE EXISTS (SELECT 1 FROM sollicituds WHERE id = ?)`,
       )
       .bind(n.rebuda_el, n.casal_id, n.sollicitud_id,
-        JSON.stringify({ origen: "formulari_public", cicle_id: n.cicle_id, nombre_preferencies: n.preferencies.length }),
+        JSON.stringify({ origen: "formulari_public", cicle_id: n.cicle_id, nombre_preferencies: n.preferencies.length, autoritzacio_tutor: !!n.tutor }),
         n.id_peticio, n.sollicitud_id);
 
     let resultats: D1Result[];
     try {
-      resultats = await this.db.batch([participant, sollicitud, ...preferencies, auditoria]);
+      resultats = await this.db.batch([participant, sollicitud, ...preferencies, ...tutor, auditoria]);
     } catch (e) {
       if (ERROR_ACTIVITAT.test((e as Error).message)) return { tipus: "activitat_no_disponible" };
       throw e;
@@ -91,5 +101,15 @@ export class D1RepositoriSollicituds implements RepositoriSollicituds {
       .bind(n.sollicitud_id)
       .first<Omit<SollicitudRegistrada, "preferencies">>();
     return { tipus: "registrada", sollicitud: { ...s!, preferencies: await this.preferencies(n.sollicitud_id) } };
+  }
+
+  async autoritzacioTutor(casalId: string, sollicitudId: string) {
+    return this.db
+      .prepare(
+        `SELECT nom, cognoms, document_identitat, signatura, creat_el FROM autoritzacions_tutor
+         WHERE sollicitud_id = ? AND casal_id = ?`,
+      )
+      .bind(sollicitudId, casalId)
+      .first<AutoritzacioTutorDesada>();
   }
 }

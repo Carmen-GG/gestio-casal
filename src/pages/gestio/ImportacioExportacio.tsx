@@ -2,7 +2,7 @@ import { useState } from "react";
 import { proposaCamp } from "../../../shared/domain/importacio";
 import { ETIQUETES_CAMPS } from "../../../shared/domain/formulari";
 import {
-  CAMPS_IMPORTACIO_ACTIVITATS, CAMPS_IMPORTACIO_SOLLICITUDS, MAX_FILES_IMPORTACIO, OBLIGATORIS_IMPORTACIO,
+  CAMPS_IMPORTACIO_SOLLICITUDS, MAX_FILES_IMPORTACIO, OBLIGATORIS_IMPORTACIO,
 } from "../../../shared/schemas/sollicituds";
 import { MissatgeError } from "../../components/EstatsConsulta";
 import { AvisExit } from "../../components/Formulari";
@@ -11,11 +11,12 @@ import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type { Activitat, Previsualitzacio } from "../../types/gestio";
 
-type Tipus = "sollicituds" | "activitats";
+type Tipus = "sollicituds";
 
 const ETIQUETES_DESTI: Record<string, string> = {
   ...ETIQUETES_CAMPS,
   codi_participant_intern: "Codi intern de participant", data_registre: "Data i hora de registre",
+  destinataris: "Persones a qui va dirigida", dates: "Dates (inici i final)",
   descripcio: "Descripció", categoria: "Categoria", dies: "Dies de la setmana", hora_inici: "Hora d'inici", hora_fi: "Hora de finalització",
   horari_text: "Horari (text lliure)", data_inici: "Data d'inici", data_fi: "Data de finalització", espai: "Espai",
   capacitat: "Capacitat (places)", nombre_sessions: "Nombre de sessions", codi_extern: "Codi extern (PGEc)",
@@ -23,27 +24,20 @@ const ETIQUETES_DESTI: Record<string, string> = {
 const etiquetaDesti = (c: string) => ETIQUETES_DESTI[c] ?? c.replace(/^preferencia_(\d+)$/, "Activitat de preferència $1");
 
 /**
- * Importació en tres passos (fitxer, previsualització i validació, confirmació)
- * i exportacions en XLSX real. La validació definitiva la fa el servidor.
+ * Importació de sol·licituds d'altres formularis en tres passos (fitxer,
+ * columnes i validació, confirmació). Les sol·licituds importades s'afegeixen
+ * a les rebudes pel formulari propi; mai les substitueixen. La validació
+ * definitiva la fa el servidor. Les activitats s'importen directament des de
+ * la secció «Activitats» (llistat de la PGEc).
  */
-export function ImportacioExportacio({ casalId, cicleId, activitats, pot, onImportat }: {
-  casalId: string; cicleId: string; activitats: Activitat[]; pot: (p: string) => boolean;
-  /** Després d'importar: la pàgina del cicle torna a carregar activitats i sol·licituds. */
-  onImportat?: () => void;
-}) {
-  return (
-    <div className="dues-columnes">
-      {pot("dades.importar") && <Importacio casalId={casalId} cicleId={cicleId} potActivitats={pot("activitats.gestionar")} onImportat={onImportat} />}
-      {pot("dades.exportar") && <Exportacio casalId={casalId} cicleId={cicleId} activitats={activitats} />}
-      {!pot("dades.importar") && !pot("dades.exportar") && <p>No teniu permís per importar ni exportar dades.</p>}
-    </div>
-  );
+export function ImportacioSollicituds(props: { casalId: string; cicleId: string; onImportat?: () => void }) {
+  return <Importacio {...props} />;
 }
 
-function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
-  casalId: string; cicleId: string; potActivitats: boolean; onImportat?: () => void;
+function Importacio({ casalId, cicleId, onImportat }: {
+  casalId: string; cicleId: string; onImportat?: () => void;
 }) {
-  const [tipus, setTipus] = useState<Tipus>("sollicituds");
+  const tipus: Tipus = "sollicituds";
   const [fitxer, setFitxer] = useState<{ nom: string; taula: TaulaLlegida } | null>(null);
   const [mapatge, setMapatge] = useState<string[]>([]);
   const [prev, setPrev] = useState<Previsualitzacio | null>(null);
@@ -53,7 +47,7 @@ function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
   const [resultat, setResultat] = useState("");
   const [nomesProblemes, setNomesProblemes] = useState(true);
 
-  const camps: readonly string[] = tipus === "sollicituds" ? CAMPS_IMPORTACIO_SOLLICITUDS : CAMPS_IMPORTACIO_ACTIVITATS;
+  const camps: readonly string[] = CAMPS_IMPORTACIO_SOLLICITUDS;
   const obligatoris: readonly string[] = OBLIGATORIS_IMPORTACIO[tipus];
 
   function reinicia() {
@@ -108,7 +102,7 @@ function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
       const r = await serveiGestio.confirmarImportacio(casalId, cicleId, tipus, {
         files: filesMapades(), nom_fitxer: fitxer!.nom, clau, confirmacio: true, files_esperades: prev!.resum.valides,
       });
-      setResultat(`Importació feta: ${r.importades} registres importats i ${r.omeses} omesos (amb errors o buits).${tipus === "activitats" ? " Les activitats s'han creat en esborrany: poseu-hi els dies i horaris a «Dies i horaris de les activitats» i activeu-les a «Formulari a la pàgina pública»." : ""}`);
+      setResultat(`Importació feta: s'han afegit ${r.importades} sol·licituds i se n'han omès ${r.omeses} (amb errors o buides).`);
       reinicia();
       onImportat?.();
     } catch (e) {
@@ -120,7 +114,8 @@ function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
 
   return (
     <section aria-labelledby="titol-importacio">
-      <h3 id="titol-importacio" className="subseccio">Importació</h3>
+      <h3 id="titol-importacio" className="subseccio">Importar inscripcions d'altres formularis (CSV o XLSX)</h3>
+      <p className="text-secundari">Les sol·licituds del fitxer s'afegeixen a les que ja heu rebut pel formulari. No se'n substitueix ni modifica cap.</p>
       {resultat && <AvisExit>{resultat}</AvisExit>}
       {error && (typeof error === "string" ? <p className="avis avis--error" role="alert">{error}</p> : <MissatgeError error={error} />)}
 
@@ -133,13 +128,6 @@ function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
       {!prev && (
         <div className="formulari">
           <div className="camp">
-            <label htmlFor="tipus-importacio">Què voleu importar?</label>
-            <select id="tipus-importacio" value={tipus} onChange={(e) => { setTipus(e.target.value as Tipus); reinicia(); }}>
-              <option value="sollicituds">Sol·licituds (per exemple, inscripcions en paper)</option>
-              {potActivitats && <option value="activitats">Activitats (per exemple, una exportació de PGEc)</option>}
-            </select>
-          </div>
-          <div className="camp">
             <label htmlFor="fitxer-importacio">Fitxer .xlsx o .csv</label>
             <input id="fitxer-importacio" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               onChange={(e) => void tria(e.target.files?.[0])} />
@@ -150,7 +138,7 @@ function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
 
       {fitxer && !prev && (
         <div>
-          <p><strong>{fitxer.nom}</strong>: {fitxer.taula.files.length} files. Indiqueu a quin camp correspon cada columna (o deixeu-la sense importar).</p>
+          <p><strong>{fitxer.nom}</strong>: {fitxer.taula.files.length} files. Indiqueu a quin camp de l'aplicació correspon cada columna, o trieu «No importar» si no la necessiteu.</p>
           <div className="taula-contenidor" tabIndex={0} role="region" aria-label="Correspondència de columnes">
             <table className="taula taula--densa">
               <thead><tr><th scope="col">Columna del fitxer</th><th scope="col">Exemple</th><th scope="col">Camp de destinació</th></tr></thead>
@@ -223,7 +211,7 @@ function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
   );
 }
 
-function Exportacio({ casalId, cicleId, activitats }: { casalId: string; cicleId: string; activitats: Activitat[] }) {
+export function Exportacio({ casalId, cicleId, activitats }: { casalId: string; cicleId: string; activitats: Activitat[] }) {
   const [activitat, setActivitat] = useState("");
   const [enCurs, setEnCurs] = useState(false);
   const [error, setError] = useState<ErrorClientApi | null>(null);

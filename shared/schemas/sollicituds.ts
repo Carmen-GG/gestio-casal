@@ -82,7 +82,7 @@ export const CAMPS_IMPORTACIO_SOLLICITUDS = [
 
 export const CAMPS_IMPORTACIO_ACTIVITATS = [
   "nom", "descripcio", "categoria", "dies", "hora_inici", "hora_fi", "horari_text", "data_inici", "data_fi",
-  "espai", "capacitat", "nombre_sessions", "codi_extern",
+  "espai", "capacitat", "nombre_sessions", "codi_extern", "destinataris", "dates",
 ] as const;
 
 export const OBLIGATORIS_IMPORTACIO = {

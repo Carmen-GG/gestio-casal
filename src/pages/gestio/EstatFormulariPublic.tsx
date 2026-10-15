@@ -12,10 +12,10 @@ interface Punt { fet: boolean; text: string }
 /**
  * Què falta perquè el formulari d'inscripció surti a la pàgina pública. Són les mateixes
  * condicions que comprova el servidor: cicle a «Inscripcions obertes», dins del termini,
- * alguna activitat activa i el text de protecció de dades.
+ * i alguna activitat activa. Sense text de protecció de dades propi, es mostra el de prova.
  */
-export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollicituds, teTextPrivacitat, activitats, potGestionar, onCanvi }: {
-  casalId: string; codiCasal: string | undefined; cicle: Cicle; acceptaSollicituds: boolean; teTextPrivacitat: boolean;
+export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollicituds, privacitatDeProva, activitats, potGestionar, onCanvi }: {
+  casalId: string; codiCasal: string | undefined; cicle: Cicle; acceptaSollicituds: boolean; privacitatDeProva: boolean;
   activitats: Activitat[]; potGestionar: boolean; onCanvi: (missatge: string) => void;
 }) {
   const [activant, setActivant] = useState(false);
@@ -29,9 +29,9 @@ export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollici
     { fet: obert, text: obert ? "El cicle és a «Inscripcions obertes»." : `El cicle és a «${ETIQUETES_ESTAT_CICLE[cicle.estat]}»: passeu-lo a «Inscripcions obertes» a la secció «Estat del cicle»${cicle.estat === "esborrany" ? " (primer a «Preparació»)" : ""}.` },
     { fet: !obert || acceptaSollicituds, text: `Termini d'inscripció: del ${formataDataHora(cicle.obertura_inscripcions)} al ${formataDataHora(cicle.tancament_inscripcions)}.` },
     { fet: actives.length > 0, text: actives.length > 0 ? (actives.length === 1 ? "1 activitat activa." : `${actives.length} activitats actives.`) : "Cap activitat activa: les activitats importades o noves queden en esborrany fins que s'activen." },
-    { fet: teTextPrivacitat, text: teTextPrivacitat ? "Té el text de protecció de dades." : "Falta el text de protecció de dades (secció «Formulari d'inscripció»)." },
+    { fet: !privacitatDeProva, text: privacitatDeProva ? "Es mostra un text de protecció de dades de prova: substituïu-lo pel definitiu a la secció «Formulari d'inscripció»." : "Té el text de protecció de dades." },
   ];
-  const visible = acceptaSollicituds && actives.length > 0 && teTextPrivacitat;
+  const visible = acceptaSollicituds && actives.length > 0;
 
   async function activaTotes() {
     setActivant(true);
@@ -75,7 +75,7 @@ export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollici
       {senseHorari.length > 0 && (
         <p className="text-secundari">
           {senseHorari.length === 1 ? "1 activitat activa no té" : `${senseHorari.length} activitats actives no tenen`} dies ni hora: al formulari sortiran com a «Horari pendent de publicar».
-          Les podeu completar a «Dies i horaris de les activitats».
+          Les podeu completar amb «Edita» a la secció «Activitats».
         </p>
       )}
     </div>

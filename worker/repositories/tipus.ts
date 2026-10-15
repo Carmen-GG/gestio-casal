@@ -74,6 +74,8 @@ export interface Activitat {
   data_inici: string | null;
   data_fi: string | null;
   espai: string | null;
+  /** Persones a qui va dirigida (text de la PGEc). */
+  destinataris: string | null;
   capacitat: number;
   nombre_sessions: number | null;
   /** Mínim de participants perquè es faci. Només genera avisos. */
@@ -92,7 +94,7 @@ export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "c
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "destinataris" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;
@@ -257,7 +259,21 @@ export interface NovaSollicitudPublica {
   dades: Record<CampPersonal, string | null>;
   clau_ordenacio: string;
   preferencies: { activitat_id: string; ordre: number }[];
+  /** Autorització del tutor (només per a menors d'edat). */
+  tutor?: DadesAutoritzacioTutor | null;
   id_peticio: string | null;
+}
+
+export interface DadesAutoritzacioTutor {
+  nom: string;
+  cognoms: string;
+  document_identitat: string;
+  /** Imatge PNG de la signatura (data URL). */
+  signatura: string;
+}
+
+export interface AutoritzacioTutorDesada extends DadesAutoritzacioTutor {
+  creat_el: string;
 }
 
 /** Vista mínima d'una sol·licitud ja registrada, sense dades personals. */
@@ -283,6 +299,7 @@ export interface RepositoriSollicituds {
    * actives del cicle) es comproven dins de la mateixa transacció: o es desa tot o res.
    */
   registrarPublica(dades: NovaSollicitudPublica): Promise<ResultatRegistre>;
+  autoritzacioTutor(casalId: string, sollicitudId: string): Promise<AutoritzacioTutorDesada | null>;
 }
 
 export const ESTATS_SOLLICITUD = ["rebuda", "validada", "pendent_revisio", "anullada"] as const;
