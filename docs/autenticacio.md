@@ -18,8 +18,18 @@ comprova el permís concret en aquell casal, i els repositoris filtren sempre pe
 - Protecció CSRF: `SameSite=Strict`, comprovació de l'origen a totes les peticions d'escriptura i
   obligació d'enviar JSON (un formulari d'un altre lloc no ho pot fer sense una consulta prèvia CORS, que es denega).
 
-## Accés de desenvolupament i proves (entorns local i staging)
-No hi ha contrasenyes. Una persona amb accés a Cloudflare genera un **enllaç d'un sol ús**:
+## Contrasenya (decisió del 2026-10-15)
+Cada persona pot fixar una **contrasenya que no caduca** a «El meu compte» (`/gestio/compte`) i després
+entrar amb el seu correu i aquesta contrasenya (`POST /api/auth/entrar-contrasenya`).
+- Es desa només el resum PBKDF2-SHA256 (100.000 iteracions, sal aleatòria de 16 bytes) a `usuaris.contrasenya_resum`.
+- Mínim 12 caràcters. Per canviar-la cal la contrasenya actual. El canvi queda a l'auditoria (`usuari.contrasenya`).
+- Error genèric si el correu o la contrasenya no són correctes (no revela si el correu existeix) i límit
+  d'intents per origen (`LIMIT_ENTRADA`, 10 per minut).
+- La primera vegada s'entra amb un codi d'accés (secció següent) per poder fixar la contrasenya.
+- La sessió continua caducant per inactivitat (60 minuts) i al cap de 8 hores; la contrasenya no.
+
+## Codi d'accés d'un sol ús (entorns local i staging)
+Per a la primera entrada, una persona amb accés a Cloudflare genera un **enllaç d'un sol ús**:
 
 ```bash
 # Local

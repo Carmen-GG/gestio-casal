@@ -16,6 +16,8 @@ export interface CasalAccessible {
 export interface Jo {
   usuari: { id: string; nom_visible: string; email: string };
   administracio_central: boolean;
+  /** Té una contrasenya per entrar al panell. */
+  te_contrasenya: boolean;
   pot_crear_casals: boolean;
   /** Pot carregar i modificar les plantilles comunes a tots els casals (administració central). */
   pot_gestionar_plantilles_comunes: boolean;

@@ -279,3 +279,6 @@ main:focus { outline: none; }
 .dades { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; }
 .dades dt { font-weight: 600; }
 .dades dd { margin: 0; }
+
+.acces-codi { margin-top: 2rem; border-top: 1px solid var(--color-vora); padding-top: 1rem; }
+.acces-codi summary { cursor: pointer; font-weight: 600; color: var(--color-primari); }

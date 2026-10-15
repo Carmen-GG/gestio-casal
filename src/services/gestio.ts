@@ -10,6 +10,9 @@ const g = (casalId: string) => `/gestio/casals/${encodeURIComponent(casalId)}`;
 export const serveiAuth = {
   jo: (s?: AbortSignal) => api.get<Jo>("/auth/jo", s),
   entrar: (testimoni: string) => api.post<{ ok: true }>("/auth/entrar", { testimoni }),
+  entrarAmbContrasenya: (email: string, contrasenya: string) =>
+    api.post<{ ok: true }>("/auth/entrar-contrasenya", { email, contrasenya }),
+  canviarContrasenya: (dades: { actual?: string; nova: string }) => api.post<{ ok: true }>("/auth/contrasenya", dades),
   sortir: () => api.post<{ ok: true }>("/auth/sortir"),
 };
 
