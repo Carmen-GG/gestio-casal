@@ -46,6 +46,7 @@ export const MENU: ElementMenu[] = [
       { text: "Instagram", desti: { properament: "instagram" } },
     ],
   },
+  { text: "Equip del casal", desti: { ruta: "usuaris" }, permis: "usuaris.gestionar" },
 ];
 
 /** Títols i descripció de les funcions que encara no estan disponibles. */

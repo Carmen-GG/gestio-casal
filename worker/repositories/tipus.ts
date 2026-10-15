@@ -169,6 +169,19 @@ export interface Usuari {
 export interface PermisosUsuari {
   globals: string[];
   perCasal: Record<string, string[]>;
+  /** Casals amb alguna persona responsable vigent (només es carrega per a qui té permisos globals). */
+  casalsAmbResponsable: string[];
+}
+
+export interface ResponsableCasal {
+  assignacio_id: string;
+  usuari_id: string;
+  email: string;
+  nom_visible: string;
+  atorgat_el: string;
+  te_contrasenya: boolean;
+  darrer_acces_el: string | null;
+  codi_pendent_fins: string | null;
 }
 
 export interface AssignacioRol {
@@ -192,12 +205,23 @@ export interface RepositoriUsuaris {
   assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
   assignacioPerId(id: string): Promise<AssignacioRol | null>;
   rolExisteix(codi: string): Promise<{ abast: "casal" | "global" } | null>;
+  /** Responsables vigents de tots els casals. */
+  responsables(): Promise<(ResponsableCasal & { casal_id: string })[]>;
+  /** Assignacions vigents de la persona (per saber si té accés a altres casals o global). */
+  assignacionsUsuari(usuariId: string): Promise<{ rol_codi: string; casal_id: string | null }[]>;
+  /** Estat d'accés de les persones: si tenen contrasenya i si tenen un codi de primer accés vigent. */
+  estatAcces(usuariIds: string[], ara: string): Promise<Record<string, { te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null }>>;
+  marcarAcces(usuariId: string, ara: string): Promise<void>;
   operacioAssignar(dades: { id: string; usuari_id: string; rol_codi: string; casal_id: string | null; atorgat_per: string; motiu: string | null }, ara: string): Operacio;
   operacioRevocar(id: string, revocatPer: string, motiu: string | null, ara: string): Operacio;
 }
 
 export interface RepositoriSessions {
   crearTestimoni(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
+  /** Nou codi de primer accés: invalida els anteriors de la mateixa persona. */
+  crearCodiPrimerAcces(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
+  /** Consumeix un codi de primer accés vàlid de la persona. */
+  consumirCodiPrimerAcces(resum: string, usuariId: string, ara: string): Promise<boolean>;
   /** Marca el testimoni com a usat si és vàlid i retorna l'usuari. Un testimoni només serveix una vegada. */
   consumirTestimoni(resum: string, ara: string): Promise<string | null>;
   crearSessio(resum: string, usuariId: string, ara: string, caducaEl: string): Promise<void>;
@@ -675,8 +699,43 @@ export interface RepositoriPersonesPlataforma {
   participacions(casalId: string, documentNorm: string | null, clauOrdenacio: string, dataNaixement: string | null): Promise<ParticipacioPersona[]>;
 }
 
+/** Recomptes d'un cicle per al quadre de comandament global. */
+export interface IndicadorsCicleGlobal {
+  casal_id: string;
+  cicle_id: string;
+  cicle: string;
+  any: number;
+  estat: string;
+  data_inici: string;
+  data_fi: string;
+  activitats: number;
+  places_ofertes: number;
+  sollicituds: number;
+  persones: number;
+  admeses: number;
+  espera: number;
+  renuncies: number;
+  baixes: number;
+  baixes_voluntaries: number;
+  sessions_realitzades: number;
+  presencies: number;
+  absencies: number;
+  absencies_justificades: number;
+}
+
+/** Recomptes per casal que no depenen del cicle. */
+export interface IndicadorsCasalGlobal {
+  casal_id: string;
+  persones_diferents: number;
+  persones_plataforma: number;
+  equip: number;
+  responsables: number;
+}
+
 export interface RepositoriIndicadors {
   cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
+  /** Tots els casals i cicles (filtrats per any del cicle si se'n dona). */
+  global(any: number | null): Promise<{ cicles: IndicadorsCicleGlobal[]; casals: IndicadorsCasalGlobal[]; anys: number[] }>;
 }
 
 export interface Repositoris {

@@ -146,5 +146,11 @@ export const assignarRol = z.strictObject({
 
 export const revocarRol = z.strictObject({ motiu });
 
+/** Alta d'una persona responsable d'un casal (superadministració). */
+export const assignarResponsable = z.strictObject({
+  email: z.email("Correu electrònic no vàlid.").trim().toLowerCase().max(254),
+  nom_visible: textCurt(120),
+});
+
 export type CicleCrear = z.input<typeof cicleCrear>;
 export type ActivitatCrear = z.input<typeof activitatCrear>;

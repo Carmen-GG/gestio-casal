@@ -4,7 +4,7 @@ import { requereixSessio } from "../auth/sessio";
 import { errors } from "../http/errors";
 import { cosValidat, idRuta } from "../http/validacio";
 import {
-  activitatActualitzar, activitatCanviEstat, activitatCrear, activitatDuplicar, assignarRol, casalActualitzar,
+  activitatActualitzar, activitatCanviEstat, activitatCrear, activitatDuplicar, assignarResponsable, assignarRol, casalActualitzar,
   casalCrear, cicleActualitzar, cicleCanviEstat, cicleCrear, revocarRol,
 } from "../../shared/schemas/gestio";
 import { transicionsPermeses } from "../../shared/domain/cicles";
@@ -13,6 +13,7 @@ import { ServeiCasals } from "../services/casals";
 import { ServeiCicles } from "../services/cicles";
 import { ServeiActivitats } from "../services/activitats";
 import { ServeiUsuaris } from "../services/usuaris";
+import { ServeiAdministracio } from "../services/administracio";
 import { ServeiGestioSollicituds, emmascaraDocument, filtraParticipant, taulaSollicituds, visibilitat } from "../services/gestio-sollicituds";
 import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
@@ -58,6 +59,15 @@ async function exportacioAuditada(c: C, casalId: string, tipus: string, entitat:
 async function detallVisible(c: C, casalId: string, id: string) {
   const detall = await sollicituds(c).obtenir(casalId, id);
   return filtraParticipant(detall, visibilitat(c.get("usuari"), casalId));
+}
+
+const proveidor = (c: C): "dev" | "entra_id" => (c.env.APP_ENV === "production" ? "entra_id" : "dev");
+const usuarisCasal = (c: C) => new ServeiUsuaris(c.get("repos"), c.get("rellotge"), proveidor(c));
+const administracio = (c: C) => new ServeiAdministracio(c.get("repos"), c.get("rellotge"), proveidor(c));
+
+/** Superadministració: permís global de gestionar persones (rol admin_central). */
+function exigeixSuperadministracio(c: C) {
+  if (!c.get("usuari").esGlobal("usuaris.gestionar")) throw errors.sensePermis();
 }
 
 /** Comprova el permís al casal de la ruta i en retorna l'id. */
@@ -472,20 +482,57 @@ export const rutesGestio = new Hono<Entorn>()
   // ---------- Persones autoritzades ----------
   .get("/casals/:casalId/usuaris", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
-    return c.json({ assignacions: await c.get("repos").usuaris.assignacionsCasal(casalId) });
+    const repos = c.get("repos");
+    const assignacions = await repos.usuaris.assignacionsCasal(casalId);
+    const estat = await repos.usuaris.estatAcces(assignacions.map((a) => a.usuari_id), new Date(c.get("rellotge").ara()).toISOString());
+    return c.json({ assignacions: assignacions.map((a) => ({ ...a, ...estat[a.usuari_id] })) });
   })
   .post("/casals/:casalId/usuaris", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
     const dades = await cosValidat(c, assignarRol);
-    const servei = new ServeiUsuaris(c.get("repos"), c.get("rellotge"), c.env.APP_ENV === "production" ? "entra_id" : "dev");
-    return c.json({ assignacio: await servei.assignarRol(casalId, dades, ctx(c)) }, 201);
+    const servei = usuarisCasal(c);
+    const assignacio = await servei.assignarRol(casalId, dades, ctx(c));
+    // El codi de primer accés només es retorna aquí, una vegada.
+    const acces = await servei.accesAlta(assignacio.usuari_id, casalId, ctx(c), false);
+    return c.json({ assignacio, acces }, 201);
   })
   .post("/casals/:casalId/usuaris/:assignacioId/revocar", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
     const { motiu } = await cosValidat(c, revocarRol);
-    const servei = new ServeiUsuaris(c.get("repos"), c.get("rellotge"), c.env.APP_ENV === "production" ? "entra_id" : "dev");
-    await servei.revocar(casalId, idRuta(c, "assignacioId"), { ...ctx(c), motiu });
+    await usuarisCasal(c).revocar(casalId, idRuta(c, "assignacioId"), { ...ctx(c), motiu });
     return c.json({ ok: true });
+  })
+  .post("/casals/:casalId/usuaris/:assignacioId/codi-acces", async (c) => {
+    const casalId = casalAutoritzat(c, "usuaris.gestionar");
+    return c.json({ codi: await usuarisCasal(c).nouCodi(casalId, idRuta(c, "assignacioId"), ctx(c), false) });
+  })
+
+  // ---------- Superadministració ----------
+  .get("/administracio/responsables", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await administracio(c).responsables());
+  })
+  .post("/administracio/casals/:casalId/responsables", async (c) => {
+    exigeixSuperadministracio(c);
+    const casalId = idRuta(c, "casalId");
+    const dades = await cosValidat(c, assignarResponsable);
+    return c.json(await administracio(c).assignarResponsable(casalId, dades, ctx(c)), 201);
+  })
+  .post("/administracio/casals/:casalId/responsables/:assignacioId/revocar", async (c) => {
+    exigeixSuperadministracio(c);
+    const { motiu } = await cosValidat(c, revocarRol);
+    await administracio(c).revocarResponsable(idRuta(c, "casalId"), idRuta(c, "assignacioId"), { ...ctx(c), motiu });
+    return c.json({ ok: true });
+  })
+  .post("/administracio/casals/:casalId/responsables/:assignacioId/codi-acces", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json({ codi: await administracio(c).nouCodiResponsable(idRuta(c, "casalId"), idRuta(c, "assignacioId"), ctx(c)) });
+  })
+  .get("/administracio/quadre", async (c) => {
+    if (!c.get("usuari").esGlobal("estadistiques.consultar")) throw errors.sensePermis();
+    const any = c.req.query("any");
+    const valor = any && /^\d{4}$/.test(any) ? Number(any) : null;
+    return c.json(await administracio(c).quadre(valor, ctx(c)));
   })
 
   // ---------- Auditoria ----------

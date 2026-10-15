@@ -28,7 +28,7 @@ export function CasalCicles() {
       <p className="subtitol">{casal.codi}</p>
       <h1>{casal.nom}</h1>
       {pot("usuaris.gestionar") && (
-        <p><Link to={`/gestio/${casalId}/usuaris`}>Persones autoritzades</Link></p>
+        <p><Link to={`/gestio/${casalId}/usuaris`}>Equip del casal</Link></p>
       )}
       {exit && <AvisExit>{exit}</AvisExit>}
 

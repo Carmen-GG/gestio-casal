@@ -411,3 +411,20 @@ main:focus { outline: none; }
 .cerca-persones .camp { margin: 0; }
 .omeses { margin: 0.5rem 0 1rem; }
 .omeses ul { max-height: 14rem; overflow: auto; }
+
+/* Codi de primer accés */
+.codi-acces p { margin: 0.25rem 0; }
+.codi-acces__codi { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.08em; }
+.mode-consulta { margin-bottom: var(--espai); }
+.taulells-admin { display: grid; gap: var(--espai); grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); list-style: none; padding: 0; }
+.taulells-admin a { display: block; height: 100%; padding: 1.25rem; border: 2px solid var(--color-vora); border-radius: var(--radi); text-decoration: none; color: inherit; background: var(--color-superficie); }
+.taulells-admin a:hover, .taulells-admin a:focus-visible { border-color: var(--color-primari); }
+.taulells-admin h2 { margin: 0 0 0.4rem; color: var(--color-primari); font-size: 1.2rem; }
+.taulells-admin p { margin: 0; color: var(--color-text-secundari); }
+.xifres { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); list-style: none; padding: 0; margin: 0 0 var(--espai); }
+.xifres li { border: 1px solid var(--color-vora); border-radius: var(--radi); padding: 0.6rem 0.8rem; }
+.xifres strong { display: block; font-size: 1.5rem; }
+.xifres span { color: var(--color-text-secundari); font-size: 0.9rem; }
+.taula td.num, .taula th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.botonera--compacta { gap: 0.4rem; margin: 0; flex-wrap: wrap; }
+.sense-salt { white-space: nowrap; }
