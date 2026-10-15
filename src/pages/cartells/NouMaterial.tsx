@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { ETIQUETES_ESTACIO, ETIQUETES_ROL, ETIQUETES_TIPUS_PLANTILLA, type RolCamp } from "../../../shared/domain/cartells";
 import {
   ROLS_TEXT, errorUrlQr, slugFitxer, textosPerDefecte, type RolText, type TextosMaterial,
@@ -48,8 +48,11 @@ export function NouMaterial() {
 function Generador({ casal, plantilles, cicles, potActivitats }: {
   casal: Casal; plantilles: PlantillaCartells[]; cicles: Cicle[]; potActivitats: boolean;
 }) {
-  const [cicleId, setCicleId] = useState(cicles[0]?.id ?? "");
-  const [activitatId, setActivitatId] = useState("");
+  // Des de la llista d'activitats d'un cicle s'arriba amb el cicle i l'activitat ja triats.
+  const [params] = useSearchParams();
+  const cicleInicial = cicles.find((c) => c.id === params.get("cicle"))?.id;
+  const [cicleId, setCicleId] = useState(cicleInicial ?? cicles[0]?.id ?? "");
+  const [activitatId, setActivitatId] = useState(cicleInicial ? (params.get("activitat") ?? "") : "");
   const [plantillaId, setPlantillaId] = useState(plantilles[0]?.id ?? "");
   const [editats, setEditats] = useState<TextosMaterial>({});
   const [imatges, setImatges] = useState<Partial<Record<RolImatgeTriada, ImatgeTriada>>>({});

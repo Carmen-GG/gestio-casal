@@ -75,7 +75,7 @@ export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollici
       {senseHorari.length > 0 && (
         <p className="text-secundari">
           {senseHorari.length === 1 ? "1 activitat activa no té" : `${senseHorari.length} activitats actives no tenen`} dies ni hora: al formulari sortiran com a «Horari pendent de publicar».
-          Les podeu completar a «Dies i horaris de les activitats».
+          Les podeu completar amb «Edita» a la secció «Activitats».
         </p>
       )}
     </div>

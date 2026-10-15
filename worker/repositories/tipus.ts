@@ -259,7 +259,21 @@ export interface NovaSollicitudPublica {
   dades: Record<CampPersonal, string | null>;
   clau_ordenacio: string;
   preferencies: { activitat_id: string; ordre: number }[];
+  /** Autorització del tutor (només per a menors d'edat). */
+  tutor?: DadesAutoritzacioTutor | null;
   id_peticio: string | null;
+}
+
+export interface DadesAutoritzacioTutor {
+  nom: string;
+  cognoms: string;
+  document_identitat: string;
+  /** Imatge PNG de la signatura (data URL). */
+  signatura: string;
+}
+
+export interface AutoritzacioTutorDesada extends DadesAutoritzacioTutor {
+  creat_el: string;
 }
 
 /** Vista mínima d'una sol·licitud ja registrada, sense dades personals. */
@@ -285,6 +299,7 @@ export interface RepositoriSollicituds {
    * actives del cicle) es comproven dins de la mateixa transacció: o es desa tot o res.
    */
   registrarPublica(dades: NovaSollicitudPublica): Promise<ResultatRegistre>;
+  autoritzacioTutor(casalId: string, sollicitudId: string): Promise<AutoritzacioTutorDesada | null>;
 }
 
 export const ESTATS_SOLLICITUD = ["rebuda", "validada", "pendent_revisio", "anullada"] as const;

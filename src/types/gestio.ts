@@ -92,6 +92,10 @@ export interface Previsualitzacio {
   resum: { total: number; valides: number; amb_avisos: number; errors: number; buides: number };
   columnes_absents: string[];
 }
+export interface ResultatImportacioActivitats {
+  creades: number; actualitzades: number; sense_canvis: number; omeses: number;
+  avisos: { fila: number; activitat: string; avisos: string[] }[];
+}
 export interface TaulaExportacio { titol: string; fitxer: string; columnes: string[]; files: (string | number | null)[][] }
 
 // ---------- Adjudicació i places ----------

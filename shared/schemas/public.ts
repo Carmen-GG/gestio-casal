@@ -57,10 +57,29 @@ export const preferenciaSollicitud = z.strictObject({
 
 export const MAX_PREFERENCIES = 30;
 
+/** Mida màxima de la imatge de la signatura (data URL PNG). */
+export const MIDA_MAXIMA_SIGNATURA = 300_000;
+
+/** Autorització del pare, mare o tutor legal quan la persona participant és menor d'edat. */
+export const autoritzacioTutor = z.strictObject({
+  nom: z.string().trim().min(1, "Aquest camp és obligatori.").max(80, "Màxim 80 caràcters."),
+  cognoms: z.string().trim().min(1, "Aquest camp és obligatori.").max(160, "Màxim 160 caràcters."),
+  document_identitat: z.string().trim().min(1, "Aquest camp és obligatori.").max(12, "Màxim 12 caràcters.")
+    .refine(esDocumentIdentitatValid, "El DNI o NIE no és vàlid.")
+    .transform((s) => s.toUpperCase().replace(/[\s-]/g, "")),
+  autoritza: z.literal(true, "Cal marcar la casella d'autorització."),
+  signatura: z.string().max(MIDA_MAXIMA_SIGNATURA, "La signatura és massa gran. Esborreu-la i torneu a signar.")
+    .regex(/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/, "Cal signar dins del requadre."),
+});
+
+export type AutoritzacioTutor = z.output<typeof autoritzacioTutor>;
+
 export const sollicitudPublica = z.strictObject({
   dades: dadesPersonalsSollicitud,
   preferencies: z.array(preferenciaSollicitud).max(MAX_PREFERENCIES, `Màxim ${MAX_PREFERENCIES} activitats.`),
   acceptacio_privacitat: z.literal(true, "Cal llegir i acceptar la informació sobre protecció de dades."),
+  /** Només si la persona és menor d'edat; si és major d'edat no es desa. */
+  tutor: autoritzacioTutor.nullable().optional(),
   /** Camp parany per a robots: les persones no el veuen i ha d'arribar buit. */
   web: z.string().max(200).optional(),
 });

@@ -10,15 +10,14 @@ import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type { Activitat, Cicle, EstatActivitat } from "../../types/gestio";
-import { formataData, formataDataHora, formataHorari } from "../../utils/format";
+import { formataData, formataDataHora } from "../../utils/format";
 import { useGestio, usePermisos } from "./context";
 import { EstatFormulariPublic } from "./EstatFormulariPublic";
-import { HorarisActivitats } from "./HorarisActivitats";
-import { FormActivitat } from "./FormActivitat";
 import { FormCicle } from "./FormCicle";
 import { Historial } from "./Historial";
 import { Duplicats } from "./Duplicats";
-import { ImportacioExportacio } from "./ImportacioExportacio";
+import { Exportacio, ImportacioSollicituds } from "./ImportacioExportacio";
+import { GestioActivitats } from "./GestioActivitats";
 import { LlistatSollicituds } from "./Sollicituds";
 import { Adjudicacio } from "./Adjudicacio";
 import { Places } from "./Places";
@@ -30,12 +29,6 @@ import { Indicadors } from "./Indicadors";
 const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat", "finalitzat", "arxivat"];
 
 const ETIQUETES_ESTAT_ACTIVITAT: Record<EstatActivitat, string> = { esborrany: "Esborrany", activa: "Activa", inactiva: "Inactiva", arxivada: "Arxivada" };
-const ACCIONS_ACTIVITAT: Record<EstatActivitat, { estat: EstatActivitat; text: string }[]> = {
-  esborrany: [{ estat: "activa", text: "Activa" }, { estat: "arxivada", text: "Arxiva" }],
-  activa: [{ estat: "inactiva", text: "Desactiva" }, { estat: "arxivada", text: "Arxiva" }],
-  inactiva: [{ estat: "activa", text: "Activa" }, { estat: "arxivada", text: "Arxiva" }],
-  arxivada: [{ estat: "inactiva", text: "Recupera" }],
-};
 
 type Pendent =
   | { tipus: "cicle"; estat: EstatCicle; transicio: TipusTransicio }
@@ -51,7 +44,6 @@ export function DetallCicle() {
   const detall = useConsulta((s) => serveiGestio.cicle(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
   const activitats = useConsulta((s) => serveiGestio.activitats(casalId, cicleId, s), [casalId, cicleId, versio], `${casalId}/${cicleId}`);
   const [editantCicle, setEditantCicle] = useState(false);
-  const [editantActivitat, setEditantActivitat] = useState<string | null>(null);
   const [exit, setExit] = useState("");
   const [errorAccio, setErrorAccio] = useState<ErrorClientApi | null>(null);
   const [pendent, setPendent] = useState<Pendent>(null);
@@ -157,67 +149,20 @@ export function DetallCicle() {
       <Seccio titol="Activitats">
         {activitats.tipus === "carregant" && <Carregant />}
         {activitats.tipus === "error" && <MissatgeError error={activitats.error} onReintentar={activitats.reintentar} />}
-        {activitats.tipus === "dades" && (activitats.dades.activitats.length === 0 ? <p>Aquest cicle encara no té activitats.</p> : (
-          <div className="taula-contenidor" tabIndex={0} role="region" aria-label="Activitats del cicle">
-            <table className="taula">
-              <thead><tr><th scope="col">Activitat</th><th scope="col">Horari</th><th scope="col">Places</th><th scope="col">Estat</th>
-                {pot("activitats.gestionar") && <th scope="col">Accions</th>}</tr></thead>
-              <tbody>
-                {activitats.dades.activitats.map((a) => editantActivitat === a.id ? (
-                  <tr key={a.id}><td colSpan={5}>
-                    <FormActivitat activitat={a} textBoto="Desa l'activitat" onCancelar={() => setEditantActivitat(null)} onDesar={async (dades) => {
-                      await serveiGestio.actualitzarActivitat(casalId, a.id, { ...dades, versio: a.versio });
-                      setEditantActivitat(null);
-                      setExit(`S'ha desat l'activitat «${String(dades.nom)}».`);
-                      recarrega();
-                    }} />
-                  </td></tr>
-                ) : (
-                  <tr key={a.id}>
-                    <td><strong>{a.nom}</strong>{a.categoria && <div className="text-secundari">{a.categoria}</div>}</td>
-                    <td>{formataHorari(a)}</td>
-                    <td>{a.capacitat}</td>
-                    <td><span className="etiqueta">{ETIQUETES_ESTAT_ACTIVITAT[a.estat]}</span></td>
-                    {pot("activitats.gestionar") && (
-                      <td><div className="accions-fila">
-                        {a.estat !== "arxivada" && <button type="button" className="boto boto--secundari boto--petit" onClick={() => setEditantActivitat(a.id)}>Edita</button>}
-                        <button type="button" className="boto boto--secundari boto--petit" disabled={enCurs}
-                          onClick={() => accio(() => serveiGestio.duplicarActivitat(casalId, a.id), `S'ha creat una còpia de «${a.nom}» en esborrany.`)}>Duplica</button>
-                        {ACCIONS_ACTIVITAT[a.estat].map((x) => (
-                          <button key={x.estat} type="button" className="boto boto--secundari boto--petit" disabled={enCurs}
-                            onClick={() => setPendent({ tipus: "activitat", activitat: a, estat: x.estat })}>{x.text}</button>
-                        ))}
-                      </div></td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
+        {activitats.tipus === "dades" && (
+          <GestioActivitats casalId={casalId} cicleId={cicleId} activitats={activitats.dades.activitats}
+            potGestionar={pot("activitats.gestionar")} potCartells={pot("cartells.generar")}
+            editable={!["finalitzat", "arxivat"].includes(cicle.estat)} onCanvi={recarrega} />
+        )}
       </Seccio>
-
-      {pot("activitats.gestionar") && !["finalitzat", "arxivat"].includes(cicle.estat) && activitats.tipus === "dades" && activitats.dades.activitats.length > 0 && (
-        <Seccio titol="Dies i horaris de les activitats"
-          obertaInicial={activitats.dades.activitats.some((a) => a.estat !== "arxivada" && !a.horari_text && (a.dies_setmana.length === 0 || !a.hora_inici))}>
-          <HorarisActivitats casalId={casalId} activitats={activitats.dades.activitats} onDesat={(m) => { setExit(m); recarrega(); }} />
-        </Seccio>
-      )}
-
-      {pot("activitats.gestionar") && !["finalitzat", "arxivat"].includes(cicle.estat) && (
-        <Seccio titol="Nova activitat" obertaInicial={false}>
-          <FormActivitat textBoto="Crea l'activitat" onDesar={async (dades) => {
-            const { activitat } = await serveiGestio.crearActivitat(casalId, cicleId, dades);
-            setExit(`S'ha creat l'activitat «${activitat.nom}» en esborrany. Activeu-la perquè aparegui a la pàgina pública.`);
-            recarrega();
-          }} />
-        </Seccio>
-      )}
 
       {pot("sollicituds.consultar") && (
         <Seccio titol="Sol·licituds rebudes">
           <LlistatSollicituds casalId={casalId} cicleId={cicleId} activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []}
-            versio={versioPlaces} />
+            versio={versioPlaces + versio} />
+          {pot("dades.importar") && ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"].includes(cicle.estat) && (
+            <ImportacioSollicituds casalId={casalId} cicleId={cicleId} onImportat={recarrega} />
+          )}
         </Seccio>
       )}
 
@@ -227,10 +172,9 @@ export function DetallCicle() {
         </Seccio>
       )}
 
-      {(pot("dades.importar") || pot("dades.exportar")) && (
-        <Seccio titol="Importació i exportació" obertaInicial={false}>
-          <ImportacioExportacio casalId={casalId} cicleId={cicleId} pot={pot} onImportat={recarrega}
-            activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
+      {pot("dades.exportar") && (
+        <Seccio titol="Exportació" obertaInicial={false}>
+          <Exportacio casalId={casalId} cicleId={cicleId} activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []} />
         </Seccio>
       )}
 

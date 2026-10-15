@@ -7,8 +7,12 @@ export interface Preferencia {
   ordre: number | null;
 }
 
+/** Màxim d'activitats que es poden triar al formulari públic (decisió de 2026-10-15). */
+export const MAX_ACTIVITATS_FORMULARI = 7;
+
 export type ErrorPreferencies =
   | { tipus: "cap_activitat" }
+  | { tipus: "massa_activitats"; maxim: number }
   | { tipus: "sense_ordre"; activitats: string[] }
   | { tipus: "duplicades"; activitats: string[]; ordres: number[] }
   | { tipus: "fora_de_rang"; activitats: string[] }
@@ -32,8 +36,9 @@ export function activitatsAmbPreferenciaDuplicada(preferencies: Preferencia[]): 
  * números entre 1 i el nombre d'activitats triades i sense salts (1, 2, 3...).
  * Retorna el primer error, en l'ordre en què s'ha de mostrar.
  */
-export function validaPreferencies(preferencies: Preferencia[]): ErrorPreferencies | null {
+export function validaPreferencies(preferencies: Preferencia[], maxim?: number): ErrorPreferencies | null {
   if (preferencies.length === 0) return { tipus: "cap_activitat" };
+  if (maxim !== undefined && preferencies.length > maxim) return { tipus: "massa_activitats", maxim };
   const ids = preferencies.map((p) => p.activitat_id);
   const repetides = ids.filter((id, i) => ids.indexOf(id) !== i);
   if (repetides.length) return { tipus: "activitat_repetida", activitats: [...new Set(repetides)] };
@@ -54,8 +59,10 @@ export function missatgeErrorPreferencies(e: ErrorPreferencies): string {
   switch (e.tipus) {
     case "cap_activitat":
       return "Cal seleccionar almenys una activitat.";
+    case "massa_activitats":
+      return `Podeu triar com a màxim ${e.maxim} activitats. Desmarqueu-ne alguna.`;
     case "sense_ordre":
-      return "Indiqueu el número de preferència de totes les activitats seleccionades.";
+      return "Falta posar la prioritat a alguna activitat triada. Indiqueu-la a totes les activitats marcades.";
     case "duplicades":
       return `Hi ha preferències duplicades (número ${e.ordres.join(", ")}). Cada activitat ha de tenir un número de preferència diferent: 1 per a la primera, 2 per a la segona, etc. Corregiu les activitats marcades en vermell.`;
     case "fora_de_rang":

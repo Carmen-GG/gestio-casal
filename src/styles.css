@@ -300,7 +300,4 @@ main:focus { outline: none; }
 .llista-comprovacions { list-style: none; padding: 0; margin: 0.75rem 0; }
 .comprovacio { margin: 0.3rem 0; color: #5c3c00; }
 .comprovacio--feta { color: var(--color-exit); }
-.taula-horaris td, .taula-horaris thead th:not(:first-child) { text-align: center; }
-.taula-horaris td input[type="time"] { font: inherit; padding: 0.25rem; }
-.taula-horaris tbody th { font-weight: 600; min-width: 12rem; }
 .fila-canviada { background: #fff4d6; }
