@@ -12,6 +12,7 @@ export function Disseny() {
           <Link to="/" className="capcalera__marca">
             Casal · Gestió integral
           </Link>
+          <Link to="/gestio" className="capcalera__enllac">Panell de gestió</Link>
         </div>
       </header>
       <main id="contingut" className="contenidor" tabIndex={-1}>

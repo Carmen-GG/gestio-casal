@@ -40,6 +40,9 @@ main:focus { outline: none; }
 .capcalera { background: var(--color-primari); color: #fff; }
 .capcalera__interior { display: flex; align-items: center; justify-content: space-between; padding-block: 0.75rem; }
 .capcalera__marca { color: #fff; font-weight: 700; text-decoration: none; font-size: 1.1rem; }
+.capcalera__enllac { color: #fff; }
+.tria-casal { max-width: 40rem; }
+.tria-casal select { width: 100%; min-width: 0; }
 
 .peu { border-top: 1px solid var(--color-vora); color: var(--color-text-secundari); font-size: 0.9rem; }
 

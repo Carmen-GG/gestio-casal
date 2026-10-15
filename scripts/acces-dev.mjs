@@ -68,6 +68,8 @@ INSERT INTO assignacions_rols (id, usuari_id, rol_codi, casal_id, atorgat_el, mo
   FROM usuaris u WHERE u.email = ${q(correu)}
   AND NOT EXISTS (SELECT 1 FROM assignacions_rols a WHERE a.usuari_id = u.id AND a.rol_codi = ${q(rol)}
                   AND ifnull(a.casal_id, '*') = ifnull(${casalSql}, '*') AND a.revocat_el IS NULL);
+-- Un codi fix (--codi-de-variable) es pot tornar a preparar: es treu l'anterior, ja usat o caducat.
+DELETE FROM testimonis_acces WHERE resum = ${q(resum)};
 INSERT INTO testimonis_acces (resum, usuari_id, creat_el, caduca_el)
   SELECT ${q(resum)}, id, ${q(isoAra)}, ${q(caduca)} FROM usuaris WHERE email = ${q(correu)};
 INSERT INTO registres_auditoria (creat_el, casal_id, usuari_id, tipus_operacio, entitat, entitat_id, resultat, detalls)
@@ -85,9 +87,15 @@ if (rol !== "admin_central") {
   }
 }
 
-execFileSync("npx", ["wrangler", "d1", "execute", "DB", entorn === "local" ? "--local" : "--remote",
-  ...(entorn === "staging" ? ["--env", "staging"] : []), "--command", sql],
-  { stdio: ["ignore", "ignore", "inherit"], shell: process.platform === "win32" });
+try {
+  execFileSync("npx", ["wrangler", "d1", "execute", "DB", entorn === "local" ? "--local" : "--remote",
+    ...(entorn === "staging" ? ["--env", "staging"] : []), "--command", sql],
+    { stdio: ["ignore", "ignore", "inherit"], shell: process.platform === "win32" });
+} catch {
+  // L'error de Node inclou l'ordre sencera (correu i resum del codi): no s'ha d'escriure als registres.
+  console.error("No s'ha pogut preparar l'accés. Vegeu el missatge de Wrangler a sobre.");
+  process.exit(1);
+}
 
 if (codiPropi) {
   console.log(`\nCodi d'accés preparat: vàlid ${minuts} minuts i d'un sol ús.`);
