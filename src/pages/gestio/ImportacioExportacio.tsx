@@ -26,19 +26,23 @@ const etiquetaDesti = (c: string) => ETIQUETES_DESTI[c] ?? c.replace(/^preferenc
  * Importació en tres passos (fitxer, previsualització i validació, confirmació)
  * i exportacions en XLSX real. La validació definitiva la fa el servidor.
  */
-export function ImportacioExportacio({ casalId, cicleId, activitats, pot }: {
+export function ImportacioExportacio({ casalId, cicleId, activitats, pot, onImportat }: {
   casalId: string; cicleId: string; activitats: Activitat[]; pot: (p: string) => boolean;
+  /** Després d'importar: la pàgina del cicle torna a carregar activitats i sol·licituds. */
+  onImportat?: () => void;
 }) {
   return (
     <div className="dues-columnes">
-      {pot("dades.importar") && <Importacio casalId={casalId} cicleId={cicleId} potActivitats={pot("activitats.gestionar")} />}
+      {pot("dades.importar") && <Importacio casalId={casalId} cicleId={cicleId} potActivitats={pot("activitats.gestionar")} onImportat={onImportat} />}
       {pot("dades.exportar") && <Exportacio casalId={casalId} cicleId={cicleId} activitats={activitats} />}
       {!pot("dades.importar") && !pot("dades.exportar") && <p>No teniu permís per importar ni exportar dades.</p>}
     </div>
   );
 }
 
-function Importacio({ casalId, cicleId, potActivitats }: { casalId: string; cicleId: string; potActivitats: boolean }) {
+function Importacio({ casalId, cicleId, potActivitats, onImportat }: {
+  casalId: string; cicleId: string; potActivitats: boolean; onImportat?: () => void;
+}) {
   const [tipus, setTipus] = useState<Tipus>("sollicituds");
   const [fitxer, setFitxer] = useState<{ nom: string; taula: TaulaLlegida } | null>(null);
   const [mapatge, setMapatge] = useState<string[]>([]);
@@ -104,8 +108,9 @@ function Importacio({ casalId, cicleId, potActivitats }: { casalId: string; cicl
       const r = await serveiGestio.confirmarImportacio(casalId, cicleId, tipus, {
         files: filesMapades(), nom_fitxer: fitxer!.nom, clau, confirmacio: true, files_esperades: prev!.resum.valides,
       });
-      setResultat(`Importació feta: ${r.importades} registres importats i ${r.omeses} omesos (amb errors o buits).${tipus === "activitats" ? " Les activitats s'han creat en esborrany: reviseu-les i activeu-les." : ""}`);
+      setResultat(`Importació feta: ${r.importades} registres importats i ${r.omeses} omesos (amb errors o buits).${tipus === "activitats" ? " Les activitats s'han creat en esborrany: poseu-hi els dies i horaris a «Dies i horaris de les activitats» i activeu-les a «Formulari a la pàgina pública»." : ""}`);
       reinicia();
+      onImportat?.();
     } catch (e) {
       if (e instanceof ErrorClientApi) setError(e); else throw e;
     } finally {

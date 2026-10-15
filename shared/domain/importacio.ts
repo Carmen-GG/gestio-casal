@@ -94,9 +94,19 @@ export function interpretaEnter(valor: string): number | null {
   return /^\d{1,6}$/.test(v) ? Number(v) : null;
 }
 
+/**
+ * Nom de l'activitat sense el cicle que la PGEc hi afegeix al final
+ * («Pilates 1. 3r Cicle 2026» → «Pilates 1»; «En Forma! 3r Cicle 2026» → «En Forma!»).
+ * Així el nom es pot reutilitzar d'un cicle a l'altre i surt net als cartells.
+ */
+export function netejaNomActivitat(nom: string): string {
+  const net = nom.trim().replace(/[\s.,;:–-]*\b\d{1,2}\s*(?:r|n|t|è|e|º|o|a|ª)?\s+cicle\s+\d{4}\s*\.?$/iu, "").trim();
+  return net || nom.trim();
+}
+
 /** Sinònims habituals de capçaleres per proposar el mapatge automàticament. */
 const SINONIMS: Record<string, string[]> = {
-  nom: ["nom", "nombre", "name"],
+  nom: ["nom", "nombre", "name", "nom activitat", "nom de l activitat", "nombre actividad", "nombre de la actividad"],
   cognom1: ["cognom1", "primer cognom", "cognom", "cognoms", "apellido", "primer apellido", "apellido1", "apellidos"],
   cognom2: ["cognom2", "segon cognom", "segundo apellido", "apellido2"],
   data_naixement: ["data naixement", "data de naixement", "fecha nacimiento", "fecha de nacimiento"],
@@ -119,7 +129,8 @@ const SINONIMS: Record<string, string[]> = {
   data_inici: ["data inici", "fecha inicio"],
   data_fi: ["data fi", "data final", "fecha fin", "fecha final"],
   espai: ["espai", "sala", "aula", "espacio"],
-  capacitat: ["capacitat", "places", "plazas", "aforament", "aforo", "capacidad"],
+  // «Assistents previstos» és la columna de places del llistat d'activitats de la PGEc.
+  capacitat: ["capacitat", "places", "plazas", "aforament", "aforo", "capacidad", "assistents previstos", "asistentes previstos"],
   nombre_sessions: ["sessions", "nombre sessions", "sesiones"],
   codi_extern: ["codi", "codi extern", "codi pgec", "codigo", "id"],
 };
