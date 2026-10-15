@@ -4,6 +4,7 @@ import { Carregant, MissatgeError } from "../../components/EstatsConsulta";
 import { useConsulta } from "../../hooks/useConsulta";
 import { serveiAuth } from "../../services/gestio";
 import type { ContextGestio } from "./context";
+import { MenuCasal } from "./MenuCasal";
 
 /** Estructura del panell: comprova la sessió al servidor abans de mostrar res. */
 export function GestioDisseny() {
@@ -69,7 +70,12 @@ export function GestioDisseny() {
           <Link to="/gestio/compte">Fixeu una contrasenya</Link> per entrar amb el vostre correu.
         </p>
       )}
-      <Outlet context={context} />
+      {casalActual ? (
+        <div className="gestio__amb-menu">
+          <MenuCasal casalId={casalActual.id} permisos={casalActual.permisos} />
+          <div className="gestio__contingut"><Outlet context={context} /></div>
+        </div>
+      ) : <Outlet context={context} />}
     </div>
   );
 }
