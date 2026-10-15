@@ -178,6 +178,9 @@ export interface RepositoriUsuaris {
   perEmail(email: string): Promise<Usuari | null>;
   crear(dades: { email: string; nom_visible: string; proveidor_identitat: Usuari["proveidor_identitat"] }): Promise<Usuari>;
   permisos(usuariId: string): Promise<PermisosUsuari>;
+  /** Resum desat de la contrasenya (null si no en té). */
+  resumContrasenya(usuariId: string): Promise<string | null>;
+  fixarContrasenya(usuariId: string, resum: string, ara: string): Promise<void>;
   assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
   assignacioPerId(id: string): Promise<AssignacioRol | null>;
   rolExisteix(codi: string): Promise<{ abast: "casal" | "global" } | null>;

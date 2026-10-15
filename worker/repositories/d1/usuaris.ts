@@ -34,6 +34,17 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
     return (await this.perId(id))!;
   }
 
+  async resumContrasenya(usuariId: string) {
+    const f = await this.db.prepare("SELECT contrasenya_resum FROM usuaris WHERE id = ?").bind(usuariId)
+      .first<{ contrasenya_resum: string | null }>();
+    return f?.contrasenya_resum ?? null;
+  }
+
+  async fixarContrasenya(usuariId: string, resum: string, ara: string) {
+    await this.db.prepare("UPDATE usuaris SET contrasenya_resum = ?, contrasenya_canviada_el = ?, actualitzat_el = ? WHERE id = ?")
+      .bind(resum, ara, ara, usuariId).run();
+  }
+
   async permisos(usuariId: string): Promise<PermisosUsuari> {
     // Només assignacions vigents, d'usuaris actius i (si són de casal) de casals actius.
     const { results } = await this.db

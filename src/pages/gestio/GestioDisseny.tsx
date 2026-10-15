@@ -11,7 +11,8 @@ export function GestioDisseny() {
   const navegar = useNavigate();
   const { casalId } = useParams();
   const [versio, setVersio] = useState(0);
-  const consulta = useConsulta((s) => serveiAuth.jo(s), [versio]);
+  // Amb clau: en recarregar les dades de la persona no es desmunta la pàgina oberta (i no es perden els missatges).
+  const consulta = useConsulta((s) => serveiAuth.jo(s), [versio], "jo");
   const [sortint, setSortint] = useState(false);
 
   if (consulta.tipus === "carregant") return <Carregant text="Comprovant la sessió…" />;
@@ -57,11 +58,17 @@ export function GestioDisseny() {
             )}
           </ul>
         )}
-        <span className="barra-gestio__usuari">{jo.usuari.nom_visible}</span>
+        <Link to="/gestio/compte" className="barra-gestio__usuari" title="El meu compte">{jo.usuari.nom_visible}</Link>
         <button type="button" className="boto boto--secundari boto--petit" onClick={sortir} disabled={sortint}>
           Tanca la sessió
         </button>
       </nav>
+      {!jo.te_contrasenya && !ubicacio.pathname.startsWith("/gestio/compte") && (
+        <p className="avis" role="status">
+          Encara no teniu contrasenya: cada vegada caldria un codi d'accés nou.{" "}
+          <Link to="/gestio/compte">Fixeu una contrasenya</Link> per entrar amb el vostre correu.
+        </p>
+      )}
       <Outlet context={context} />
     </div>
   );

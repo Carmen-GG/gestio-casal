@@ -11,4 +11,6 @@ export interface Env {
    * Opcional: si no està configurat, no es limita (p. ex. en algunes proves).
    */
   LIMIT_SOLLICITUDS?: RateLimit;
+  /** Limitador dels intents d'entrada amb contrasenya. Opcional com l'anterior. */
+  LIMIT_ENTRADA?: RateLimit;
 }

@@ -9,6 +9,7 @@ import { NoTrobada } from "./pages/NoTrobada";
 import { Entrar } from "./pages/gestio/Entrar";
 import { GestioDisseny } from "./pages/gestio/GestioDisseny";
 import { GestioInici } from "./pages/gestio/GestioInici";
+import { Compte } from "./pages/gestio/Compte";
 import { CasalCicles } from "./pages/gestio/CasalCicles";
 import { DetallCicle } from "./pages/gestio/DetallCicle";
 import { Usuaris } from "./pages/gestio/Usuaris";
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
         element: <GestioDisseny />,
         children: [
           { index: true, element: <GestioInici /> },
+          { path: "compte", element: <Compte /> },
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
           { path: ":casalId/cicles/:cicleId/sorteig", element: <PantallaSorteig /> },
