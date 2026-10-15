@@ -11,7 +11,7 @@
 import { normalitzaText } from "./ordenacio";
 
 /** Versió de l'algorisme. Es desa a cada execució per poder-la reproduir. */
-export const VERSIO_MOTOR = 2;
+export const VERSIO_MOTOR = 3;
 
 /**
  * - sorteig_activitat: a cada activitat, l'ordre el decideix un sorteig propi
@@ -118,6 +118,8 @@ export interface ActivitatMotor {
   capacitat: number;
   /** Les activitats no actives no adjudiquen places. */
   disponible: boolean;
+  /** Grup d'activitats que no es poden acumular (vegeu `EntradaMotor.limits_grups`). */
+  grup?: number | null;
 }
 
 export interface EntradaMotor {
@@ -136,9 +138,11 @@ export interface EntradaMotor {
   espera_anterior?: ReadonlySet<string>;
   /** Sorteig de cada activitat (criteri "sorteig_activitat"). */
   sortejos?: ReadonlyMap<string, Sorteig>;
+  /** Màxim d'activitats admeses de cada grup per persona ({"1": 1, "2": 3}). Grups sense límit: no hi són. */
+  limits_grups?: Readonly<Record<string, number>>;
 }
 
-export type MotiuNoAdjudicada = "maxim_activitats" | "activitat_no_disponible" | "exclosa" | "sense_llista_espera";
+export type MotiuNoAdjudicada = "maxim_activitats" | "maxim_grup" | "activitat_no_disponible" | "exclosa" | "sense_llista_espera";
 
 export interface ResultatMotor {
   sollicitud_id: string;
@@ -281,6 +285,14 @@ export function adjudica(entrada: EntradaMotor): SortidaMotor {
   let seq = 0;
   const maxim = p.maxim_activitats_per_persona;
   const potAdmetre = (s: SollicitudMotor) => maxim === null || (admesesPerPersona.get(s.participant_id) ?? 0) < maxim;
+  // Grups d'activitats: una persona no pot obtenir més activitats d'un grup que el límit del grup.
+  const limitsGrups = entrada.limits_grups ?? {};
+  const admesesPerGrup = new Map<string, number>(); // "participant:grup" → admeses
+  const limitGrup = (a: ActivitatMotor) => (a.grup != null ? limitsGrups[String(a.grup)] : undefined);
+  const potAdmetreGrup = (s: SollicitudMotor, a: ActivitatMotor) => {
+    const limit = limitGrup(a);
+    return limit === undefined || (admesesPerGrup.get(`${s.participant_id}:${a.grup}`) ?? 0) < limit;
+  };
 
   type Prioritat = "continuitat" | "espera_anterior" | null;
   const decideix = (s: SollicitudMotor, pref: { activitat_id: string; ordre: number }, prioritat: Prioritat) => {
@@ -305,11 +317,21 @@ export function adjudica(entrada: EntradaMotor): SortidaMotor {
       resultats.set(clau, { ...base, resultat: "no_adjudicada", ordre_adjudicacio: ++seq, motiu: "maxim_activitats" });
       return;
     }
+    if (!potAdmetreGrup(s, activitat)) {
+      // Ja té el màxim d'activitats d'aquest grup: no s'admet ni entra a la llista d'espera.
+      if (prioritat) return;
+      resultats.set(clau, { ...base, resultat: "no_adjudicada", ordre_adjudicacio: ++seq, motiu: "maxim_grup" });
+      return;
+    }
     const marca = { per_continuitat: prioritat === "continuitat", per_espera_anterior: prioritat === "espera_anterior" };
     const lliure = lliures.get(pref.activitat_id) ?? 0;
     if (lliure > 0) {
       lliures.set(pref.activitat_id, lliure - 1);
       admesesPerPersona.set(s.participant_id, (admesesPerPersona.get(s.participant_id) ?? 0) + 1);
+      if (limitGrup(activitat) !== undefined) {
+        const clauGrup = `${s.participant_id}:${activitat.grup}`;
+        admesesPerGrup.set(clauGrup, (admesesPerGrup.get(clauGrup) ?? 0) + 1);
+      }
       resultats.set(clau, { ...base, ...marca, resultat: "admesa", ordre_adjudicacio: ++seq, motiu: null });
       return;
     }

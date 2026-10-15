@@ -44,6 +44,9 @@ const campsCicle = {
   configuracio_formulari: configuracioFormulari.optional(),
   /** Percentatge mínim d'assistència per identificar persones per sota (sense cap acció automàtica). */
   llindar_assistencia: z.number().int().min(1, "Mínim 1%.").max(100, "Màxim 100%.").nullable().optional(),
+  /** Màxim d'activitats de cada grup per persona ({"1": 1, "2": 3}). */
+  limits_grups: z.record(z.string().regex(/^[1-9][0-9]?$/, "Grup no vàlid."), z.number().int().min(1, "Mínim 1.").max(20, "Màxim 20."))
+    .refine((r) => Object.keys(r).length <= 99).optional(),
 };
 
 type DatesCicle = Partial<Record<"data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions", string>>;
@@ -92,6 +95,7 @@ const campsActivitat = {
   data_fi: data.nullable().optional(),
   espai: textOpcional(120).optional(),
   destinataris: textOpcional(200).optional(),
+  grup: z.number().int().min(1, "Mínim 1.").max(99, "Màxim 99.").nullable().optional(),
   capacitat: z.number().int().min(0).max(10000),
   nombre_sessions: z.number().int().min(0).max(1000).nullable().optional(),
   minim_participants: z.number().int().min(0).max(10000).nullable().optional(),

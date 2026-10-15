@@ -5,9 +5,11 @@ import { assignacionsUpdate, comOperacio, comStatement, jsonObjecte, marcadors }
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
 
-type Fila = Omit<Cicle, "configuracio_formulari"> & { configuracio_formulari: string };
+type Fila = Omit<Cicle, "configuracio_formulari" | "limits_grups"> & { configuracio_formulari: string; limits_grups: string };
 
-const mapa = (f: Fila): Cicle => ({ ...f, configuracio_formulari: jsonObjecte(f.configuracio_formulari) });
+const mapa = (f: Fila): Cicle => ({
+  ...f, configuracio_formulari: jsonObjecte(f.configuracio_formulari), limits_grups: jsonObjecte(f.limits_grups) as Record<string, number>,
+});
 
 export class D1RepositoriCicles implements RepositoriCicles {
   constructor(private readonly db: D1Database, private readonly rellotge: Rellotge) {}
@@ -66,7 +68,7 @@ export class D1RepositoriCicles implements RepositoriCicles {
   operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisCicle, ara: string, operacio: string) {
     const { sql, valors } = assignacionsUpdate(canvis, [
       "nom", "any", "data_inici", "data_fi", "obertura_inscripcions", "tancament_inscripcions",
-      "data_resolucio_prevista", "configuracio_formulari", "llindar_assistencia",
+      "data_resolucio_prevista", "configuracio_formulari", "llindar_assistencia", "limits_grups",
     ]);
     return comOperacio(
       this.db

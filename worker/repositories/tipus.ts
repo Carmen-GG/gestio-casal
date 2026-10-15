@@ -46,12 +46,14 @@ export interface Cicle {
   estat: EstatCicle;
   configuracio_formulari: Record<string, unknown>;
   llindar_assistencia: number | null;
+  /** Màxim d'activitats de cada grup per persona a l'adjudicació ({"1": 1, "2": 3}). */
+  limits_grups: Record<string, number>;
   versio: number;
   creat_el: string;
   actualitzat_el: string;
 }
 
-export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia"> & {
+export type NouCicle = Omit<Cicle, "id" | "estat" | "versio" | "creat_el" | "actualitzat_el" | "configuracio_formulari" | "llindar_assistencia" | "limits_grups"> & {
   configuracio_formulari?: Record<string, unknown>;
   /** Sense valor: el llindar per defecte de la regla del casal. Null: sense llindar. */
   llindar_assistencia?: number | null;
@@ -76,6 +78,8 @@ export interface Activitat {
   espai: string | null;
   /** Persones a qui va dirigida (text de la PGEc). */
   destinataris: string | null;
+  /** Grup d'activitats que no es poden acumular (vegeu `cicles.limits_grups`). */
+  grup: number | null;
   capacitat: number;
   nombre_sessions: number | null;
   /** Mínim de participants perquè es faci. Només genera avisos. */
@@ -94,7 +98,7 @@ export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "c
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "destinataris" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;
@@ -202,7 +206,7 @@ export interface RepositoriSessions {
 
 export type CanvisCicle = Partial<Pick<Cicle,
   | "nom" | "any" | "data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions"
-  | "data_resolucio_prevista" | "configuracio_formulari" | "llindar_assistencia">>;
+  | "data_resolucio_prevista" | "configuracio_formulari" | "llindar_assistencia" | "limits_grups">>;
 
 export interface RepositoriCicles {
   /** Sempre filtra per casal per evitar accessos horitzontals. */
@@ -476,6 +480,7 @@ export interface MovimentPlaca {
 export interface DadesMotor {
   sollicituds: (SollicitudMotor & { estat: EstatSollicitud })[];
   activitats: (ActivitatMotor & { nom: string; estat: EstatActivitat; minim_participants: number | null })[];
+  limits_grups: Record<string, number>;
 }
 
 /** Sorteig d'una activitat (número o lletra). No s'esborra: s'anul·la amb motiu. */

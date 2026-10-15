@@ -92,6 +92,7 @@ export const ETIQUETES_RESULTAT = {
 
 export const ETIQUETES_MOTIU_NO_ADJUDICADA = {
   maxim_activitats: "Ja té el màxim d'activitats",
+  maxim_grup: "Ja té el màxim d'activitats d'aquest grup",
   activitat_no_disponible: "Activitat no disponible",
   exclosa: "Renúncia o baixa anterior",
   sense_llista_espera: "Sense llista d'espera",
