@@ -6,9 +6,9 @@ import { formataDataHora } from "../utils/format";
 export function instruccionsAcces(nom: string, email: string, codi: CodiAcces, casal?: string) {
   return [
     `Hola, ${nom}!`,
-    `Ja tens accés al panell de gestió${casal ? ` del ${casal}` : ""}.`,
-    `1. Entra a ${window.location.origin}/gestio/entrar?primer`,
-    "2. A «Primer accés o contrasenya oblidada»,",
+    `Ja tens accés a l'administració${casal ? ` del ${casal}` : ""}.`,
+    `1. Entra a ${window.location.origin}/`,
+    "2. Al bloc «Administració», marca «És la primera vegada» i",
     `   escriu el teu correu (${email}) i aquest codi: ${codi.codi}`,
     "3. Crea la teva contrasenya. A partir d'aleshores entraràs amb el correu i la contrasenya.",
     `El codi només serveix una vegada i caduca el ${formataDataHora(codi.caduca_el)}.`,

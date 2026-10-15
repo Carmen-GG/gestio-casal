@@ -34,14 +34,14 @@ export function GestioDisseny() {
     try {
       await serveiAuth.sortir();
     } finally {
-      navegar("/gestio/entrar", { replace: true });
+      navegar("/", { replace: true });
     }
   }
 
   return (
     <div className="gestio">
-      <nav className="barra-gestio" aria-label="Panell de gestió">
-        <Link to="/gestio" className="barra-gestio__titol">{jo.superadministracio ? "Superadministració" : "Panell de gestió"}</Link>
+      <nav className="barra-gestio" aria-label={jo.superadministracio ? "Superadministració" : "Administració"}>
+        <Link to="/gestio" className="barra-gestio__titol">{jo.superadministracio ? "Superadministració" : "Administració"}</Link>
         {jo.casals.length > 0 && (
           <label className="barra-gestio__casal">
             <span>Casal:</span>

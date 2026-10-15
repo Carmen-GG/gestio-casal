@@ -84,7 +84,7 @@ export function Entrar() {
 
   return (
     <section aria-labelledby="titol-entrar" className="estret">
-      <h1 id="titol-entrar">Accés al panell de gestió</h1>
+      <h1 id="titol-entrar">Accés a l'administració</h1>
       {error && <MissatgeError error={error} />}
       <form onSubmit={enviaContrasenya} noValidate className="formulari">
         <CampText etiqueta="Correu electrònic" type="email" obligatori autoComplete="username" value={email}

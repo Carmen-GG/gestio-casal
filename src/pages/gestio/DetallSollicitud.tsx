@@ -16,7 +16,7 @@ import { usePermisos } from "./context";
 import { Historial } from "./Historial";
 import { nomComplet } from "./Sollicituds";
 
-const ORIGENS = { formulari_public: "Formulari públic", importacio: "Importació", gestio: "Panell de gestió" } as const;
+const ORIGENS = { formulari_public: "Formulari públic", importacio: "Importació", gestio: "Administració del casal" } as const;
 const CAMPS_EDITABLES: (CampPersonal | "codi_participant_intern")[] = [
   "nom", "cognom1", "cognom2", "data_naixement", "telefon", "email", "adreca", "codi_postal", "municipi", "lloc_naixement", "barri",
   "codi_participant_intern",

@@ -434,3 +434,8 @@ main:focus { outline: none; }
 .entrada-inici p { margin: 0; }
 .entrada-inici__formulari { margin-top: auto; max-width: 28rem; }
 .entrada-inici__formulari .boto { align-self: flex-start; }
+
+.dades-compte { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0 0 var(--espai); }
+.dades-compte dt { color: var(--color-text-secundari); }
+.dades-compte dd { margin: 0; overflow-wrap: anywhere; }
+.dades-compte__casal { display: block; }

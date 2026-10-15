@@ -5,7 +5,7 @@
 |---|---|---|
 | Persona no autenticada | — | Àrea pública: consultar cicles i activitats publicades (i, a la Fase 3, enviar sol·licituds) |
 | Personal d'un casal | Sessió del panell | Segons el rol al casal: `gestor_casal`, `consulta_casal`, `difusio_casal` |
-| Administració central | Sessió del panell | Rol `admin_central` (abast global). Només s'ha d'assignar amb autorització expressa |
+| Superadministració | Sessió (pàgina principal, només contrasenya) | Rol `admin_central` (abast global). Només s'ha d'assignar amb autorització expressa |
 
 Els permisos de cada rol són a la taula `rols_permisos` (migració 0001). El servidor els torna a llegir a
 **cada petició**: una revocació té efecte immediat. Cada ruta de `/api/gestio/casals/{casalId}/…`

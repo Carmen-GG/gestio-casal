@@ -28,5 +28,5 @@ jobs:
           cache: npm
       - run: npm ci
       - run: >-
-          node scripts/acces-dev.mjs --entorn staging --rol admin_central --nom "Administració central"
+          node scripts/acces-dev.mjs --entorn staging --rol admin_central --nom "Superadministració"
           --correu-de-variable ACCES_CORREU --codi-de-variable ACCES_CODI --minuts 60
