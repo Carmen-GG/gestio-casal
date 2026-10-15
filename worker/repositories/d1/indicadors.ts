@@ -17,7 +17,8 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
              WHERE pr.activitat_id = a.id AND s.estat <> 'anullada' AND pr.ordre = 1) AS primera_preferencia,
            (SELECT COUNT(*) FROM places p WHERE p.activitat_id = a.id AND p.estat = 'admesa') AS admeses,
            (SELECT COUNT(*) FROM places p WHERE p.activitat_id = a.id AND p.estat = 'oferta_pendent') AS ofertes,
-           (SELECT COUNT(*) FROM places p WHERE p.activitat_id = a.id AND p.estat = 'llista_espera') AS espera
+           (SELECT COUNT(*) FROM places p WHERE p.activitat_id = a.id AND p.estat = 'llista_espera') AS espera,
+           (SELECT COUNT(*) FROM baixes_voluntaries b WHERE b.activitat_id = a.id) AS baixes_voluntaries
          FROM activitats a WHERE a.casal_id = ? AND a.cicle_id = ? AND a.estat <> 'arxivada' ORDER BY a.nom`,
       ).bind(casalId, cicleId),
       this.db.prepare(

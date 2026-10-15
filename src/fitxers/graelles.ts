@@ -1,6 +1,6 @@
 /**
  * Graelles d'assistència en XLSX real: un full per activitat, amb les persones
- * admeses per ordre alfabètic, una columna per sessió i, separada a sota, la
+ * admeses per ordre alfabètic (nom, cognoms i telèfon), una columna per sessió i, separada a sota, la
  * llista d'espera per posició. Preparades per imprimir en horitzontal.
  */
 import type { DadesGraelles } from "../types/gestio";
@@ -37,7 +37,7 @@ export async function generaGraelles(dades: DadesGraelles, excel?: ExcelJS): Pro
   dades.graelles.forEach((g, idx) => {
     const columnesSessio = g.sessions.length > 0 ? g.sessions.map((s) => dataCurta(s.data))
       : Array.from({ length: g.columnes_buides }, () => "");
-    const fixes = ["Núm.", "Cognoms i nom", ...(dades.telefon ? ["Telèfon"] : [])];
+    const fixes = ["Núm.", "Nom", "Cognoms", ...(dades.telefon ? ["Telèfon"] : [])];
     const total = fixes.length + columnesSessio.length + 1; // + Observacions
     const full = llibre.addWorksheet(noms[idx]!, {
       pageSetup: {
@@ -75,7 +75,7 @@ export async function generaGraelles(dades: DadesGraelles, excel?: ExcelJS): Pro
     const filaCapcalera = capcalera.number;
     for (const p of g.admeses) {
       const marques = g.sessions.length > 0 ? p.marques : columnesSessio.map(() => "");
-      const r = full.addRow([p.ordre, p.persona, ...(dades.telefon ? [p.telefon ?? ""] : []), ...marques, ""]);
+      const r = full.addRow([p.ordre, p.nom, p.cognoms, ...(dades.telefon ? [p.telefon ?? ""] : []), ...marques, ""]);
       r.height = 22;
       r.alignment = { vertical: "middle", wrapText: true };
       r.eachCell({ includeEmpty: true }, (c, col) => {
@@ -86,7 +86,7 @@ export async function generaGraelles(dades: DadesGraelles, excel?: ExcelJS): Pro
     if (g.admeses.length > 0) {
       full.autoFilter = { from: { row: filaCapcalera, column: 1 }, to: { row: filaCapcalera + g.admeses.length, column: fixes.length } };
     }
-    full.views = [{ state: "frozen", ySplit: filaCapcalera, xSplit: 2 }];
+    full.views = [{ state: "frozen", ySplit: filaCapcalera, xSplit: 3 }];
     full.pageSetup.printTitlesRow = `${filaCapcalera}:${filaCapcalera}`;
     const llegenda = full.addRow([dades.llegenda]);
     llegenda.font = { italic: true, size: 9, color: { argb: "FF4A5560" } };
@@ -100,11 +100,11 @@ export async function generaGraelles(dades: DadesGraelles, excel?: ExcelJS): Pro
     if (g.espera.length === 0) {
       full.addRow(["Ningú en llista d'espera."]).font = { italic: true };
     } else {
-      const ce = full.addRow(["Posició", "Cognoms i nom", ...(dades.telefon ? ["Telèfon"] : []), "Situació"]);
+      const ce = full.addRow(["Posició", "Nom", "Cognoms", ...(dades.telefon ? ["Telèfon"] : []), "Situació"]);
       ce.font = { bold: true };
       ce.eachCell((c) => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF1D6" } }; c.border = VORES; });
       for (const p of g.espera) {
-        const r = full.addRow([p.posicio ?? "", p.persona, ...(dades.telefon ? [p.telefon ?? ""] : []), p.oferta_pendent ? "Plaça oferta, pendent de resposta" : ""]);
+        const r = full.addRow([p.posicio ?? "", p.nom, p.cognoms, ...(dades.telefon ? [p.telefon ?? ""] : []), p.oferta_pendent ? "Plaça oferta, pendent de resposta" : ""]);
         r.height = 20;
         r.eachCell({ includeEmpty: true }, (c) => { c.border = VORES; });
       }
@@ -112,8 +112,10 @@ export async function generaGraelles(dades: DadesGraelles, excel?: ExcelJS): Pro
 
     // Amplades.
     full.getColumn(1).width = 8;
-    full.getColumn(2).width = Math.min(Math.max(...[...g.admeses, ...g.espera].map((p) => p.persona.length), 20) + 2, 42);
-    if (dades.telefon) full.getColumn(3).width = 13;
+    const persones = [...g.admeses, ...g.espera];
+    full.getColumn(2).width = Math.min(Math.max(...persones.map((p) => p.nom.length), 12) + 2, 28);
+    full.getColumn(3).width = Math.min(Math.max(...persones.map((p) => p.cognoms.length), 16) + 2, 36);
+    if (dades.telefon) full.getColumn(4).width = 13;
     for (let c = fixes.length + 1; c < total; c++) full.getColumn(c).width = 7;
     full.getColumn(total).width = 28;
     // Les etiquetes de la capçalera (Casal, Cicle…) a la columna 1 no s'han de tallar.
@@ -143,9 +145,14 @@ export async function validaGraelles(buffer: ArrayBuffer, dades: DadesGraelles, 
     const g = dades.graelles[i];
     if (!g) return;
     const persones: string[] = [];
-    full.eachRow((fila) => { const v = fila.getCell(2).value; if (typeof v === "string") persones.push(v); });
-    const admeses = g.admeses.map((p) => p.persona);
-    const espera = g.espera.map((p) => p.persona);
+    full.eachRow((fila) => {
+      const nom = fila.getCell(2).value;
+      const cognoms = fila.getCell(3).value;
+      if (typeof nom === "string" && typeof cognoms === "string") persones.push(`${nom}|${cognoms}`);
+    });
+    const clau = (p: { nom: string; cognoms: string }) => `${p.nom}|${p.cognoms}`;
+    const admeses = g.admeses.map(clau);
+    const espera = g.espera.map(clau);
     const comptades = [...admeses, ...espera].filter((nom) => persones.includes(nom)).length;
     const esperades = admeses.length + espera.length;
     const totes = persones.filter((v) => [...admeses, ...espera].includes(v)).length;

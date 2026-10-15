@@ -16,9 +16,14 @@ const DIES = ["", "dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 
 const nomPersona = (p: { cognom1: string | null; cognom2: string | null; nom: string | null }) =>
   `${[p.cognom1, p.cognom2].filter(Boolean).join(" ")}, ${p.nom ?? ""}`;
+const nomICognoms = (p: { cognom1: string | null; cognom2: string | null; nom: string | null }) =>
+  ({ nom: p.nom ?? "", cognoms: [p.cognom1, p.cognom2].filter(Boolean).join(" ") });
 const perPersona = (a: FilaPlaca, b: FilaPlaca) =>
   comparaPersones({ cognom1: a.participant.cognom1 ?? "", cognom2: a.participant.cognom2, nom: a.participant.nom ?? "" },
     { cognom1: b.participant.cognom1 ?? "", cognom2: b.participant.cognom2, nom: b.participant.nom ?? "" }) || a.numero - b.numero;
+
+const ordreEspera = (places: FilaPlaca[]) =>
+  [...places].sort((x, y) => (x.posicio_espera ?? 1e9) - (y.posicio_espera ?? 1e9) || x.numero - y.numero);
 
 export function horariText(a: Activitat): string | null {
   if (a.horari_text) return a.horari_text;
@@ -49,11 +54,13 @@ export class ServeiAssistencia {
   /** Full d'assistència d'una activitat: sessions, persones, marques i percentatges. */
   async activitat(casalId: string, activitatId: string, vis: Visibilitat) {
     const { activitat, cicle } = await this.activitatICicle(casalId, activitatId);
-    const [sessions, places, marques] = await Promise.all([
+    const [sessions, places, marques, baixes] = await Promise.all([
       this.repos.assistencia.sessions(activitatId),
       this.repos.adjudicacio.places(casalId, cicle.id, activitatId),
       this.repos.assistencia.marquesActivitat(activitatId),
+      this.repos.assistencia.baixesVoluntaries(activitatId),
     ]);
+    const baixaPerPlaca = new Map(baixes.map((b) => [b.placa_id, { data: b.data, motiu: b.motiu }]));
     const perPlaca = new Map<string, Marca[]>();
     for (const m of marques) perPlaca.set(m.placa_id, [...(perPlaca.get(m.placa_id) ?? []), m]);
     const persones = this.participants(places, marques).map((p) => {
@@ -63,13 +70,19 @@ export class ServeiAssistencia {
         ...filtraParticipant(p, vis),
         marques: Object.fromEntries(propies.map((m) => [m.sessio_id, { estat: m.estat, versio: m.versio }])),
         resum, sota_llindar: sotaLlindar(resum.percentatge, cicle.llindar_assistencia),
+        baixa_voluntaria: baixaPerPlaca.get(p.id) ?? null,
       };
     });
+    // Llista d'espera per ordre d'adjudicació, sempre amb nom, cognoms i telèfon (si es poden veure).
+    const espera = ordreEspera(places.filter((p) => p.estat === "llista_espera" || p.estat === "oferta_pendent"))
+      .map((p) => filtraParticipant(p, vis));
+    const casal = (await this.repos.casals.perId(casalId))!;
     return {
+      casal: { nom: casal.nom },
       activitat: { id: activitat.id, nom: activitat.nom, capacitat: activitat.capacitat, horari: horariText(activitat), nombre_sessions: activitat.nombre_sessions,
-        dies_setmana: activitat.dies_setmana, data_inici: activitat.data_inici, data_fi: activitat.data_fi },
+        dies_setmana: activitat.dies_setmana, data_inici: activitat.data_inici, data_fi: activitat.data_fi, espai: activitat.espai },
       cicle: { id: cicle.id, nom: cicle.nom, estat: cicle.estat, llindar_assistencia: cicle.llindar_assistencia, data_inici: cicle.data_inici, data_fi: cicle.data_fi },
-      sessions, persones,
+      sessions, persones, espera,
       avui: avuiLocal(this.rellotge.ara()),
       pot_registrar: ESTATS_PLACES.includes(cicle.estat),
       pot_crear_sessions: ESTATS_SESSIONS.includes(cicle.estat),
@@ -97,6 +110,53 @@ export class ServeiAssistencia {
     const motiu = `Assistència del ${percentatge}%, inferior al llindar del ${llindar}%.${d.motiu ? ` ${d.motiu}` : ""}`;
     return new ServeiAdjudicacio(this.repos, this.rellotge).moviment(casalId, placaId, { accio: "donar_baixa", versio: d.versio, motiu }, ctx,
       { tipus_operacio: "places.baixa_assistencia", detalls: { percentatge, llindar } });
+  }
+
+  /**
+   * Baixa voluntària (o renúncia a una oferta): la persona deixa l'activitat. Es desa el
+   * motiu i la data per als indicadors, la plaça passa a «Renúncia» i, si queda lloc,
+   * s'ofereix a la primera persona de la llista d'espera. L'oferta queda pendent fins
+   * que la persona l'accepta; el missatge de WhatsApp el prepara el panell.
+   */
+  async baixaVoluntaria(casalId: string, placaId: string, d: { versio: number; motiu: string }, vis: Visibilitat, ctx: ContextOperacio) {
+    const placa = await this.repos.adjudicacio.placa(casalId, placaId);
+    if (!placa) throw errors.noTrobat("No s'ha trobat la plaça.");
+    if (placa.estat !== "admesa" && placa.estat !== "oferta_pendent") {
+      throw errors.conflicte("transicio_no_permesa", "Només es pot donar de baixa una plaça admesa o una oferta pendent.");
+    }
+    const data = avuiLocal(this.rellotge.ara());
+    const motiu = d.motiu.trim();
+    const adjudicacio = new ServeiAdjudicacio(this.repos, this.rellotge);
+    const estat_anterior = placa.estat;
+    await adjudicacio.moviment(casalId, placaId, { accio: "renunciar", versio: d.versio, motiu: `Baixa voluntària: ${motiu}` }, ctx,
+      { tipus_operacio: "places.baixa_voluntaria", detalls: { data } },
+      (operacio) => [this.repos.assistencia.operacioBaixaVoluntaria({
+        placa_id: placaId, casal_id: casalId, estat_anterior, data, motiu, usuari_id: ctx.usuariId ?? null, operacio,
+      }, isoAra(this.rellotge))]);
+
+    const { activitat, cicle } = await this.activitatICicle(casalId, placa.activitat_id);
+    const casal = (await this.repos.casals.perId(casalId))!;
+    // La data d'inici només s'esmenta al missatge si l'activitat encara no ha començat.
+    const inici = activitat.data_inici ?? cicle.data_inici;
+    const missatge = { casal: casal.nom, activitat: activitat.nom, horari: horariText(activitat), espai: activitat.espai,
+      data_inici: inici > data ? inici : null };
+    const seguent = ordreEspera((await this.repos.adjudicacio.places(casalId, cicle.id, placa.activitat_id))
+      .filter((p) => p.estat === "llista_espera"))[0];
+    if (!seguent) return { data, oferta: null, sense_oferta: "La llista d'espera és buida: la plaça queda lliure.", missatge };
+    try {
+      await adjudicacio.moviment(casalId, seguent.id, { accio: "oferir", versio: seguent.versio, motiu: "Plaça alliberada per una baixa voluntària." }, ctx,
+        { tipus_operacio: "places.oferta_baixa_voluntaria", detalls: { placa_alliberada: placaId } });
+    } catch (e) {
+      if (e instanceof ErrorAplicacio && e.status === 409) {
+        return { data, oferta: null, sense_oferta: `No s'ha pogut oferir la plaça automàticament: ${e.missatge} Ho podeu fer des de «Places».`, missatge };
+      }
+      throw e;
+    }
+    const p = filtraParticipant(seguent, vis).participant;
+    return {
+      data, missatge, sense_oferta: null,
+      oferta: { placa_id: seguent.id, numero: seguent.numero, posicio: seguent.posicio_espera, nom: p.nom, cognom1: p.cognom1, cognom2: p.cognom2, telefon: p.telefon },
+    };
   }
 
   /** Genera les sessions previstes segons els dies i les dates de l'activitat (o del cicle). No duplica les existents. */
@@ -263,7 +323,8 @@ export class ServeiAssistencia {
 
   /**
    * Dades de les graelles d'assistència: una per activitat amb places, amb les
-   * persones admeses per ordre alfabètic i la llista d'espera per posició.
+   * persones admeses per ordre alfabètic i la llista d'espera per posició, totes
+   * amb nom, cognoms i telèfon (decisió de 2026-10-15) si la persona usuària el pot veure.
    */
   async graelles(casalId: string, cicleId: string, vis: Visibilitat, ambTelefon: boolean) {
     const cicle = await this.repos.cicles.perId(casalId, cicleId);
@@ -283,18 +344,17 @@ export class ServeiAssistencia {
         const propies = places.filter((p) => p.activitat_id === a.id);
         const sessionsA = sessions.filter((s: Sessio) => s.activitat_id === a.id && s.estat !== "cancellada");
         const admeses = propies.filter((p) => p.estat === "admesa").sort(perPersona);
-        const espera = propies.filter((p) => p.estat === "llista_espera" || p.estat === "oferta_pendent")
-          .sort((x, y) => (x.posicio_espera ?? 1e9) - (y.posicio_espera ?? 1e9) || x.numero - y.numero);
+        const espera = ordreEspera(propies.filter((p) => p.estat === "llista_espera" || p.estat === "oferta_pendent"));
         return {
-          activitat: a.nom, horari: horariText(a), capacitat: a.capacitat, espai: a.espai,
+          activitat_id: a.id, activitat: a.nom, horari: horariText(a), capacitat: a.capacitat, espai: a.espai, data_inici: a.data_inici ?? cicle.data_inici, data_fi: a.data_fi ?? cicle.data_fi,
           sessions: sessionsA.map((s) => ({ id: s.id, data: s.data })),
           columnes_buides: sessionsA.length === 0 ? Math.min(Math.max(a.nombre_sessions ?? 12, 1), 60) : 0,
           admeses: admeses.map((p, i) => ({
-            ordre: i + 1, numero: p.numero, persona: nomPersona(p.participant), telefon: telefon ? p.participant.telefon : null,
+            ordre: i + 1, numero: p.numero, ...nomICognoms(p.participant), telefon: telefon ? p.participant.telefon : null,
             marques: sessionsA.map((s) => marca.get(`${s.id}:${p.id}`) ?? ""),
           })),
           espera: espera.map((p) => ({
-            posicio: p.posicio_espera, numero: p.numero, persona: nomPersona(p.participant), telefon: telefon ? p.participant.telefon : null,
+            posicio: p.posicio_espera, numero: p.numero, ...nomICognoms(p.participant), telefon: telefon ? p.participant.telefon : null,
             oferta_pendent: p.estat === "oferta_pendent",
           })),
         };
@@ -322,14 +382,14 @@ export class ServeiAssistencia {
       const marquesA = marques.filter((m) => ids.has(m.sessio_id));
       for (const p of this.participants(places.filter((x) => x.activitat_id === a.id), marquesA)) {
         const r = resumAssistencia(marquesA.filter((m) => m.placa_id === p.id).map((m) => m.estat));
-        files.push([a.nom, p.numero, nomPersona(p.participant), r.presents, r.absents,
+        files.push([a.nom, p.numero, nomPersona(p.participant), r.presents, r.absents, r.justificades,
           r.percentatge, sotaLlindar(r.percentatge, cicle.llindar_assistencia) ? "Sí" : "No"]);
       }
     }
     return {
       titol: `Assistència · ${cicle.nom}`,
       fitxer: `assistencia-${cicle.nom.normalize("NFD").replace(/[^\w]+/g, "-").toLowerCase().slice(0, 50)}.xlsx`,
-      columnes: ["Activitat", "Núm. sol·licitud", "Persona", "Presències", "Absències", "% d'assistència",
+      columnes: ["Activitat", "Núm. sol·licitud", "Persona", "Assistències (X)", "Faltes (F + FJ)", "De les quals justificades (FJ)", "% d'assistència",
         cicle.llindar_assistencia ? `Per sota del ${cicle.llindar_assistencia}%` : "Per sota del llindar (no configurat)"],
       files,
     };

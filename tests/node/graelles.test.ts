@@ -4,22 +4,22 @@ import { generaGraelles, nomsFulls, validaGraelles } from "../../src/fitxers/gra
 import type { DadesGraelles } from "../../src/types/gestio";
 
 const dades = (): DadesGraelles => ({
-  casal: "Casal de prova", cicle: "Cicle fictici", telefon: true, llegenda: "P: Present · A: Absent",
+  casal: "Casal de prova", cicle: "Cicle fictici", telefon: true, llegenda: "X: Assisteix · F: Falta · FJ: Falta justificada",
   totals: { activitats: 2, admeses: 3, espera: 1 },
   graelles: [
     {
-      activitat: "Ioga: nivell 1/2 [matins]", horari: "dl, dc · 10:00–11:30", capacitat: 2, espai: "Sala d'actes",
+      activitat_id: "a1", activitat: "Ioga: nivell 1/2 [matins]", horari: "dl, dc · 10:00–11:30", capacitat: 2, espai: "Sala d'actes", data_inici: "2026-10-05", data_fi: "2026-12-18",
       sessions: [{ id: "s1", data: "2026-10-05" }, { id: "s2", data: "2026-10-07" }], columnes_buides: 0,
       admeses: [
-        { ordre: 1, numero: 2, persona: "Àvila, Jordi", telefon: "600000002", marques: ["P", "A"] },
-        { ordre: 2, numero: 1, persona: "D'Alòs, Núria", telefon: null, marques: ["P", ""] },
+        { ordre: 1, numero: 2, nom: "Jordi", cognoms: "Àvila", telefon: "600000002", marques: ["X", "FJ"] },
+        { ordre: 2, numero: 1, nom: "Núria", cognoms: "D'Alòs", telefon: null, marques: ["X", ""] },
       ],
-      espera: [{ posicio: 1, numero: 3, persona: "Bosch, Marta", telefon: "600000003", oferta_pendent: true }],
+      espera: [{ posicio: 1, numero: 3, nom: "Marta", cognoms: "Bosch", telefon: "600000003", oferta_pendent: true }],
     },
     {
-      activitat: "Ioga: nivell 1/2 [matins]", horari: null, capacitat: 10, espai: null,
+      activitat_id: "a2", activitat: "Ioga: nivell 1/2 [matins]", horari: null, capacitat: 10, espai: null, data_inici: "2026-10-05", data_fi: "2026-12-18",
       sessions: [], columnes_buides: 4,
-      admeses: [{ ordre: 1, numero: 4, persona: "Zapata, Pere", telefon: null, marques: [] }],
+      admeses: [{ ordre: 1, numero: 4, nom: "Pere", cognoms: "Zapata", telefon: null, marques: [] }],
       espera: [],
     },
   ],
@@ -48,26 +48,26 @@ describe("graelles d'assistència XLSX", () => {
     });
     const textos = files.map((f) => f.filter((v) => v !== null && v !== undefined && v !== "").join(" | "));
     const capcalera = textos.findIndex((t) => t.startsWith("Núm."));
-    expect(textos[capcalera]).toBe("Núm. | Cognoms i nom | Telèfon | 05/10 | 07/10 | Observacions");
-    expect(textos[capcalera + 1]).toBe("1 | Àvila, Jordi | 600000002 | P | A");
-    expect(textos[capcalera + 2]).toBe("2 | D'Alòs, Núria | P");
+    expect(textos[capcalera]).toBe("Núm. | Nom | Cognoms | Telèfon | 05/10 | 07/10 | Observacions");
+    expect(textos[capcalera + 1]).toBe("1 | Jordi | Àvila | 600000002 | X | FJ");
+    expect(textos[capcalera + 2]).toBe("2 | Núria | D'Alòs | X");
     const espera = textos.findIndex((t) => t.startsWith("LLISTA D'ESPERA"));
     expect(espera).toBeGreaterThan(capcalera + 2);
-    expect(textos[espera + 2]).toBe("1 | Bosch, Marta | 600000003 | Plaça oferta, pendent de resposta");
+    expect(textos[espera + 2]).toBe("1 | Marta | Bosch | 600000003 | Plaça oferta, pendent de resposta");
     expect(full.pageSetup.orientation).toBe("portrait");
     expect(full.getRow(filaCapcalera).font?.bold).toBe(true);
     expect(full.views[0]).toMatchObject({ state: "frozen", ySplit: filaCapcalera });
     // Sense sessions creades: columnes en blanc per escriure-hi les dates.
     let capcaleraSegon = 0;
     llibre.worksheets[1]!.eachRow((r, n) => { if (r.getCell(1).value === "Núm.") capcaleraSegon = n; });
-    expect(llibre.worksheets[1]!.getRow(capcaleraSegon).cellCount).toBe(2 + 1 + 4 + 1);
+    expect(llibre.worksheets[1]!.getRow(capcaleraSegon).cellCount).toBe(3 + 1 + 4 + 1);
   });
 
   it("detecta un fitxer que no coincideix amb les dades", async () => {
     const d = dades();
     const buffer = await generaGraelles(d, ExcelJS);
     const altres = dades();
-    altres.graelles[0]!.admeses.push({ ordre: 3, numero: 9, persona: "Nova, Persona", telefon: null, marques: ["", ""] });
+    altres.graelles[0]!.admeses.push({ ordre: 3, numero: 9, nom: "Persona", cognoms: "Nova", telefon: null, marques: ["", ""] });
     expect(await validaGraelles(buffer, altres, ExcelJS)).toEqual([expect.stringContaining("Ioga")]);
     expect(await validaGraelles(new TextEncoder().encode("<xml/>").buffer as ArrayBuffer, d, ExcelJS)).toEqual(["El fitxer generat no és un XLSX vàlid."]);
   });

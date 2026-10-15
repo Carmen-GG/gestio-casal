@@ -18,7 +18,7 @@ import { ServeiImportacions } from "../services/importacions";
 import { ServeiAdjudicacio } from "../services/adjudicacio";
 import { ServeiAssistencia } from "../services/assistencia";
 import { ServeiIndicadors } from "../services/indicadors";
-import { baixaAssistencia, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
+import { baixaAssistencia, baixaVoluntaria, cancellarSessio, novaSessio, registrarAssistencia } from "../../shared/schemas/assistencia";
 import { anullarSorteig, confirmarProposta, desarParametres, movimentPlaca, novaProposta, nouSorteig } from "../../shared/schemas/adjudicacio";
 import {
   consultaSollicituds, importacioConfirmacio, importacioPeticio, revisioDuplicat, sollicitudActualitzarDades,
@@ -335,6 +335,11 @@ export const rutesGestio = new Hono<Entorn>()
     const cos = await cosValidat(c, movimentPlaca);
     return c.json(await adjudicacio(c).moviment(casalId, idRuta(c, "placaId"), cos, ctx(c)));
   })
+  .post("/casals/:casalId/places/:placaId/baixa-voluntaria", async (c) => {
+    const casalId = casalAutoritzat(c, "places.gestionar");
+    const cos = await cosValidat(c, baixaVoluntaria);
+    return c.json(await assistencia(c).baixaVoluntaria(casalId, idRuta(c, "placaId"), cos, visibilitat(c.get("usuari"), casalId), ctx(c)));
+  })
   .post("/casals/:casalId/places/:placaId/baixa-assistencia", async (c) => {
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, baixaAssistencia);
@@ -392,7 +397,7 @@ export const rutesGestio = new Hono<Entorn>()
     c.get("usuari").exigeix("sollicituds.consultar", casalId);
     const cicleId = idRuta(c, "cicleId");
     const vis = visibilitat(c.get("usuari"), casalId);
-    const dades = await assistencia(c).graelles(casalId, cicleId, vis, c.req.query("telefon") === "1");
+    const dades = await assistencia(c).graelles(casalId, cicleId, vis, c.req.query("telefon") !== "0");
     await c.get("repos").auditoria.registrar({
       casal_id: casalId, usuari_id: c.get("usuari").id, tipus_operacio: "exportacio.graelles", entitat: "cicle", entitat_id: cicleId,
       resultat: "exit", id_peticio: c.get("idPeticio"), detalls: { ...dades.totals, telefon: dades.telefon },

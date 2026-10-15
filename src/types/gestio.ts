@@ -183,14 +183,22 @@ export interface Sessio {
   id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada"; motiu_cancellacio: string | null; versio: number; marques: number;
 }
-export interface ResumAssistencia { presents: number; absents: number; percentatge: number | null }
+export interface ResumAssistencia { presents: number; absents: number; justificades: number; percentatge: number | null }
 export interface PersonaAssistencia extends FilaPlaca {
   marques: Record<string, { estat: EstatAssistencia; versio: number }>; resum: ResumAssistencia; sota_llindar: boolean;
+  baixa_voluntaria: { data: string; motiu: string } | null;
 }
 export interface FullAssistencia {
-  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null };
+  casal: { nom: string };
+  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null };
   cicle: { id: string; nom: string; estat: EstatCicle; llindar_assistencia: number | null; data_inici: string; data_fi: string };
-  sessions: Sessio[]; persones: PersonaAssistencia[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
+  sessions: Sessio[]; persones: PersonaAssistencia[]; espera: FilaPlaca[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
+}
+export interface ResultatBaixaVoluntaria {
+  data: string;
+  missatge: { casal: string; activitat: string; horari: string | null; espai: string | null; data_inici: string | null };
+  sense_oferta: string | null;
+  oferta: { placa_id: string; numero: number; posicio: number | null; nom: string | null; cognom1: string | null; cognom2: string | null; telefon: string | null } | null;
 }
 export interface ResumAssistenciaCicle {
   llindar_assistencia: number | null;
@@ -201,10 +209,10 @@ export interface DadesGraelles {
   casal: string; cicle: string; telefon: boolean; llegenda: string;
   totals: { activitats: number; admeses: number; espera: number };
   graelles: {
-    activitat: string; horari: string | null; capacitat: number; espai: string | null;
+    activitat_id: string; activitat: string; horari: string | null; capacitat: number; espai: string | null; data_inici: string; data_fi: string;
     sessions: { id: string; data: string }[]; columnes_buides: number;
-    admeses: { ordre: number; numero: number; persona: string; telefon: string | null; marques: string[] }[];
-    espera: { posicio: number | null; numero: number; persona: string; telefon: string | null; oferta_pendent: boolean }[];
+    admeses: { ordre: number; numero: number; nom: string; cognoms: string; telefon: string | null; marques: string[] }[];
+    espera: { posicio: number | null; numero: number; nom: string; cognoms: string; telefon: string | null; oferta_pendent: boolean }[];
   }[];
 }
 
@@ -216,12 +224,12 @@ export interface IndicadorsCicle {
   totals: {
     activitats: number; activitats_no_actives: number; sollicituds: number;
     sollicituds_per_estat: { rebuda: number; validada: number; pendent_revisio: number; anullada: number };
-    persones: number; places_disponibles: number; places_ocupades: number; places_lliures: number; admeses: number; espera: number;
+    persones: number; places_disponibles: number; places_ocupades: number; places_lliures: number; admeses: number; espera: number; baixes_voluntaries: number;
     activitats_sense_inscripcions: number; activitats_mes_demanda: number;
   };
   activitats: {
     id: string; nom: string; capacitat: number; minim_participants: number | null; sollicituds: number; primera_preferencia: number;
-    admeses: number; ofertes: number; espera: number; lliures: number; sense_inscripcions: boolean; mes_demanda: boolean;
+    admeses: number; ofertes: number; espera: number; baixes_voluntaries: number; lliures: number; sense_inscripcions: boolean; mes_demanda: boolean;
   }[];
 }
 
