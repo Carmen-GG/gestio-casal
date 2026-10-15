@@ -1,7 +1,7 @@
 import type { EstatCicle } from "../../shared/domain/cicles";
 import { CAMPS_PERSONALS, configuracioFormulariEfectiva, ETIQUETES_CAMPS, type CampPersonal } from "../../shared/domain/formulari";
 import {
-  interpretaData, interpretaDataHoraLocal, interpretaDies, interpretaEnter, interpretaHora, localMadridAIso,
+  interpretaData, interpretaDataHoraLocal, interpretaDies, interpretaEnter, interpretaHora, localMadridAIso, netejaNomActivitat,
 } from "../../shared/domain/importacio";
 import { clauOrdenacioPersona, normalitzaText } from "../../shared/domain/ordenacio";
 import { errorsPerCamp } from "../../shared/schemas/comuns";
@@ -283,7 +283,7 @@ export class ServeiImportacions {
       }
       const errs: string[] = [];
       const avisos: string[] = [];
-      const cand: Record<string, unknown> = { nom: valor(f, "nom") };
+      const cand: Record<string, unknown> = { nom: netejaNomActivitat(valor(f, "nom")) };
       const text = (camp: string) => { const v = valor(f, camp); if (v) cand[camp] = v; };
       ["descripcio", "categoria", "horari_text", "espai", "codi_extern"].forEach(text);
       const capacitat = interpretaEnter(valor(f, "capacitat"));
