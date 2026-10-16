@@ -79,7 +79,7 @@ describe("WhatsApp Business", () => {
     expect(estat.secrets).toEqual({ testimoni: true, secret_app: true, verificacio: true });
     expect(JSON.stringify(estat)).not.toContain("testimoni-fictici");
     expect(estat.disponible).toBe(false);
-    expect(estat.plantilles.map((p: { nom: string }) => p.nom)).toEqual(["placa_admesa", "llista_espera", "oferta_placa", "avis_general"]);
+    expect(estat.plantilles.map((p: { nom: string }) => p.nom)).toEqual(["placa_admesa", "llista_espera", "oferta_placa", "sollicitud_rebuda", "avis_general"]);
     expect((await r.json(`${base}/cicles/${cicle.id}/whatsapp/activitats`, { method: "POST", json: {} })).status).toBe(409);
   });
 

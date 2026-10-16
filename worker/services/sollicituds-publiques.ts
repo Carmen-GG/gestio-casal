@@ -10,7 +10,8 @@ import { ErrorAplicacio, errors } from "../http/errors";
 import { resumSha256 } from "../lib/cripto";
 import { nouId } from "../lib/ids";
 import { isoAra, type Rellotge } from "../lib/rellotge";
-import type { Cicle, Repositoris, SollicitudRegistrada } from "../repositories/tipus";
+import type { Casal, Cicle, Repositoris, SollicitudRegistrada } from "../repositories/tipus";
+import type { ServeiAvisRebuda } from "./avis-rebuda";
 import { ServeiConsultaPublica } from "./consulta-publica";
 
 /** Clau d'idempotència generada pel navegador (UUID o similar). */
@@ -34,7 +35,7 @@ const INTENTS_MAXIMS = 3;
 export class ServeiSollicitudsPubliques {
   private readonly consulta: ServeiConsultaPublica;
 
-  constructor(private readonly repos: Repositoris, private readonly rellotge: Rellotge) {
+  constructor(private readonly repos: Repositoris, private readonly rellotge: Rellotge, private readonly avis?: ServeiAvisRebuda) {
     this.consulta = new ServeiConsultaPublica(repos, rellotge);
   }
 
@@ -114,7 +115,21 @@ export class ServeiSollicitudsPubliques {
         throw errors.conflicte("cicle_tancat", "El període d'inscripció d'aquest cicle no està obert.");
       }
       if (resultat.tipus === "activitat_no_disponible") throw errorActivitat();
+      await this.avisRebuda(casal, cicle, resultat.sollicitud, dades, idPeticio);
       return resposta(resultat.sollicitud, cicle, false);
+    }
+  }
+
+  /** L'avís de rebuda no fa fallar mai la sol·licitud, que ja està desada. Al registre no hi va cap dada personal. */
+  private async avisRebuda(casal: Casal, cicle: Cicle, s: SollicitudRegistrada, dades: Record<CampPersonal, string | null>, idPeticio: string | null) {
+    if (!this.avis) return;
+    try {
+      await this.avis.envia(casal, cicle, {
+        sollicitud_id: s.id, codi_confirmacio: s.codi_confirmacio, rebuda_el: s.rebuda_el, preferencies: s.preferencies,
+        nom: dades.nom!, email: dades.email, telefon: dades.telefon,
+      });
+    } catch (e) {
+      console.error(JSON.stringify({ nivell: "error", id_peticio: idPeticio, tipus: "avis_rebuda", error: (e as Error).name }));
     }
   }
 
