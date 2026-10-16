@@ -69,7 +69,8 @@ export class D1RepositoriPersonesPlataforma implements RepositoriPersonesPlatafo
     const { results } = await this.db.prepare(
       `SELECT id, nom, trim(coalesce(cognom1, '') || ' ' || coalesce(cognom2, '')) AS cognoms,
          json_extract(dades, '$.telefon_mobil') AS telefon_mobil, json_extract(dades, '$.telefon_opcional') AS telefon_opcional,
-         json_extract(dades, '$.telefon_fix') AS telefon_fix, json_extract(dades, '$.tutor_telefon') AS tutor_telefon
+         json_extract(dades, '$.telefon_fix') AS telefon_fix, json_extract(dades, '$.tutor_telefon') AS tutor_telefon,
+         coalesce(json_extract(dades, '$.email'), json_extract(dades, '$.tutor_email')) AS email
        FROM persones_plataforma WHERE casal_id = ? ORDER BY clau_ordenacio`,
     ).bind(casalId).all<ContactePersona>();
     return results;

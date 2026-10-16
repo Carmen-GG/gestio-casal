@@ -415,7 +415,7 @@ export interface ResultatComunicat {
     casal_id: string; casal: string;
     responsables: { nom: string; correu: EstatCanalComunicat | null; whatsapp: EstatCanalComunicat | null }[];
     persones: {
-      total: number; contactades: number; llegides: number; pendents: number;
+      total: number; contactades: number; per_correu: number; llegides: number; pendents: number;
       no_contactades: { nom: string; telefon: string | null; tipus_telefon: string | null; motiu: MotiuComunicat | null; error_text: string | null }[];
     };
   }[];
