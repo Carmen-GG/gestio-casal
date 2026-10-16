@@ -135,6 +135,13 @@ export class ServeiComunicats {
       ({ id: nouId(), casal_id, tipus, referencia_id, canal, estat: motiu ? "no_enviable" : "pendent", motiu, manual: !motiu && manual ? 1 : 0 });
     const correuManual: { nom: string; email: string; casal: string }[] = [];
     const vistosCorreu = new Set<string>(), vistosWaResp = new Set<string>(), vistosMobil = new Set<string>();
+    // Si ja se sap que el WhatsApp no arribarà (fix, sense mòbil, sense número), es prova per correu.
+    const alternativa = (k: { id: string }, tipus: Fila["tipus"], referencia: string, email: string | null, motiu: MotiuComunicat | null) => {
+      if (motiu && this.correu && email && !(tipus === "responsable" && vistosCorreu.has(referencia))) {
+        if (tipus === "responsable") vistosCorreu.add(referencia);
+        files.push(fila(k.id, tipus, referencia, "correu", null));
+      }
+    };
 
     for (const k of casals) {
       for (const r of responsables.filter((x) => x.casal_id === k.id)) {
@@ -147,7 +154,9 @@ export class ServeiComunicats {
           vistosWaResp.add(r.usuari_id);
           const t = analitzaTelefon(r.telefon);
           if (t.internacional) vistosMobil.add(t.internacional);
-          files.push(fila(k.id, "responsable", r.usuari_id, "whatsapp", motiuTelefon(t), !this.centralActiu(central)));
+          const motiu = motiuTelefon(t);
+          files.push(fila(k.id, "responsable", r.usuari_id, "whatsapp", motiu, !this.centralActiu(central)));
+          alternativa(k, "responsable", r.usuari_id, r.email, motiu);
         }
       }
       if (d.whatsapp_persones) {
@@ -158,7 +167,9 @@ export class ServeiComunicats {
             if (vistosMobil.has(t.internacional)) continue;
             vistosMobil.add(t.internacional);
           }
-          files.push(fila(k.id, "persona", p.id, "whatsapp", motiuTelefon(t), !numero));
+          const motiu = motiuTelefon(t);
+          files.push(fila(k.id, "persona", p.id, "whatsapp", motiu, !numero));
+          alternativa(k, "persona", p.id, p.email, motiu);
         }
       }
     }
@@ -250,6 +261,35 @@ export class ServeiComunicats {
     return { estat: enviat ? "enviat" : "pendent" };
   }
 
+  /**
+   * Correu alternatiu (petició de 2026-10-16): si el WhatsApp no ha arribat i la persona té
+   * correu, s'afegeix un enviament per correu, un sol cop per persona i comunicat.
+   */
+  private async afegeixAlternativa(d: DestinatariComunicat, email: string | null): Promise<DestinatariComunicat | null> {
+    if (!this.correu || !email || d.canal !== "whatsapp") return null;
+    if (await this.repos.comunicats.teCanal(d.comunicat_id, d.tipus, d.referencia_id, "correu")) return null;
+    const nou = { id: nouId(), comunicat_id: d.comunicat_id, casal_id: d.casal_id, tipus: d.tipus, referencia_id: d.referencia_id,
+      canal: "correu" as const, estat: "pendent" as const, motiu: null, manual: 0 };
+    const ara = isoAra(this.rellotge);
+    await this.repos.comunicats.afegirDestinatari(nou, ara);
+    return { ...nou, wamid: null, error_text: null, creat_el: ara, actualitzat_el: ara };
+  }
+
+  /**
+   * Un WhatsApp que Meta avisa més tard que no s'ha pogut entregar (el número no té WhatsApp):
+   * s'envia de seguida per correu si la persona en té.
+   */
+  async alternativaDespresDeFallada(d: DestinatariComunicat) {
+    if (d.canal !== "whatsapp" || d.estat !== "fallit") return;
+    const comunicat = await this.repos.comunicats.perId(d.comunicat_id);
+    if (!comunicat) return;
+    const email = d.tipus === "responsable"
+      ? (await this.repos.usuaris.perId(d.referencia_id))?.email ?? null
+      : await this.repos.personesPlataforma.perId(d.casal_id, d.referencia_id).then((p) => p?.dades.email ?? p?.dades.tutor_email ?? null);
+    const nou = await this.afegeixAlternativa(d, email);
+    if (nou) await this.enviaUn(nou, comunicat, null, "");
+  }
+
   private async enviaUn(d: DestinatariComunicat, c: { assumpte: string; text: string }, numero: NumeroWhatsapp | null, remitent: string): Promise<string | null> {
     const ara = isoAra(this.rellotge);
     const marca = (motiu: MotiuComunicat, error_text: string | null = null) =>
@@ -263,6 +303,7 @@ export class ServeiComunicats {
       const p = await this.repos.personesPlataforma.perId(d.casal_id, d.referencia_id);
       if (!p) { await marca("sense_telefon", "La persona ja no és a la llista del casal."); return null; }
       nom = p.dades.nom ?? p.nom ?? "";
+      email = p.dades.email ?? p.dades.tutor_email ?? null;
       telefon = telefonPersona({
         telefon_mobil: p.dades.telefon_mobil ?? null, telefon_opcional: p.dades.telefon_opcional ?? null,
         telefon_fix: p.dades.telefon_fix ?? null, tutor_telefon: p.dades.tutor_telefon ?? null,
@@ -284,9 +325,9 @@ export class ServeiComunicats {
       }
     }
 
-    if (!numero || !this.whatsapp) { await marca("sense_numero"); return null; }
+    if (!numero || !this.whatsapp) { await marca("sense_numero"); await this.afegeixAlternativa(d, email); return null; }
     const motiu = motiuTelefon(telefon);
-    if (motiu) { await marca(motiu); return null; }
+    if (motiu) { await marca(motiu); await this.afegeixAlternativa(d, email); return null; }
     try {
       const { wamid } = await this.whatsapp.enviaPlantilla({
         phoneNumberId: numero.phone_number_id, destinatari: telefon.internacional!, plantilla: "avis_general", idioma: numero.idioma,
@@ -300,6 +341,7 @@ export class ServeiComunicats {
       await this.repos.comunicats.actualitzar(d.id, {
         estat: "fallit", motiu: e.destinatariNoDisponible ? "sense_whatsapp" : "error_meta", error_text: e.titol,
       }, ara);
+      await this.afegeixAlternativa(d, email);
       return null;
     }
   }
@@ -316,7 +358,12 @@ export class ServeiComunicats {
     const casals = new Map((await this.repos.casals.llistar()).map((k) => [k.id, k]));
     const casalsResultat = await Promise.all(casalIds.map(async (casalId) => {
       const propis = destinataris.filter((d) => d.casal_id === casalId);
-      const persones = propis.filter((d) => d.tipus === "persona");
+      // Una persona pot tenir dues files (WhatsApp i el correu alternatiu): compta la millor.
+      const perPersona = new Map<string, DestinatariComunicat[]>();
+      for (const d of propis.filter((x) => x.tipus === "persona")) perPersona.set(d.referencia_id, [...(perPersona.get(d.referencia_id) ?? []), d]);
+      const persones = [...perPersona.values()].map((fs) =>
+        fs.find((d) => d.estat === "llegit") ?? fs.find((d) => CONTACTATS.includes(d.estat)) ?? fs.find((d) => d.estat === "pendent")
+        ?? fs.find((d) => d.canal === "whatsapp") ?? fs[0]!);
       const contactes = new Map((persones.some((d) => d.estat !== "pendent" && !CONTACTATS.includes(d.estat))
         ? await this.repos.personesPlataforma.contactes(casalId) : []).map((p) => [p.id, p]));
       const responsables = await Promise.all([...new Set(propis.filter((d) => d.tipus === "responsable").map((d) => d.referencia_id))].map(async (uid) => {
@@ -333,6 +380,7 @@ export class ServeiComunicats {
         persones: {
           total: persones.length,
           contactades: persones.filter((d) => CONTACTATS.includes(d.estat)).length,
+          per_correu: persones.filter((d) => d.canal === "correu" && CONTACTATS.includes(d.estat)).length,
           llegides: persones.filter((d) => d.estat === "llegit").length,
           pendents: persones.filter((d) => d.estat === "pendent").length,
           no_contactades: persones.filter((d) => d.estat === "no_enviable" || d.estat === "fallit").map((d) => {

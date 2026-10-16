@@ -1,5 +1,5 @@
 import type {
-  Comunicat, ConfigWhatsappCentral, DestinatariComunicat, EstatMissatgeWhatsapp, RepositoriComunicats,
+  CanalComunicat, Comunicat, ConfigWhatsappCentral, DestinatariComunicat, EstatMissatgeWhatsapp, RepositoriComunicats,
 } from "../tipus";
 
 const ORDRE: Record<EstatMissatgeWhatsapp, number> = { pendent: 0, no_enviable: 0, enviat: 1, entregat: 2, llegit: 3, fallit: 4 };
@@ -36,6 +36,19 @@ export class D1RepositoriComunicats implements RepositoriComunicats {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(d.id, c.id, d.casal_id, d.tipus, d.referencia_id, d.canal, d.estat, d.motiu, d.manual, ara, ara)));
     }
+  }
+
+  async afegirDestinatari(d: Omit<DestinatariComunicat, "wamid" | "error_text" | "creat_el" | "actualitzat_el">, ara: string) {
+    await this.db.prepare(
+      `INSERT INTO comunicats_destinataris (id, comunicat_id, casal_id, tipus, referencia_id, canal, estat, motiu, manual, creat_el, actualitzat_el)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(d.id, d.comunicat_id, d.casal_id, d.tipus, d.referencia_id, d.canal, d.estat, d.motiu, d.manual, ara, ara).run();
+  }
+
+  async teCanal(comunicatId: string, tipus: DestinatariComunicat["tipus"], referenciaId: string, canal: CanalComunicat) {
+    return !!(await this.db.prepare(
+      "SELECT 1 FROM comunicats_destinataris WHERE comunicat_id = ? AND tipus = ? AND referencia_id = ? AND canal = ? LIMIT 1",
+    ).bind(comunicatId, tipus, referenciaId, canal).first());
   }
 
   async perId(id: string) {

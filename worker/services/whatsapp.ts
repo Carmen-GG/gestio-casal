@@ -12,13 +12,14 @@ import type {
   Activitat, ConfigWhatsapp, EnviamentWhatsapp, FilaPlaca, MissatgeWhatsapp, MotiuMissatgeWhatsapp, Repositoris,
 } from "../repositories/tipus";
 import { horariText } from "./assistencia";
+import { ServeiComunicats } from "./comunicats";
 import type { ContextOperacio } from "./traca";
 
 /** Missatges per petició: queda lluny del límit de subpeticions d'un Worker. */
 export const MIDA_LOT = 25;
 const COMUNICABLES = ["admesa", "llista_espera", "oferta_pendent"];
 
-type Secrets = Pick<Env, "WHATSAPP_TOKEN" | "WHATSAPP_APP_SECRET" | "WHATSAPP_VERIFY_TOKEN">;
+type Secrets = Pick<Env, "WHATSAPP_TOKEN" | "WHATSAPP_APP_SECRET" | "WHATSAPP_VERIFY_TOKEN" | "RESEND_API_KEY" | "CORREU_REMITENT">;
 
 const plantillaPerEstat = (estat: string): PlantillaWhatsapp =>
   estat === "admesa" ? "placa_admesa" : estat === "oferta_pendent" ? "oferta_placa" : "llista_espera";
@@ -38,7 +39,7 @@ export class ServeiWhatsapp {
     private readonly repos: Repositoris,
     private readonly rellotge: Rellotge,
     private readonly secrets: Secrets,
-    fetchFn?: typeof fetch,
+    private readonly fetchFn?: typeof fetch,
   ) {
     this.client = secrets.WHATSAPP_TOKEN ? clientWhatsapp(secrets.WHATSAPP_TOKEN, fetchFn) : null;
   }
@@ -210,7 +211,14 @@ export class ServeiWhatsapp {
         const m = await this.repos.whatsapp.canviEstatPerWamid(st.id, estat, error, ara);
         if (!m) {
           // Missatges dels comunicats de la superadministració.
-          if (await this.repos.comunicats.canviEstatPerWamid(st.id, estat, error, ara)) estats++;
+          const d = await this.repos.comunicats.canviEstatPerWamid(st.id, estat, error, ara);
+          if (d) {
+            estats++;
+            // El número no té WhatsApp: es prova per correu.
+            if (estat === "fallit" && error && [131026, 131021, 131030].includes(error.codi)) {
+              await new ServeiComunicats(this.repos, this.rellotge, this.secrets, this.fetchFn).alternativaDespresDeFallada(d);
+            }
+          }
           continue;
         }
         estats++;
