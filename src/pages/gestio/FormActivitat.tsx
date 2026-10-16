@@ -42,7 +42,7 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
     const dades = {
       nom: v.nom, descripcio: nul(v.descripcio), categoria: nul(v.categoria), dies_setmana: v.dies_setmana,
       hora_inici: nul(v.hora_inici), hora_fi: nul(v.hora_fi), horari_text: nul(v.horari_text),
-      data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai), tallerista: nul(v.tallerista), gestio: v.gestio, destinataris: nul(v.destinataris), grup: v.grup === "" ? null : Number(v.grup),
+      data_inici: nul(v.data_inici), data_fi: nul(v.data_fi), espai: nul(v.espai), tallerista: nul(v.tallerista), gestio: v.gestio, destinataris: nul(v.destinataris), grup: v.grup.trim() === "" ? null : v.grup.trim().toUpperCase(),
       capacitat: v.capacitat === "" ? Number.NaN : Number(v.capacitat),
       nombre_sessions: v.nombre_sessions === "" ? null : Number(v.nombre_sessions),
       minim_participants: v.minim_participants === "" ? null : Number(v.minim_participants), codi_extern: nul(v.codi_extern),
@@ -96,8 +96,8 @@ export function FormActivitat({ activitat, textBoto, onDesar, onCancelar }: {
           ajuda="Les estadístiques de la superadministració només compten les activitats de la Generalitat. Les importades de la PGEc ja hi surten com a Generalitat." />
         <CampText etiqueta="Tallerista" value={v.tallerista} onChange={canvia("tallerista")} error={errors.tallerista}
           ajuda="Nom de la persona que fa el taller. Si encara no n'hi ha, deixeu-ho buit: comptarà com a activitat sense tallerista." />
-        <CampText etiqueta="Grup" type="number" min={1} max={99} value={v.grup} onChange={canvia("grup")} error={errors.grup}
-          ajuda="Activitats que no es poden acumular: per exemple 1 per a totes les esportives i 2 per a totes les de ball. El màxim de cada grup es posa sota la llista d'activitats." />
+        <CampText etiqueta="Tipus (símbol)" value={v.grup} maxLength={3} onChange={canvia("grup")} error={errors.grup}
+          ajuda="Una lletra o un número per a les activitats que no es poden acumular: per exemple E per a totes les esportives i B per a les de ball. Sota la llista d'activitats es posa quantes de cada tipus pot tenir una persona." />
         <CampText etiqueta="Persones a qui va dirigida" value={v.destinataris} onChange={canvia("destinataris")} error={errors.destinataris} maxLength={200} />
         <CampText etiqueta="Codi FA (PGEC)" value={v.codi_extern} onChange={canvia("codi_extern")} error={errors.codi_extern} />
         <div className="camp--ample">

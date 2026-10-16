@@ -48,6 +48,17 @@ const resum = (grups: Grup[], id: string) =>
   grups.find((x) => x.activitat_id === id)!.resultats.map((r) => `${r.participant.cognom1}:${r.resultat}${r.posicio_espera ? r.posicio_espera : ""}`);
 
 describe("adjudicació: grups d'activitats", () => {
+  it("accepta lletres com a símbol del tipus i en desa el màxim", async () => {
+    const { casal, activa } = await crearEscenari({ estatCicle: "preparacio" });
+    const g = await clientAutenticat("gestor_casal", casal.id);
+    const url = `/api/gestio/casals/${casal.id}/activitats/${activa.id}`;
+    const r = await g.json(url, { method: "PATCH", json: { grup: "e", versio: activa.versio } });
+    expect(r.status).toBe(200);
+    expect(r.cos.activitat.grup).toBe("E");
+    expect((await g.json(url, { method: "PATCH", json: { grup: "ESPORT", versio: r.cos.activitat.versio } })).status).toBe(400);
+    expect((await g.json(url, { method: "PATCH", json: { grup: "", versio: r.cos.activitat.versio } })).cos.activitat.grup).toBeNull();
+  });
+
   it("respecta el màxim d'activitats per grup desat al cicle", async () => {
     const { A, B, base, cicle, g, desa, proposa } = await escenari();
     await env.DB.prepare("UPDATE activitats SET capacitat = 2 WHERE id = ?").bind(A.id).run();
@@ -55,7 +66,7 @@ describe("adjudicació: grups d'activitats", () => {
       const actual = await g.json(`${base}/activitats/${a.id}`);
       const r = await g.json(`${base}/activitats/${a.id}`, { method: "PATCH", json: { grup: 1, versio: actual.cos.activitat.versio } });
       expect(r.status).toBe(200);
-      expect(r.cos.activitat.grup).toBe(1);
+      expect(r.cos.activitat.grup).toBe("1");
     }
     const c = await g.json(`${base}/cicles/${cicle.id}`);
     expect((await g.json(`${base}/cicles/${cicle.id}`, { method: "PATCH", json: { versio: c.cos.cicle.versio, limits_grups: { 1: 0 } } })).status).toBe(400);
