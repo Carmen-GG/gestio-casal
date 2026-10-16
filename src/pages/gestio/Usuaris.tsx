@@ -10,8 +10,8 @@ import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import { CodiAccesLliurat, ResultatAlta } from "../../components/CodiAccesLliurat";
-import type { AccesAlta, AssignacioRol, CodiAcces } from "../../types/gestio";
-import { formataDataHora } from "../../utils/format";
+import type { AccesAlta, AssignacioRol, CodiAcces, PeriodeEquip } from "../../types/gestio";
+import { formataData, formataDataHora } from "../../utils/format";
 import { usePermisos } from "./context";
 
 /** Rols de l'equip (2026-10-16): la persona responsable (l'assigna la superadministració) i conserge. */
@@ -142,10 +142,66 @@ export function Usuaris() {
           <button type="submit" className="boto" disabled={desant}>{desant ? "Desant…" : "Dona d'alta"}</button>
         </form>
       </Seccio>
+      <HistorialEquip casalId={casalId} versio={versio} />
       <DialegConfirmacio obert={revocant !== null} enCurs={desant} titol="Donar de baixa" textConfirmar="Dona de baixa" demanaMotiu
         onCancelar={() => setRevocant(null)} onConfirmar={revoca}>
         <p>{revocant?.nom_visible} deixarà de tenir el rol «{revocant ? nomRol(revocant.rol_codi) : ""}» en aquest casal. El canvi té efecte immediat i queda registrat.</p>
       </DialegConfirmacio>
     </div>
+  );
+}
+
+/**
+ * Historial de l'equip (petició de 2026-10-16): cada alta és un període propi, de manera que
+ * una mateixa persona pot sortir diverses vegades si l'han donada d'alta i de baixa més d'un cop.
+ */
+function HistorialEquip({ casalId, versio }: { casalId: string; versio: number }) {
+  const consulta = useConsulta((s) => serveiGestio.historialEquip(casalId, s), [casalId, versio]);
+  const [nomesBaixes, setNomesBaixes] = useState(false);
+  return (
+    <Seccio titol="Historial de l'equip" obertaInicial={false}>
+      {consulta.tipus === "carregant" && <Carregant text="Carregant l'historial…" />}
+      {consulta.tipus === "error" && <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />}
+      {consulta.tipus === "dades" && (() => {
+        const periodes = consulta.dades.historial;
+        if (periodes.length === 0) return <p>Encara no hi ha cap alta registrada.</p>;
+        const perPersona = new Map<string, PeriodeEquip[]>();
+        for (const p of periodes) perPersona.set(p.usuari_id, [...(perPersona.get(p.usuari_id) ?? []), p]);
+        const persones = [...perPersona.values()].filter((ps) => !nomesBaixes || ps.every((p) => p.revocat_el));
+        return (
+          <>
+            <p className="text-secundari">
+              Cada fila és un període: des de l'alta fins a la baixa. Si una persona ha entrat i sortit de l'equip més d'una vegada, en surten tots els períodes.
+            </p>
+            <label className="casella"><input type="checkbox" checked={nomesBaixes} onChange={(e) => setNomesBaixes(e.target.checked)} /> Només les persones que ja no són a l'equip</label>
+            <div className="taula-contenidor" tabIndex={0} role="region" aria-label="Historial de l'equip">
+              <table className="taula">
+                <thead>
+                  <tr><th scope="col">Persona</th><th scope="col">Rol</th><th scope="col">Alta</th><th scope="col">Baixa</th><th scope="col">Motiu de la baixa</th></tr>
+                </thead>
+                <tbody>
+                  {persones.flatMap((ps) => ps.map((p, i) => (
+                    <tr key={p.id}>
+                      {i === 0 && (
+                        <th scope="row" rowSpan={ps.length}>
+                          {p.nom_visible}<br /><span className="text-secundari">{p.email}</span>
+                          {ps.length > 1 && <><br /><span className="text-secundari">{ps.length} períodes</span></>}
+                        </th>
+                      )}
+                      <td>{nomRol(p.rol_codi)}</td>
+                      <td className="sense-salt">{formataData(p.atorgat_el.slice(0, 10))}{p.atorgat_per && <><br /><span className="text-secundari">per {p.atorgat_per}</span></>}</td>
+                      <td className="sense-salt">
+                        {p.revocat_el ? <>{formataData(p.revocat_el.slice(0, 10))}{p.revocat_per && <><br /><span className="text-secundari">per {p.revocat_per}</span></>}</> : <span className="etiqueta etiqueta--activa">Actualment a l'equip</span>}
+                      </td>
+                      <td>{p.revocat_el ? p.motiu ?? "—" : ""}</td>
+                    </tr>
+                  )))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        );
+      })()}
+    </Seccio>
   );
 }

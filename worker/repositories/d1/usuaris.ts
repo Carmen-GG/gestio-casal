@@ -1,4 +1,4 @@
-import type { AssignacioRol, PermisosUsuari, RepositoriSessions, RepositoriUsuaris, ResponsableCasal, Usuari } from "../tipus";
+import type { AssignacioRol, PermisosUsuari, RepositoriSessions, RepositoriUsuaris, ResponsableCasal, Usuari, PeriodeEquip } from "../tipus";
 import { comOperacio } from "./util";
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
@@ -92,6 +92,17 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
 
   private static readonly SELECT_ASSIGNACIO = `SELECT a.id, a.usuari_id, u.email, u.nom_visible, a.rol_codi, a.casal_id, a.atorgat_el
     FROM assignacions_rols a JOIN usuaris u ON u.id = a.usuari_id`;
+
+  async historialEquip(casalId: string) {
+    const { results } = await this.db.prepare(
+      `SELECT a.id, a.usuari_id, u.email, u.nom_visible, a.rol_codi, a.atorgat_el, ua.nom_visible AS atorgat_per,
+         a.revocat_el, ur.nom_visible AS revocat_per, a.motiu
+       FROM assignacions_rols a JOIN usuaris u ON u.id = a.usuari_id
+       LEFT JOIN usuaris ua ON ua.id = a.atorgat_per LEFT JOIN usuaris ur ON ur.id = a.revocat_per
+       WHERE a.casal_id = ? ORDER BY u.nom_visible, a.atorgat_el DESC`,
+    ).bind(casalId).all<PeriodeEquip>();
+    return results;
+  }
 
   async assignacionsCasal(casalId: string) {
     const { results } = await this.db
