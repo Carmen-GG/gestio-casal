@@ -2,7 +2,7 @@ import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
-  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal,
+  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal, EstatWhatsapp, ConfigWhatsapp, ResumWhatsapp, ProgresEnviament,
 } from "../types/gestio";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
@@ -87,6 +87,17 @@ export const serveiGestio = {
     api.get<FitxaPersonaPlataforma>(`${g(casalId)}/persones-plataforma/${encodeURIComponent(id)}`, s),
   importarPersones: (casalId: string, dades: { origen: "usuaris" | "carnets" | "altres"; nom_fitxer?: string; primera_fila: number; files: Record<string, string>[] }) =>
     api.post<ResultatImportacioPersones>(`${g(casalId)}/persones-plataforma/importacio`, dades),
+  estatWhatsapp: (casalId: string, s?: AbortSignal) => api.get<EstatWhatsapp>(`${g(casalId)}/whatsapp`, s),
+  desarWhatsapp: (casalId: string, dades: unknown) => api.put<{ config: ConfigWhatsapp }>(`${g(casalId)}/whatsapp`, dades),
+  comprovarWhatsapp: (casalId: string) =>
+    api.post<{ numero: { numero: string | null; nom_verificat: string | null; qualitat: string | null } }>(`${g(casalId)}/whatsapp/comprovacio`, {}),
+  resumWhatsapp: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<ResumWhatsapp>(`${g(casalId)}/cicles/${cicleId}/whatsapp`, s),
+  enviamentWhatsappActivitats: (casalId: string, cicleId: string, dades: { activitat_ids?: string[]; placa_ids?: string[]; nomes_pendents: boolean }) =>
+    api.post<{ enviament_id: string; total: number }>(`${g(casalId)}/cicles/${cicleId}/whatsapp/activitats`, dades),
+  enviamentWhatsappGeneral: (casalId: string, cicleId: string, dades: { text: string; activitat_ids?: string[]; situacions: ("admesa" | "espera")[] }) =>
+    api.post<{ enviament_id: string; total: number }>(`${g(casalId)}/cicles/${cicleId}/whatsapp/generals`, dades),
+  continuaEnviamentWhatsapp: (casalId: string, enviamentId: string) =>
+    api.post<ProgresEnviament>(`${g(casalId)}/whatsapp/enviaments/${enviamentId}/continua`, {}),
   comunicacions: (casalId: string, cicleId: string, s?: AbortSignal) =>
     api.get<DadesComunicacions>(`${g(casalId)}/cicles/${cicleId}/comunicacions`, s),
   registrarComunicacio: (casalId: string, placaId: string, dades: { tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio; motiu?: MotiuNoContacte | null; nota?: string | null }) =>

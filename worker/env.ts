@@ -13,4 +13,13 @@ export interface Env {
   LIMIT_SOLLICITUDS?: RateLimit;
   /** Limitador dels intents d'entrada amb contrasenya. Opcional com l'anterior. */
   LIMIT_ENTRADA?: RateLimit;
+  /**
+   * WhatsApp Business (API de Meta). Secrets: es configuren amb `wrangler secret put`, mai al repositori.
+   * WHATSAPP_TOKEN: testimoni d'accés permanent d'un usuari del sistema de Meta Business.
+   * WHATSAPP_APP_SECRET: secret de l'app de Meta (per comprovar la signatura dels avisos).
+   * WHATSAPP_VERIFY_TOKEN: text que s'escriu a Meta en registrar el webhook.
+   */
+  WHATSAPP_TOKEN?: string;
+  WHATSAPP_APP_SECRET?: string;
+  WHATSAPP_VERIFY_TOKEN?: string;
 }

@@ -12,13 +12,19 @@ import { serveiGestio } from "../../services/gestio";
 import { CodiAccesLliurat, ResultatAlta } from "../../components/CodiAccesLliurat";
 import type { AccesAlta, AssignacioRol, CodiAcces } from "../../types/gestio";
 import { formataDataHora } from "../../utils/format";
+import { usePermisos } from "./context";
 
-const ROLS = [
-  { valor: "gestor_casal", text: "Gestió del casal" },
-  { valor: "consulta_casal", text: "Consulta del casal" },
-  { valor: "difusio_casal", text: "Difusió del casal (PG-Cartells)" },
-];
-const nomRol = (codi: string) => (codi === "responsable_casal" ? "Responsable del casal" : ROLS.find((r) => r.valor === codi)?.text ?? codi);
+/** Rols de l'equip (2026-10-16): la persona responsable (l'assigna la superadministració) i conserge. */
+const ROLS = [{ valor: "conserge", text: "Conserge (només gestionar l'assistència)" }];
+const NOMS_ROLS: Record<string, string> = {
+  responsable_casal: "Responsable del casal",
+  conserge: "Conserge",
+  // Rols anteriors: les assignacions existents continuen fins que es revoquin.
+  gestor_casal: "Gestió del casal (rol antic)",
+  consulta_casal: "Consulta del casal (rol antic)",
+  difusio_casal: "Difusió del casal (rol antic)",
+};
+const nomRol = (codi: string) => NOMS_ROLS[codi] ?? codi;
 const estatAcces = (a: AssignacioRol) => {
   if (a.darrer_acces_el) return `Darrer accés: ${formataDataHora(a.darrer_acces_el)}`;
   if (a.te_contrasenya) return "Té contrasenya";
@@ -28,9 +34,10 @@ const estatAcces = (a: AssignacioRol) => {
 
 export function Usuaris() {
   const { casalId = "" } = useParams();
+  const pot = usePermisos(casalId);
   const [versio, setVersio] = useState(0);
   const consulta = useConsulta((s) => serveiGestio.assignacions(casalId, s), [casalId, versio]);
-  const [v, setV] = useState({ email: "", nom_visible: "", rol_codi: "gestor_casal" });
+  const [v, setV] = useState({ email: "", nom_visible: "", rol_codi: "conserge" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<ErrorClientApi | null>(null);
   const [exit, setExit] = useState("");
@@ -60,7 +67,7 @@ export function Usuaris() {
       const resposta = await serveiGestio.assignarRol(casalId, r.data);
       setExit(`S'ha donat d'alta ${v.nom_visible} amb el rol «${nomRol(v.rol_codi)}».`);
       setAlta({ nom: v.nom_visible, email: r.data.email, acces: resposta.acces });
-      setV({ email: "", nom_visible: "", rol_codi: "gestor_casal" });
+      setV({ email: "", nom_visible: "", rol_codi: "conserge" });
       setVersio((x) => x + 1);
     } catch (err) {
       if (err instanceof ErrorClientApi) { setError(err); setErrors(err.errorsCamps); } else throw err;
@@ -77,6 +84,10 @@ export function Usuaris() {
     } catch (err) {
       if (err instanceof ErrorClientApi) setError(err); else throw err;
     } finally { setDesant(false); setRevocant(null); }
+  }
+
+  if (!pot("usuaris.gestionar")) {
+    return <p role="alert" className="avis avis--error">Només la persona responsable del casal pot gestionar l'equip. <Link to={`/gestio/${casalId}`}>Tornar al casal</Link></p>;
   }
 
   return (

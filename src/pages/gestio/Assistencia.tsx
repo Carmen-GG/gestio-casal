@@ -109,7 +109,7 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
         Es calcula a partir de {MINIM_SESSIONS_PERCENTATGE} dies marcats i no comporta cap pèrdua de plaça automàtica.
       </p>
 
-      {pot("dades.exportar") && pot("sollicituds.consultar") && (
+      {((pot("dades.exportar") && pot("sollicituds.consultar")) || pot("assistencia.registrar")) && (
         <>
           <h3 className="subseccio">Imprimir</h3>
           <p className="text-secundari">
@@ -121,7 +121,9 @@ export function Assistencia({ casalId, cicle, pot, onCanviCicle }: {
             <button type="button" className="boto boto--secundari" disabled={enCurs} onClick={() => void graelles()}>
               {enCurs ? "Generant…" : "Descarrega-les en Excel"}
             </button>
-            <button type="button" className="boto boto--secundari" disabled={enCurs} onClick={() => void exporta()}>Exporta les dades d'assistència</button>
+            {pot("dades.exportar") && (
+              <button type="button" className="boto boto--secundari" disabled={enCurs} onClick={() => void exporta()}>Exporta les dades d'assistència</button>
+            )}
           </div>
         </>
       )}

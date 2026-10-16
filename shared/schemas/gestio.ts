@@ -133,7 +133,7 @@ export const activitatDuplicar = z.strictObject({
 export const assignarRol = z.strictObject({
   email: z.email("Correu electrònic no vàlid.").trim().toLowerCase().max(254),
   nom_visible: textCurt(120),
-  rol_codi: z.enum(["gestor_casal", "consulta_casal", "difusio_casal"]),
+  rol_codi: z.enum(["conserge"]),
   motiu,
 });
 

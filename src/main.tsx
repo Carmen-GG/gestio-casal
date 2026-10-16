@@ -20,6 +20,9 @@ import { DetallAdjudicacio } from "./pages/gestio/DetallAdjudicacio";
 import { AssistenciaActivitat } from "./pages/gestio/AssistenciaActivitat";
 import { ImprimirGraelles } from "./pages/gestio/ImprimirGraelles";
 import { Comunicacions } from "./pages/gestio/Comunicacions";
+import { ComunicacionsGenerals } from "./pages/gestio/ComunicacionsGenerals";
+import { AssistenciaCicle } from "./pages/gestio/AssistenciaCicle";
+import { WhatsappBusiness } from "./pages/gestio/WhatsappBusiness";
 import { BuscarUsuari } from "./pages/gestio/BuscarUsuari";
 import { AdministracioCasal, Responsables } from "./pages/gestio/Administracio";
 import { QuadreGlobal } from "./pages/gestio/QuadreGlobal";
@@ -59,6 +62,9 @@ const router = createBrowserRouter([
           { path: ":casalId/activitats/:activitatId/assistencia", element: <AssistenciaActivitat /> },
           { path: ":casalId/cicles/:cicleId/graelles", element: <ImprimirGraelles /> },
           { path: ":casalId/cicles/:cicleId/comunicacions", element: <Comunicacions /> },
+          { path: ":casalId/cicles/:cicleId/comunicacions-generals", element: <ComunicacionsGenerals /> },
+          { path: ":casalId/cicles/:cicleId/assistencia", element: <AssistenciaCicle /> },
+          { path: ":casalId/whatsapp", element: <WhatsappBusiness /> },
           { path: ":casalId/persones", element: <BuscarUsuari /> },
           { path: ":casalId/persones/:personaId", element: <FitxaPersona /> },
           { path: ":casalId/cartells", element: <CartellsInici /> },
