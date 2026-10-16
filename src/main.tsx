@@ -20,8 +20,12 @@ import { DetallAdjudicacio } from "./pages/gestio/DetallAdjudicacio";
 import { AssistenciaActivitat } from "./pages/gestio/AssistenciaActivitat";
 import { ImprimirGraelles } from "./pages/gestio/ImprimirGraelles";
 import { Comunicacions } from "./pages/gestio/Comunicacions";
+import { ComunicacionsGenerals } from "./pages/gestio/ComunicacionsGenerals";
+import { AssistenciaCicle } from "./pages/gestio/AssistenciaCicle";
+import { WhatsappBusiness } from "./pages/gestio/WhatsappBusiness";
 import { BuscarUsuari } from "./pages/gestio/BuscarUsuari";
 import { AdministracioCasal, Responsables } from "./pages/gestio/Administracio";
+import { ComunicatsCasals } from "./pages/gestio/ComunicatsCasals";
 import { QuadreGlobal } from "./pages/gestio/QuadreGlobal";
 import { FitxaPersona } from "./pages/gestio/FitxaPersona";
 import { PantallaSorteig } from "./pages/gestio/PantallaSorteig";
@@ -31,6 +35,8 @@ import { DetallPlantilla } from "./pages/cartells/DetallPlantilla";
 import { NouMaterial } from "./pages/cartells/NouMaterial";
 import { Instagram } from "./pages/instagram/Instagram";
 import { DetallPublicacio } from "./pages/instagram/DetallPublicacio";
+import { Territori } from "./pages/gestio/Territori";
+import { Incidencies } from "./pages/gestio/Incidencies";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -50,6 +56,8 @@ const router = createBrowserRouter([
           { path: "administracio/responsables", element: <Responsables /> },
           { path: "administracio/casal", element: <AdministracioCasal /> },
           { path: "administracio/quadre", element: <QuadreGlobal /> },
+          { path: "administracio/comunicats", element: <ComunicatsCasals /> },
+          { path: "administracio/territori", element: <Territori /> },
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
           { path: ":casalId/anar/:seccio", element: <AnarASeccio /> },
@@ -61,6 +69,10 @@ const router = createBrowserRouter([
           { path: ":casalId/activitats/:activitatId/assistencia", element: <AssistenciaActivitat /> },
           { path: ":casalId/cicles/:cicleId/graelles", element: <ImprimirGraelles /> },
           { path: ":casalId/cicles/:cicleId/comunicacions", element: <Comunicacions /> },
+          { path: ":casalId/cicles/:cicleId/comunicacions-generals", element: <ComunicacionsGenerals /> },
+          { path: ":casalId/cicles/:cicleId/assistencia", element: <AssistenciaCicle /> },
+          { path: ":casalId/whatsapp", element: <WhatsappBusiness /> },
+          { path: ":casalId/incidencies", element: <Incidencies /> },
           { path: ":casalId/persones", element: <BuscarUsuari /> },
           { path: ":casalId/persones/:personaId", element: <FitxaPersona /> },
           { path: ":casalId/cartells", element: <CartellsInici /> },

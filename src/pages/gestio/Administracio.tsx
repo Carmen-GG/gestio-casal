@@ -14,7 +14,7 @@ import type { AccesAlta, CasalResponsables, CodiAcces, ResponsableCasal } from "
 import { formataDataHora } from "../../utils/format";
 import { useGestio } from "./context";
 
-/** Pantalla d'inici de la superadministració: només tres opcions (petició de 2026-10-15). */
+/** Pantalla d'inici de la superadministració (peticions de 2026-10-15 i 2026-10-16). */
 export function AdministracioInici() {
   const { jo } = useGestio();
   return (
@@ -33,11 +33,23 @@ export function AdministracioInici() {
             <p>Entreu a qualsevol casal per veure'n les dades com si en fóssiu responsable.</p>
           </Link>
         </li>
+        <li>
+          <Link to="/gestio/administracio/comunicats">
+            <h2>Comunicats als casals</h2>
+            <p>Envieu un avís per correu i WhatsApp a les responsables i per WhatsApp a les persones usuàries dels casals que trieu.</p>
+          </Link>
+        </li>
+        <li>
+          <Link to="/gestio/administracio/territori">
+            <h2>Territori i referents</h2>
+            <p>Doneu d'alta les referents, indiqueu quins casals porta cadascuna i reviseu-ne la comarca i la demarcació.</p>
+          </Link>
+        </li>
         {jo.quadre_global && (
           <li>
             <Link to="/gestio/administracio/quadre">
               <h2>Quadre de comandament</h2>
-              <p>Indicadors de tots els casals i cicles: inscripcions, places, assistència, persones i equips.</p>
+              <p>Indicadors i gràfiques de tots els casals, d'un casal, d'una comarca, d'una demarcació o dels casals d'una referent.</p>
             </Link>
           </li>
         )}
@@ -137,7 +149,10 @@ export function Responsables() {
                   )}
                   {r ? (
                     <>
-                      <td>{r.nom_visible}<br /><span className="text-secundari">{r.email}</span></td>
+                      <td>
+                        {r.nom_visible}<br /><span className="text-secundari">{r.email}</span>
+                        <TelefonResponsable r={r} onDesat={() => setVersio((v) => v + 1)} />
+                      </td>
                       <td>{estatAcces(r)}</td>
                       <td>
                         <div className="botonera botonera--compacta">
@@ -180,6 +195,42 @@ export function Responsables() {
         <p>{baixa?.r.nom_visible} deixarà de ser responsable del {baixa?.casal.nom} i no hi podrà entrar. Les persones del seu equip continuen igual.</p>
       </DialegConfirmacio>
     </div>
+  );
+}
+
+/** Mòbil de la responsable per rebre els comunicats per WhatsApp (també el pot posar ella a «El meu compte»). */
+function TelefonResponsable({ r, onDesat }: { r: ResponsableCasal; onDesat: () => void }) {
+  const [editant, setEditant] = useState(false);
+  const [valor, setValor] = useState(r.telefon ?? "");
+  const [error, setError] = useState("");
+  const [desant, setDesant] = useState(false);
+  if (!editant) {
+    return (
+      <span className="bloc text-secundari">
+        Mòbil: {r.telefon ?? "no en té"}{" "}
+        <button type="button" className="boto-enllac" onClick={() => setEditant(true)}>{r.telefon ? "Canvia" : "Afegeix"}</button>
+      </span>
+    );
+  }
+  async function desa(e: FormEvent) {
+    e.preventDefault();
+    setError(""); setDesant(true);
+    try {
+      await serveiGestio.telefonResponsable(r.usuari_id, valor.trim() || null);
+      setEditant(false);
+      onDesat();
+    } catch (err) {
+      if (err instanceof ErrorClientApi) setError(err.errorsCamps.telefon ?? err.missatgeUsuari); else throw err;
+    } finally { setDesant(false); }
+  }
+  return (
+    <form className="formulari formulari--en-linia" onSubmit={(e) => void desa(e)} noValidate>
+      <CampText etiqueta="Mòbil" inputMode="tel" value={valor} onChange={(e) => setValor(e.target.value)} error={error} ajuda="Deixeu-lo buit per treure'l." />
+      <div className="botonera botonera--compacta">
+        <button type="submit" className="boto boto--petit" disabled={desant}>Desa</button>
+        <button type="button" className="boto boto--secundari boto--petit" onClick={() => setEditant(false)}>Cancel·la</button>
+      </div>
+    </form>
   );
 }
 

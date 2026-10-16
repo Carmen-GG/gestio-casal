@@ -141,7 +141,7 @@ export function GestioActivitats({ casalId, cicle, activitats, potGestionar, pot
               ) : (
                 <tr key={a.id} className={a.estat !== "activa" ? "fila--inactiva" : undefined}>
                   <td className="text-secundari">{a.codi_extern ?? "—"}</td>
-                  <td><strong>{a.nom}</strong></td>
+                  <td><strong>{a.nom}</strong>{a.gestio === "associacio" && <> <span className="etiqueta" title="No compta a les estadístiques de la superadministració">Associació</span></>}</td>
                   <td>{teHorari(a) ? formataHorari(a) : "—"}</td>
                   <td className="sense-salt">{a.data_inici ? <>{dataCurta(a.data_inici)}{a.data_fi && <><br />{dataCurta(a.data_fi)}</>}</> : "—"}</td>
                   <td>{a.capacitat}</td>

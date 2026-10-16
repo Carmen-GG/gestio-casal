@@ -132,7 +132,7 @@ export function AssistenciaActivitat() {
 
   return (
     <div>
-      <p className="subtitol"><Link to={`/gestio/${casalId}/cicles/${f.cicle.id}#assistencia`}>Tornar a les graelles d'assistència</Link></p>
+      <p className="subtitol"><Link to={`/gestio/${casalId}/cicles/${f.cicle.id}/assistencia`}>Tornar a les graelles d'assistència</Link></p>
       <h1>Assistència · {f.activitat.nom}</h1>
       <p className="text-secundari">
         {[f.activitat.horari, f.activitat.espai ? `Aula ${f.activitat.espai}` : null, `${f.activitat.capacitat} places`, `${admeses.length} persones admeses`].filter(Boolean).join(" · ")}
@@ -241,6 +241,27 @@ export function AssistenciaActivitat() {
           `${nomICognoms(p.participant)} ha acceptat la plaça i ja surt a la graella.`)}
         onRebutja={(p) => setBaixa({ placa: p, oferta: true })} />
 
+      {sessions.length > 0 && (
+        <Seccio titol="Assistència de la tallerista">
+          <p className="text-secundari">
+            {f.activitat.tallerista ? `Tallerista: ${f.activitat.tallerista}. ` : "Aquesta activitat no té cap tallerista indicada (es pot posar a la fitxa de l'activitat). "}
+            Marqueu els dies que la tallerista no ha vingut: compta al quadre de comandament de la superadministració.
+          </p>
+          <ul className="llista-sessions">
+            {sessions.map((s) => (
+              <li key={s.id}>
+                <label className="casella">
+                  <input type="checkbox" checked={s.tallerista_absent === 1} disabled={!registra || enCurs}
+                    onChange={(e) => void accio(() => serveiGestio.faltaTallerista(casalId, s.id, { absent: e.target.checked }),
+                      e.target.checked ? `S'ha anotat que la tallerista no va venir el ${formataData(s.data)}.` : `S'ha tret la falta de la tallerista del ${formataData(s.data)}.`)} />
+                  {" "}<strong>{formataData(s.data)}</strong>{s.hora_inici ? ` · ${s.hora_inici}` : ""} · {s.tallerista_absent === 1 ? "No ha vingut" : "Ha vingut"}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </Seccio>
+      )}
+
       <Seccio titol="Calendari de sessions">
         <details open={sessions.length === 0}>
           <summary>Dies de l'activitat ({sessions.length}){f.sessions.length > sessions.length ? ` i ${f.sessions.length - sessions.length} ${f.sessions.length - sessions.length === 1 ? "cancel·lat" : "cancel·lats"}` : ""}</summary>
@@ -343,12 +364,24 @@ function AvisOferta({ persona, r, onTanca }: { persona: string; r: ResultatBaixa
             La plaça s'ha ofert a <strong>{nomICognoms(o)}</strong>{o.posicio ? `, número ${o.posicio} de la llista d'espera` : ""}
             {o.telefon ? ` (telèfon ${o.telefon})` : ""}. Queda pendent que l'accepti.
           </p>
-          <BotoWhatsapp telefon={o.telefon} persona={nomICognoms(o)}
-            text={missatgeOferta({ nom: o.nom ?? "", ...r.missatge })} />
-          <p className="text-secundari">
-            WhatsApp s'obrirà amb el missatge escrit; només cal prémer Envia. Si la persona no té WhatsApp, l'aplicació us ho dirà: aleshores, truqueu-la.
-            Quan respongui, marqueu-ho a la llista d'espera («Ha acceptat» o «No la vol»).
-          </p>
+          {r.whatsapp?.enviat ? (
+            <p><strong>S'ha enviat l'oferta per WhatsApp Business.</strong> Quan respongui, ho veureu a «Comunicacions segons activitat»; marqueu-ho a la llista d'espera («Ha acceptat» o «No la vol»).</p>
+          ) : (
+            <>
+              {r.whatsapp && (
+                <p className="avis avis--alerta">
+                  No s'ha pogut enviar per WhatsApp Business{r.whatsapp.motiu === "telefon_fix" ? ": té un telèfon fix" : r.whatsapp.motiu === "sense_telefon" ? ": no té telèfon"
+                    : r.whatsapp.motiu === "sense_whatsapp" ? ": el número no té WhatsApp" : r.whatsapp.error ? `: ${r.whatsapp.error}` : ""}. Truqueu-la o envieu-ho a mà.
+                </p>
+              )}
+              <BotoWhatsapp telefon={o.telefon} persona={nomICognoms(o)}
+                text={missatgeOferta({ nom: o.nom ?? "", ...r.missatge })} />
+              <p className="text-secundari">
+                WhatsApp s'obrirà amb el missatge escrit; només cal prémer Envia. Si la persona no té WhatsApp, l'aplicació us ho dirà: aleshores, truqueu-la.
+                Quan respongui, marqueu-ho a la llista d'espera («Ha acceptat» o «No la vol»).
+              </p>
+            </>
+          )}
         </>
       ) : <p>{r.sense_oferta}</p>}
       <button type="button" className="boto boto--secundari boto--petit" onClick={onTanca}>Entesos</button>

@@ -50,16 +50,68 @@ const detallsActivitat = (d: DadesMissatgeOferta) =>
   [d.horari, d.espai ? `aula ${d.espai}` : null, d.data_inici ? `a partir del ${dataLlegible(d.data_inici)}` : null].filter(Boolean).join(", ");
 
 /**
- * Plantilles de missatge. Quan el casal tingui l'API de WhatsApp Business, cada plantilla
- * s'haurà de donar d'alta a Meta amb aquest nom i aquests paràmetres, en aquest ordre;
- * el text d'aquí és el mateix que s'envia ara de manera semiautomàtica.
+ * Plantilles de WhatsApp Business. Cada plantilla s'ha de donar d'alta a Meta (WhatsApp
+ * Manager → Plantilles de missatge) amb aquest nom, categoria «Utilitat», l'idioma del
+ * casal i exactament aquest text; {{1}}, {{2}}… són els paràmetres, en aquest ordre.
+ * Meta no accepta paràmetres buits ni amb salts de línia: es netegen abans d'enviar.
  */
 export const PLANTILLES_WHATSAPP = {
-  placa_admesa: { parametres: ["nom", "casal", "activitat", "detalls"] },
-  llista_espera: { parametres: ["nom", "casal", "activitat", "detalls", "posicio"] },
-  oferta_placa: { parametres: ["nom", "casal", "activitat", "detalls"] },
+  placa_admesa: {
+    titol: "Plaça adjudicada",
+    parametres: ["nom", "casal", "activitat", "detalls"],
+    text: {
+      ca: "Hola, {{1}}!\n\nUs escrivim del {{2}}. Teniu plaça a l'activitat «{{3}}» ({{4}}).\n\nSi finalment no hi podeu venir, digueu-nos-ho per poder oferir la plaça a una altra persona.\n\nUs hi esperem!",
+      es: "¡Hola, {{1}}!\n\nOs escribimos del {{2}}. Tenéis plaza en la actividad «{{3}}» ({{4}}).\n\nSi finalmente no podéis venir, decídnoslo para poder ofrecer la plaza a otra persona.\n\n¡Os esperamos!",
+    },
+    botons: null,
+  },
+  llista_espera: {
+    titol: "Llista d'espera",
+    parametres: ["nom", "casal", "activitat", "detalls", "posicio"],
+    text: {
+      ca: "Hola, {{1}}!\n\nUs escrivim del {{2}}. De moment no hi ha plaça a l'activitat «{{3}}» ({{4}}) i heu quedat en llista d'espera amb el número {{5}}.\n\nSi s'allibera una plaça, us avisarem per aquest mateix mitjà.\n\nGràcies!",
+      es: "¡Hola, {{1}}!\n\nOs escribimos del {{2}}. De momento no hay plaza en la actividad «{{3}}» ({{4}}) y habéis quedado en lista de espera con el número {{5}}.\n\nSi se libera una plaza, os avisaremos por este mismo medio.\n\n¡Gracias!",
+    },
+    botons: null,
+  },
+  oferta_placa: {
+    titol: "Oferta de plaça (llista d'espera)",
+    parametres: ["nom", "casal", "activitat", "detalls"],
+    text: {
+      ca: "Hola, {{1}}!\n\nUs escrivim del {{2}}. S'ha alliberat una plaça a l'activitat «{{3}}» ({{4}}) i sou la persona següent de la llista d'espera.\n\nLa voleu?",
+      es: "¡Hola, {{1}}!\n\nOs escribimos del {{2}}. Se ha liberado una plaza en la actividad «{{3}}» ({{4}}) y sois la siguiente persona de la lista de espera.\n\n¿La queréis?",
+    },
+    botons: { ca: ["Sí, la vull", "No, gràcies"], es: ["Sí, la quiero", "No, gracias"] },
+  },
+  avis_general: {
+    titol: "Comunicació general",
+    parametres: ["nom", "casal", "text"],
+    text: {
+      ca: "Hola, {{1}}!\n\nUs escrivim del {{2}}:\n\n{{3}}\n\nGràcies!",
+      es: "¡Hola, {{1}}!\n\nOs escribimos del {{2}}:\n\n{{3}}\n\n¡Gracias!",
+    },
+    botons: null,
+  },
 } as const;
 export type PlantillaWhatsapp = keyof typeof PLANTILLES_WHATSAPP;
+export type IdiomaWhatsapp = "ca" | "es";
+export const NOMS_PLANTILLES = Object.keys(PLANTILLES_WHATSAPP) as PlantillaWhatsapp[];
+
+/** Meta no admet salts de línia, tabuladors ni més de 4 espais seguits dins d'un paràmetre, ni paràmetres buits. */
+export function netejaParametre(v: string | number | null | undefined, maxim = 400): string {
+  const net = String(v ?? "").replace(/[\r\n\t]+/g, " ").replace(/ {2,}/g, " ").trim().slice(0, maxim);
+  return net || "-";
+}
+
+/** Detalls de l'activitat per a les plantilles: horari, aula i data d'inici. */
+export const detallsPlantilla = (d: Pick<DadesMissatgeOferta, "horari" | "espai" | "data_inici">, idioma: IdiomaWhatsapp = "ca") =>
+  [d.horari, d.espai ? `aula ${d.espai}` : null, d.data_inici ? `a partir del ${dataLlegible(d.data_inici)}` : null].filter(Boolean).join(", ")
+  || (idioma === "es" ? "consultad el horario en el casal" : "consulteu l'horari al casal");
+
+/** Text final d'una plantilla amb els paràmetres (el mateix que rebrà la persona). */
+export function textPlantilla(plantilla: PlantillaWhatsapp, idioma: IdiomaWhatsapp, parametres: string[]): string {
+  return PLANTILLES_WHATSAPP[plantilla].text[idioma].replace(/\{\{(\d+)\}\}/g, (_, n: string) => parametres[Number(n) - 1] ?? "");
+}
 
 /** Missatge per a una persona admesa en una activitat. */
 export function missatgeAdmissio(d: DadesMissatgeOferta): string {

@@ -5,6 +5,7 @@ import type { ConfiguracioFormulari } from "../../shared/domain/formulari";
 import type { ParametresAdjudicacio } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
 import type { EstatAssistencia } from "../../shared/domain/assistencia";
+import type { CategoriaIncidencia } from "../../shared/domain/territori";
 
 export interface Casal {
   id: string; codi: string; nom: string; municipi: string; adreca: string | null; actiu: boolean; versio: number;
@@ -17,7 +18,7 @@ export interface CasalAccessible {
 }
 
 export interface Jo {
-  usuari: { id: string; nom_visible: string; email: string };
+  usuari: { id: string; nom_visible: string; email: string; telefon: string | null };
   administracio_central: boolean;
   /** Superadministració: assigna responsables i veu tots els casals. */
   superadministracio: boolean;
@@ -49,7 +50,7 @@ export type EstatActivitat = "esborrany" | "activa" | "inactiva" | "arxivada";
 export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
-  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; grup: number | null; capacitat: number;
+  data_inici: string | null; data_fi: string | null; espai: string | null; tallerista?: string | null; gestio?: "generalitat" | "associacio"; destinataris: string | null; grup: number | null; capacitat: number;
   nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 
@@ -57,6 +58,10 @@ export interface EntradaHistorial {
   id: number; accio: string; canvis: Record<string, unknown>; usuari_id: string | null; motiu: string | null; creat_el: string;
 }
 
+export interface PeriodeEquip {
+  id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string;
+  atorgat_el: string; atorgat_per: string | null; revocat_el: string | null; revocat_per: string | null; motiu: string | null;
+}
 export interface AssignacioRol {
   id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string; casal_id: string | null; atorgat_el: string;
   te_contrasenya?: boolean; darrer_acces_el?: string | null; codi_pendent_fins?: string | null;
@@ -68,7 +73,7 @@ export type AccesAlta = { estat: "codi"; codi: CodiAcces } | { estat: "te_contra
 
 export interface ResponsableCasal {
   assignacio_id: string; usuari_id: string; email: string; nom_visible: string; atorgat_el: string;
-  te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null;
+  te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null; telefon: string | null;
 }
 export interface CasalResponsables {
   id: string; codi: string; nom: string; municipi: string; actiu: boolean; responsables: ResponsableCasal[];
@@ -78,19 +83,30 @@ export interface RecomptesGlobals {
   activitats: number; places_ofertes: number; sollicituds: number; persones: number; admeses: number; espera: number;
   renuncies: number; baixes: number; baixes_voluntaries: number; sessions_realitzades: number;
   presencies: number; absencies: number; absencies_justificades: number; percentatge_assistencia: number | null;
+  activitats_sense_tallerista: number; sessions_falta_tallerista: number;
+}
+export interface CasalQuadre extends RecomptesGlobals {
+  casal_id: string; casal: string; municipi: string; actiu: boolean; cicles: number;
+  comarca: string | null; demarcacio: string | null; referent_id: string | null; referent: string | null;
+  persones_diferents: number; persones_plataforma: number; equip: number; responsables: number;
+  incidencies: number; incidencies_obertes: number; incidencies_per_categoria: Record<CategoriaIncidencia, number>;
 }
 export interface QuadreGlobal {
   any: number | null;
   anys: number[];
-  totals: RecomptesGlobals & {
-    casals: number; casals_amb_responsable: number; casals_amb_cicles: number; cicles: number;
-    persones_diferents: number; persones_plataforma: number; equip: number;
-  };
-  casals: (RecomptesGlobals & {
-    casal_id: string; casal: string; municipi: string; actiu: boolean; cicles: number;
-    persones_diferents: number; persones_plataforma: number; equip: number; responsables: number;
-  })[];
+  casals: CasalQuadre[];
   cicles: (RecomptesGlobals & { casal_id: string; casal: string; cicle_id: string; cicle: string; any: number; estat: EstatCicle; data_inici: string; data_fi: string })[];
+  referents: { id: string; nom: string; actiu: boolean }[];
+}
+
+export interface Referent { id: string; nom: string; email: string | null; actiu: boolean }
+export interface CasalTerritori {
+  id: string; codi: string; nom: string; municipi: string; actiu: boolean;
+  comarca: string | null; demarcacio: string | null; referent_id: string | null;
+}
+export interface Incidencia {
+  id: string; data: string; categoria: CategoriaIncidencia; descripcio: string; activitat_id: string | null; activitat: string | null;
+  estat: "oberta" | "resolta"; resolucio: string | null; resolta_el: string | null; creat_el: string;
 }
 
 export type EstatSollicitud = "rebuda" | "validada" | "pendent_revisio" | "anullada";
@@ -220,6 +236,7 @@ export type { EstatAssistencia };
 export interface Sessio {
   id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada"; motiu_cancellacio: string | null; versio: number; marques: number;
+  tallerista_absent: 0 | 1; tallerista_motiu: string | null;
 }
 export interface ResumAssistencia { presents: number; absents: number; justificades: number; percentatge: number | null }
 export interface PersonaAssistencia extends FilaPlaca {
@@ -228,7 +245,7 @@ export interface PersonaAssistencia extends FilaPlaca {
 }
 export interface FullAssistencia {
   casal: { nom: string };
-  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null };
+  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null; tallerista?: string | null };
   cicle: { id: string; nom: string; estat: EstatCicle; llindar_assistencia: number | null; data_inici: string; data_fi: string };
   sessions: Sessio[]; persones: PersonaAssistencia[]; espera: FilaPlaca[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
 }
@@ -250,7 +267,36 @@ export interface ResultatBaixaVoluntaria {
   missatge: { casal: string; activitat: string; horari: string | null; espai: string | null; data_inici: string | null };
   sense_oferta: string | null;
   oferta: { placa_id: string; numero: number; posicio: number | null; nom: string | null; cognom1: string | null; cognom2: string | null; telefon: string | null } | null;
+  /** Oferta enviada sola per WhatsApp Business (null si el casal no el té actiu o no hi havia oferta). */
+  whatsapp: { enviat: boolean; estat: string; motiu: string | null; error: string | null } | null;
 }
+
+export type IdiomaWhatsapp = "ca" | "es";
+export interface ConfigWhatsapp {
+  casal_id: string; phone_number_id: string; numero_visible: string | null; idioma: IdiomaWhatsapp;
+  actiu: boolean; ofertes_automatiques: boolean; actualitzat_el: string;
+}
+export interface PlantillaMeta {
+  nom: string; titol: string; categoria: string; idioma: IdiomaWhatsapp; text: string; parametres: string[]; botons: string[] | null; exemple: string;
+}
+export interface EstatWhatsapp {
+  secrets: { testimoni: boolean; secret_app: boolean; verificacio: boolean };
+  config: ConfigWhatsapp | null;
+  disponible: boolean;
+  plantilles: PlantillaMeta[];
+}
+export type EstatMissatgeWhatsapp = "pendent" | "enviat" | "entregat" | "llegit" | "fallit" | "no_enviable";
+export interface MissatgeWhatsappPlaca {
+  placa_id: string; plantilla: string; estat: EstatMissatgeWhatsapp; motiu: string | null; error_text: string | null;
+  resposta: "si" | "no" | "text" | null; resposta_el: string | null; actualitzat_el: string;
+}
+export interface EnviamentWhatsapp {
+  id: string; tipus: "activitat" | "general" | "oferta"; text: string | null; abast: unknown; creat_el: string; recompte: Record<string, number>;
+}
+export interface ResumWhatsapp {
+  disponible: boolean; ofertes_automatiques: boolean; idioma: IdiomaWhatsapp; enviaments: EnviamentWhatsapp[]; missatges: MissatgeWhatsappPlaca[];
+}
+export interface ProgresEnviament { recompte: Record<string, number>; queden: number; aturat: string | null }
 export interface ResumAssistenciaCicle {
   llindar_assistencia: number | null;
   activitats: { activitat_id: string; activitat: string; horari: string | null; admeses: number; sessions: number; realitzades: number;
@@ -337,4 +383,44 @@ export interface ResultatImportacioPersones {
   actualitzades: number;
   sense_canvis: number;
   omeses: { fila: number; motiu: string }[];
+}
+
+// ---------- Comunicats de la superadministració ----------
+export interface ConfigWhatsappCentral {
+  phone_number_id: string; numero_visible: string | null; idioma: IdiomaWhatsapp; remitent: string; actiu: boolean; actualitzat_el: string;
+}
+export interface CasalComunicats {
+  id: string; codi: string; nom: string; municipi: string; actiu: boolean;
+  responsables: { usuari_id: string; nom_visible: string; email: string; te_mobil: boolean }[];
+  /** Des de quin número reben el WhatsApp les persones del casal. */
+  whatsapp: "casal" | "central" | null;
+  persones: number; persones_mobil: number;
+}
+export interface ResumComunicat {
+  id: string; assumpte: string; text: string; casal_ids: string[]; creat_el: string;
+  canals: { correu_responsables: boolean; whatsapp_responsables: boolean; whatsapp_persones: boolean };
+  recompte: Record<string, number>;
+}
+export interface EstatComunicats {
+  serveis: { whatsapp: boolean; correu: boolean };
+  config_central: ConfigWhatsappCentral | null;
+  casals: CasalComunicats[];
+  comunicats: ResumComunicat[];
+}
+export type MotiuComunicat = "telefon_fix" | "sense_telefon" | "telefon_invalid" | "sense_whatsapp" | "error_meta" | "sense_numero" | "sense_correu" | "error_correu" | "duplicat";
+export interface EstatCanalComunicat { estat: EstatMissatgeWhatsapp; motiu: MotiuComunicat | null; error_text: string | null }
+export interface ResultatComunicat {
+  comunicat: { id: string; assumpte: string; text: string; creat_el: string; canals: ResumComunicat["canals"] };
+  casals: {
+    casal_id: string; casal: string;
+    responsables: { nom: string; correu: EstatCanalComunicat | null; whatsapp: EstatCanalComunicat | null }[];
+    persones: {
+      total: number; contactades: number; llegides: number; pendents: number;
+      no_contactades: { nom: string; telefon: string | null; tipus_telefon: string | null; motiu: MotiuComunicat | null; error_text: string | null }[];
+    };
+  }[];
+}
+export interface ComunicatCreat {
+  comunicat_id: string; total: number; pendents: number;
+  correu_manual: { nom: string; email: string; casal: string }[] | null;
 }

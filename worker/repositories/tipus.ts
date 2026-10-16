@@ -6,6 +6,7 @@
  * nova de cada repositori (vegeu docs/adr/0003-capa-de-repositoris.md).
  */
 import type { DadesPersona } from "../../shared/domain/persones-plataforma";
+import type { IdiomaWhatsapp, PlantillaWhatsapp } from "../../shared/domain/whatsapp";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte, TipusComunicacio } from "../../shared/schemas/comunicacions";
 import type { EstatCicle } from "../../shared/domain/cicles";
 import type { CampPersonal } from "../../shared/domain/formulari";
@@ -13,6 +14,7 @@ import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMo
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
 import type { EstatAssistencia } from "../../shared/domain/assistencia";
 import type { EstatPublicacio } from "../../shared/domain/instagram";
+import type { CATEGORIES_INCIDENCIA } from "../../shared/domain/territori";
 import type { CampPlantilla, Estacio, EstatPlantilla, FormatSortida, TipusPlantilla, UsFitxer } from "../../shared/domain/cartells";
 
 export interface Casal {
@@ -21,6 +23,9 @@ export interface Casal {
   nom: string;
   municipi: string;
   adreca: string | null;
+  comarca: string | null;
+  demarcacio: string | null;
+  referent_id: string | null;
   actiu: boolean;
   configuracio: Record<string, unknown>;
   versio: number;
@@ -79,6 +84,10 @@ export interface Activitat {
   data_inici: string | null;
   data_fi: string | null;
   espai: string | null;
+  /** Persona tallerista (buit: sense tallerista assignada). */
+  tallerista: string | null;
+  /** Qui la gestiona: només les de la Generalitat compten a les estadístiques de la superadministració. */
+  gestio: GestioActivitat;
   /** Persones a qui va dirigida (text de la PGEc). */
   destinataris: string | null;
   /** Grup d'activitats que no es poden acumular (vegeu `cicles.limits_grups`). */
@@ -96,12 +105,14 @@ export interface Activitat {
   actualitzat_el: string;
 }
 
+export type GestioActivitat = "generalitat" | "associacio";
+
 export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "capacitat"> &
   Partial<
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "tallerista" | "gestio" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;
@@ -164,6 +175,8 @@ export interface Usuari {
   nom_visible: string;
   proveidor_identitat: "dev" | "entra_id";
   actiu: boolean;
+  /** Mòbil per als avisos de la superadministració (opcional). */
+  telefon: string | null;
 }
 
 /** Permisos efectius d'un usuari: globals (administració central) i per casal. */
@@ -183,6 +196,21 @@ export interface ResponsableCasal {
   te_contrasenya: boolean;
   darrer_acces_el: string | null;
   codi_pendent_fins: string | null;
+  telefon: string | null;
+}
+
+/** Un període d'una persona en un rol del casal (des de l'alta fins a la baixa, si n'hi ha). */
+export interface PeriodeEquip {
+  id: string;
+  usuari_id: string;
+  email: string;
+  nom_visible: string;
+  rol_codi: string;
+  atorgat_el: string;
+  atorgat_per: string | null;
+  revocat_el: string | null;
+  revocat_per: string | null;
+  motiu: string | null;
 }
 
 export interface AssignacioRol {
@@ -206,6 +234,8 @@ export interface RepositoriUsuaris {
   superadministracio(): Promise<{ id: string; contrasenya_resum: string }[]>;
   fixarContrasenya(usuariId: string, resum: string, ara: string): Promise<void>;
   assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
+  /** Totes les assignacions del casal, també les revocades: una fila per període. */
+  historialEquip(casalId: string): Promise<PeriodeEquip[]>;
   assignacioPerId(id: string): Promise<AssignacioRol | null>;
   rolExisteix(codi: string): Promise<{ abast: "casal" | "global" } | null>;
   /** Responsables vigents de tots els casals. */
@@ -215,6 +245,7 @@ export interface RepositoriUsuaris {
   /** Estat d'accés de les persones: si tenen contrasenya i si tenen un codi de primer accés vigent. */
   estatAcces(usuariIds: string[], ara: string): Promise<Record<string, { te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null }>>;
   marcarAcces(usuariId: string, ara: string): Promise<void>;
+  fixarTelefon(usuariId: string, telefon: string | null, ara: string): Promise<void>;
   operacioAssignar(dades: { id: string; usuari_id: string; rol_codi: string; casal_id: string | null; atorgat_per: string; motiu: string | null }, ara: string): Operacio;
   operacioRevocar(id: string, revocatPer: string, motiu: string | null, ara: string): Operacio;
 }
@@ -595,6 +626,9 @@ export interface Sessio {
   hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada";
   motiu_cancellacio: string | null;
+  /** La persona tallerista no ha vingut a la sessió. */
+  tallerista_absent: 0 | 1;
+  tallerista_motiu: string | null;
   versio: number;
   /** Nombre de marques registrades en aquesta sessió. */
   marques: number;
@@ -615,6 +649,7 @@ export interface RepositoriAssistencia {
   /** Insereix les sessions que encara no existeixen (mateixa activitat, data i hora d'inici). */
   operacioCrearSessions(sessions: { id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null }[], usuariId: string, ara: string): Operacio;
   operacioCancellarSessio(id: string, versio: number, motiu: string, ara: string, operacio: string): Operacio;
+  operacioFaltaTallerista(id: string, absent: boolean, motiu: string | null, ara: string, operacio: string): Operacio;
   marquesActivitat(activitatId: string): Promise<Marca[]>;
   marquesCicle(cicleId: string): Promise<Marca[]>;
   operacioNovaMarca(d: { sessio_id: string; placa_id: string; estat: EstatAssistencia; usuari_id: string; operacio: string }, ara: string): Operacio;
@@ -662,6 +697,66 @@ export interface RepositoriComunicacions {
   esborrar(casalId: string, placaId: string): Promise<number>;
 }
 
+export interface ConfigWhatsapp {
+  casal_id: string;
+  phone_number_id: string;
+  numero_visible: string | null;
+  idioma: IdiomaWhatsapp;
+  actiu: boolean;
+  ofertes_automatiques: boolean;
+  actualitzat_el: string;
+}
+
+export type EstatMissatgeWhatsapp = "pendent" | "enviat" | "entregat" | "llegit" | "fallit" | "no_enviable";
+export type MotiuMissatgeWhatsapp = "telefon_fix" | "sense_telefon" | "telefon_invalid" | "sense_whatsapp" | "error_meta";
+
+export interface MissatgeWhatsapp {
+  id: string;
+  enviament_id: string;
+  casal_id: string;
+  cicle_id: string;
+  placa_id: string;
+  plantilla: PlantillaWhatsapp;
+  estat: EstatMissatgeWhatsapp;
+  motiu: MotiuMissatgeWhatsapp | null;
+  wamid: string | null;
+  error_codi: number | null;
+  error_text: string | null;
+  resposta: "si" | "no" | "text" | null;
+  resposta_el: string | null;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface EnviamentWhatsapp {
+  id: string;
+  casal_id: string;
+  cicle_id: string;
+  tipus: "activitat" | "general" | "oferta";
+  text: string | null;
+  abast: string;
+  usuari_id: string | null;
+  creat_el: string;
+}
+
+export interface RepositoriWhatsapp {
+  config(casalId: string): Promise<ConfigWhatsapp | null>;
+  desarConfig(d: Omit<ConfigWhatsapp, "actualitzat_el">, usuariId: string | null, ara: string): Promise<void>;
+  crearEnviament(e: EnviamentWhatsapp, missatges: Pick<MissatgeWhatsapp, "id" | "placa_id" | "plantilla">[], ara: string): Promise<void>;
+  enviament(casalId: string, id: string): Promise<EnviamentWhatsapp | null>;
+  enviaments(casalId: string, cicleId: string, tipus?: EnviamentWhatsapp["tipus"]): Promise<(EnviamentWhatsapp & { recompte: Record<string, number> })[]>;
+  pendents(enviamentId: string, limit: number): Promise<MissatgeWhatsapp[]>;
+  recompte(enviamentId: string): Promise<Record<string, number>>;
+  actualitzar(id: string, canvis: Partial<Pick<MissatgeWhatsapp, "estat" | "motiu" | "wamid" | "error_codi" | "error_text">>, ara: string): Promise<void>;
+  perWamid(wamid: string): Promise<MissatgeWhatsapp | null>;
+  canviEstatPerWamid(wamid: string, estat: EstatMissatgeWhatsapp, error: { codi: number; text: string } | null, ara: string): Promise<MissatgeWhatsapp | null>;
+  resposta(wamid: string, resposta: "si" | "no" | "text", ara: string): Promise<MissatgeWhatsapp | null>;
+  /** Darrer missatge de cada plaça del cicle. */
+  darrersPerPlaca(casalId: string, cicleId: string): Promise<MissatgeWhatsapp[]>;
+  /** Missatges d'un enviament amb la plaça (per mostrar el resultat). */
+  missatges(enviamentId: string): Promise<MissatgeWhatsapp[]>;
+}
+
 export interface PersonaPlataforma {
   id: string;
   clau: string;
@@ -697,6 +792,8 @@ export interface RepositoriPersonesPlataforma {
   desar(casalId: string, persones: PersonaPlataforma[]): Promise<void>;
   cercar(casalId: string, f: { paraules: string[]; data_naixement: string | null; contacte: boolean; limit: number }): Promise<{ persones: PersonaPlataforma[]; total: number }>;
   perId(casalId: string, id: string): Promise<PersonaPlataforma | null>;
+  /** Nom i telèfons de totes les persones del casal (per als comunicats). */
+  contactes(casalId: string): Promise<ContactePersona[]>;
   resum(casalId: string): Promise<{ total: number; darrera_importacio: string | null }>;
   /** Sol·licituds i places de l'aplicació de la mateixa persona (per document o per nom i data de naixement). */
   participacions(casalId: string, documentNorm: string | null, clauOrdenacio: string, dataNaixement: string | null): Promise<ParticipacioPersona[]>;
@@ -724,6 +821,10 @@ export interface IndicadorsCicleGlobal {
   presencies: number;
   absencies: number;
   absencies_justificades: number;
+  /** Activitats sense cap tallerista indicada. */
+  activitats_sense_tallerista: number;
+  /** Sessions no cancel·lades en què la tallerista no ha vingut. */
+  sessions_falta_tallerista: number;
 }
 
 /** Recomptes per casal que no depenen del cicle. */
@@ -738,7 +839,56 @@ export interface IndicadorsCasalGlobal {
 export interface RepositoriIndicadors {
   cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
   /** Tots els casals i cicles (filtrats per any del cicle si se'n dona). */
-  global(any: number | null): Promise<{ cicles: IndicadorsCicleGlobal[]; casals: IndicadorsCasalGlobal[]; anys: number[] }>;
+  global(any: number | null): Promise<{ cicles: IndicadorsCicleGlobal[]; casals: IndicadorsCasalGlobal[]; anys: number[]; incidencies: RecompteIncidencies[] }>;
+}
+
+/** Incidències d'un casal per categoria i estat (any de la data de la incidència). */
+export interface RecompteIncidencies { casal_id: string; categoria: CategoriaIncidencia; estat: EstatIncidencia; n: number }
+
+// ---------- Territori i referents ----------
+export interface Referent {
+  id: string;
+  nom: string;
+  email: string | null;
+  actiu: boolean;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface RepositoriTerritori {
+  referents(): Promise<Referent[]>;
+  referent(id: string): Promise<Referent | null>;
+  crearReferent(d: { id: string; nom: string; email: string | null }, ara: string): Promise<void>;
+  actualitzarReferent(id: string, d: { nom: string; email: string | null; actiu: boolean }, ara: string): Promise<boolean>;
+  /** Comarca, demarcació i referent d'un casal. */
+  fixarTerritori(casalId: string, d: { comarca: string | null; demarcacio: string | null; referent_id: string | null }, ara: string): Promise<boolean>;
+}
+
+// ---------- Incidències ----------
+export type CategoriaIncidencia = (typeof CATEGORIES_INCIDENCIA)[number];
+export type EstatIncidencia = "oberta" | "resolta";
+
+export interface Incidencia {
+  id: string;
+  casal_id: string;
+  data: string;
+  categoria: CategoriaIncidencia;
+  descripcio: string;
+  activitat_id: string | null;
+  activitat: string | null;
+  estat: EstatIncidencia;
+  resolucio: string | null;
+  resolta_el: string | null;
+  creat_el: string;
+}
+
+export interface RepositoriIncidencies {
+  llistar(casalId: string, any: number | null): Promise<Incidencia[]>;
+  /** Activitats no arxivades del casal, per vincular-hi una incidència. */
+  activitats(casalId: string): Promise<{ id: string; nom: string; cicle: string }[]>;
+  crear(d: { id: string; casal_id: string; data: string; categoria: CategoriaIncidencia; descripcio: string; activitat_id: string | null; usuari_id: string }, ara: string): Promise<void>;
+  /** Marca la incidència com a resolta; retorna fals si no existeix o ja ho estava. */
+  resoldre(casalId: string, id: string, d: { resolucio: string | null; usuari_id: string }, ara: string): Promise<boolean>;
 }
 
 export interface Repositoris {
@@ -754,8 +904,12 @@ export interface Repositoris {
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
   comunicacions: RepositoriComunicacions;
+  whatsapp: RepositoriWhatsapp;
+  comunicats: RepositoriComunicats;
   personesPlataforma: RepositoriPersonesPlataforma;
   indicadors: RepositoriIndicadors;
+  territori: RepositoriTerritori;
+  incidencies: RepositoriIncidencies;
   cartells: RepositoriCartells;
   instagram: RepositoriInstagram;
   unitat: UnitatDeTreball;
@@ -863,4 +1017,65 @@ export interface RepositoriInstagram {
   publicacions(casalId: string, limit: number): Promise<PublicacioInstagram[]>;
   /** Aplica els canvis només si la versió coincideix; retorna si s'han aplicat. */
   actualitzarPublicacio(id: string, versio: number, canvis: CanvisPublicacio, ara: string): Promise<boolean>;
+}
+
+export interface ContactePersona {
+  id: string;
+  nom: string | null;
+  cognoms: string;
+  telefon_mobil: string | null;
+  telefon_opcional: string | null;
+  telefon_fix: string | null;
+  tutor_telefon: string | null;
+}
+
+export interface ConfigWhatsappCentral {
+  phone_number_id: string;
+  numero_visible: string | null;
+  idioma: "ca" | "es";
+  remitent: string;
+  actiu: boolean;
+  actualitzat_el: string;
+}
+
+export type CanalComunicat = "correu" | "whatsapp";
+export type MotiuComunicat = MotiuMissatgeWhatsapp | "sense_numero" | "sense_correu" | "error_correu" | "duplicat";
+
+export interface Comunicat {
+  id: string;
+  assumpte: string;
+  text: string;
+  casal_ids: string;
+  canals: string;
+  usuari_id: string | null;
+  creat_el: string;
+}
+
+export interface DestinatariComunicat {
+  id: string;
+  comunicat_id: string;
+  casal_id: string;
+  tipus: "responsable" | "persona";
+  referencia_id: string;
+  canal: CanalComunicat;
+  estat: EstatMissatgeWhatsapp;
+  motiu: MotiuComunicat | null;
+  wamid: string | null;
+  error_text: string | null;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface RepositoriComunicats {
+  configCentral(): Promise<ConfigWhatsappCentral | null>;
+  desarConfigCentral(d: Omit<ConfigWhatsappCentral, "actualitzat_el">, usuariId: string | null, ara: string): Promise<void>;
+  crear(c: Comunicat, destinataris: Omit<DestinatariComunicat, "comunicat_id" | "wamid" | "error_text" | "creat_el" | "actualitzat_el">[], ara: string): Promise<void>;
+  perId(id: string): Promise<Comunicat | null>;
+  /** Darrers comunicats amb recomptes per estat. */
+  llistar(limit: number): Promise<(Comunicat & { recompte: Record<string, number> })[]>;
+  /** Pendents: primer les responsables, després les persones. */
+  pendents(comunicatId: string, limit: number): Promise<DestinatariComunicat[]>;
+  destinataris(comunicatId: string): Promise<DestinatariComunicat[]>;
+  actualitzar(id: string, canvis: Partial<Pick<DestinatariComunicat, "estat" | "motiu" | "wamid" | "error_text">>, ara: string): Promise<void>;
+  canviEstatPerWamid(wamid: string, estat: EstatMissatgeWhatsapp, error: { codi: number; text: string } | null, ara: string): Promise<DestinatariComunicat | null>;
 }

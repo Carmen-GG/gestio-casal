@@ -439,3 +439,40 @@ main:focus { outline: none; }
 .dades-compte dt { color: var(--color-text-secundari); }
 .dades-compte dd { margin: 0; overflow-wrap: anywhere; }
 .dades-compte__casal { display: block; }
+
+/* ---------- WhatsApp Business ---------- */
+.plantilla-meta { border: 1px solid var(--color-vora); border-radius: var(--radi); padding: var(--espai); margin: 0 0 var(--espai); background: var(--color-superficie); }
+.plantilla-meta h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.plantilla-meta__text { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; background: var(--color-fons, #f5f6f8); padding: 0.75rem; border-radius: var(--radi); margin: 0 0 0.5rem; }
+.previsualitzacio-missatge blockquote { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0.25rem 0 var(--espai); padding: 0.75rem 1rem; border-left: 4px solid #25d366; background: var(--color-superficie); }
+.graella-caselles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: 0.25rem 1rem; margin-top: 0.25rem; }
+.llista-enviament li, .llista-enviaments li { padding: 0.4rem 0; border-bottom: 1px solid var(--color-vora); }
+.llista-estat li { padding: 0.15rem 0; }
+.trencable { overflow-wrap: anywhere; }
+.sense-vora { border: 0; padding: 0; margin: 0; min-width: 0; }
+
+/* Comunicats de la superadministració */
+.bloc { display: block; }
+.llista-casals-comunicat { max-height: 28rem; overflow-y: auto; border: 1px solid var(--color-vora, #d0d7de); border-radius: 0.5rem; padding: 0.25rem 0.75rem; }
+.llista-casals-comunicat li { padding: 0.5rem 0; border-bottom: 1px solid var(--color-vora, #d0d7de); }
+.llista-casals-comunicat li:last-child { border-bottom: 0; }
+.llista-casals-comunicat .casella { align-items: flex-start; }
+.formulari--en-linia { margin-top: 0.5rem; }
+.resultat-comunicat { margin-top: 1.5rem; }
+
+/* Quadre de comandament: gràfiques de barres i filtres (2026-10-16) */
+.graella-grafics { display: grid; gap: 0.5rem 2rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); margin: 0.5rem 0 1rem; }
+.grafic { margin: 0; }
+.grafic figcaption { font-weight: 600; margin-bottom: 0.4rem; }
+.barres { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.3rem; }
+.barres li { display: grid; grid-template-columns: minmax(6rem, 40%) 1fr; gap: 0.6rem; align-items: center; }
+.barres__etiqueta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+.barres__pista { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.barres__barra { flex: 0 1 auto; height: 1rem; min-width: 2px; background: var(--color-primari); border-radius: 0 3px 3px 0; }
+.barres__valor { flex: none; font-size: 0.85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seleccio-casals { margin: 0 0 1rem; }
+.seleccio-casals summary { cursor: pointer; font-weight: 600; }
+.llista-seleccio { list-style: none; padding: 0; margin: 0.5rem 0 0; max-height: 18rem; overflow: auto; border: 1px solid var(--color-vora); border-radius: var(--radi); padding: 0.4rem 0.6rem; background: var(--color-superficie); }
+.formulari-en-linia { display: flex; flex-wrap: wrap; gap: 0 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.formulari-en-linia .camp { flex: 1 1 14rem; }
+.formulari-en-linia .boto { margin-bottom: 1rem; }

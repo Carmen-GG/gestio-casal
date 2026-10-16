@@ -135,6 +135,18 @@ describe("gestió d'activitats", () => {
     expect((await c.peticio(url, { method: "PATCH", json: { versio: activa.versio, capacitat: 20, confirmacio: true, motiu: "Sala més gran" } })).status).toBe(200);
   });
 
+  it("les activitats creades a mà són d'associació si no es diu el contrari, i es poden marcar com de la Generalitat", async () => {
+    const { casal, cicle } = await crearEscenari({ estatCicle: "preparacio" });
+    const c = await clientAutenticat("gestor_casal", casal.id);
+    const ruta = `/api/gestio/casals/${casal.id}/cicles/${cicle.id}/activitats`;
+    const manual = await c.json(ruta, { method: "POST", json: { nom: "Taller d'una associació", capacitat: 10 } });
+    expect(manual.status).toBe(201);
+    expect(manual.cos.activitat?.gestio ?? manual.cos.gestio).toBe("associacio");
+    const gene = await c.json(ruta, { method: "POST", json: { nom: "Taller de la Generalitat", capacitat: 10, gestio: "generalitat" } });
+    expect(gene.cos.activitat?.gestio ?? gene.cos.gestio).toBe("generalitat");
+    expect((await c.json(ruta, { method: "POST", json: { nom: "X", capacitat: 1, gestio: "ajuntament" } })).status).toBe(400);
+  });
+
   it("no permet crear activitats en un cicle arxivat", async () => {
     const { casal, cicle } = await crearEscenari({ estatCicle: "arxivat" });
     const c = await clientAutenticat("gestor_casal", casal.id);
@@ -148,9 +160,9 @@ describe("persones autoritzades", () => {
     const { casal } = await crearEscenari();
     const admin = await clientAutenticat("admin_central", null);
     const email = `nova-${crypto.randomUUID()}@exemple.invalid`;
-    const r = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "gestor_casal" } });
+    const r = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "conserge" } });
     expect(r.status).toBe(201);
-    const duplicat = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "gestor_casal" } });
+    const duplicat = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "conserge" } });
     expect(duplicat.status).toBe(409);
     expect(((await admin.json(`/api/gestio/casals/${casal.id}/usuaris`)).cos.assignacions as unknown[]).length).toBe(1);
 

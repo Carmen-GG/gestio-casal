@@ -12,7 +12,8 @@ import { descarrega, generaXlsx } from "../../fitxers/xlsx";
 import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
-import type { DadesComunicacions, PersonaComunicacio } from "../../types/gestio";
+import type { DadesComunicacions, MissatgeWhatsappPlaca, PersonaComunicacio } from "../../types/gestio";
+import { ProgresWhatsapp, textMissatgeWhatsapp, useEnviamentWhatsapp } from "../../components/EnviamentWhatsapp";
 import { usePermisos } from "./context";
 
 type Grup = DadesComunicacions["activitats"][number];
@@ -63,6 +64,9 @@ export function Comunicacions() {
   const pot = usePermisos(casalId);
   const [versio, setVersio] = useState(0);
   const consulta = useConsulta((s) => serveiGestio.comunicacions(casalId, cicleId, s), [casalId, cicleId, versio]);
+  // Estat de WhatsApp Business: si no hi és o falla, la pàgina continua amb l'enviament semiautomàtic.
+  const wa = useConsulta((s) => serveiGestio.resumWhatsapp(casalId, cicleId, s).catch(() => null), [casalId, cicleId, versio]);
+  const enviament = useEnviamentWhatsapp(casalId);
   const [activitat, setActivitat] = useState("");
   const [situacio, setSituacio] = useState<"" | "admesa" | "espera">("");
   const [veure, setVeure] = useState<"pendents" | "tots" | "enviats" | "trucar">("pendents");
@@ -82,6 +86,9 @@ export function Comunicacions() {
   if (consulta.tipus === "error") return <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />;
   const d = consulta.dades;
   const gestiona = pot("places.gestionar");
+  const resumWa = wa.tipus === "dades" ? wa.dades : null;
+  const api = !!resumWa?.disponible;
+  const missatgesWa = new Map((resumWa?.missatges ?? []).map((m) => [m.placa_id, m]));
 
   const filtrades = files.filter((f) => (!activitat || f.grup.activitat_id === activitat) && (!situacio || f.situacio === situacio))
     .filter((f) => {
@@ -96,6 +103,13 @@ export function Comunicacions() {
     trucar: estats.filter((e) => e.tipus === "trucar").length,
   };
   const seguent = filtrades.find((f) => estatComunicacio(f).tipus === "pendent");
+  const pendentsFiltrades = filtrades.filter((f) => estatComunicacio(f).tipus === "pendent");
+  async function enviaApi(places: Fila[]) {
+    setExit("");
+    setError(null);
+    await enviament.envia(() => serveiGestio.enviamentWhatsappActivitats(casalId, cicleId, { placa_ids: places.map((f) => f.placa_id), nomes_pendents: false }));
+    setVersio((v) => v + 1);
+  }
 
   async function registra(f: Fila, dades: { canal: CanalComunicacio; estat: EstatComunicacio; motiu?: MotiuNoContacte; nota?: string }, text: string) {
     setError(null);
@@ -136,9 +150,11 @@ export function Comunicacions() {
         <h1>Comunicacions segons activitat</h1>
         <p className="text-secundari">
           Un missatge de WhatsApp per activitat i persona, tant si és admesa com si ha quedat en llista d'espera.
-          Cada «Envia per WhatsApp» obre el WhatsApp del casal amb el missatge escrit: només cal prémer Envia, i aquí queda marcat com a enviat.
-          Quan el casal tingui l'API de WhatsApp Business, els mateixos missatges es podran enviar sols.
+          {api
+            ? " Els missatges surten sols des del WhatsApp Business del casal. Els telèfons fixos, els que no tenen WhatsApp i els números no vàlids passen al llistat per trucar."
+            : " Cada «Envia per WhatsApp» obre el WhatsApp del casal amb el missatge escrit: només cal prémer Envia, i aquí queda marcat com a enviat. Si el casal activa WhatsApp Business, els missatges sortiran sols."}
         </p>
+        <ProgresWhatsapp estat={enviament.estat} error={enviament.error} onRepren={() => void enviament.repren().then(() => setVersio((v) => v + 1))} />
         <div aria-live="polite">
           {exit && <AvisExit>{exit}</AvisExit>}
           {error && (error instanceof ErrorClientApi ? <MissatgeError error={error} /> : <p className="avis avis--error" role="alert">{error.message}</p>)}
@@ -173,7 +189,15 @@ export function Comunicacions() {
                 </select>
               </label>
             </div>
-            {gestiona && seguent && (
+            {gestiona && api && pendentsFiltrades.length > 0 && (
+              <div className="botonera">
+                <button type="button" className="boto boto--whatsapp" disabled={!!enviament.estat?.enCurs} onClick={() => void enviaApi(pendentsFiltrades)}>
+                  Envia per WhatsApp Business a {pendentsFiltrades.length === 1 ? "la persona pendent" : `les ${pendentsFiltrades.length} persones pendents`}
+                  {activitat ? " d'aquesta activitat" : ""}
+                </button>
+              </div>
+            )}
+            {gestiona && !api && seguent && (
               <div className="botonera">
                 <a className="boto boto--whatsapp" href={enllac(d, seguent)} target="_blank" rel="noopener noreferrer" onClick={() => enviat(seguent)}>
                   Envia el següent: {seguent.nom} {seguent.cognoms} · {seguent.grup.activitat}
@@ -191,7 +215,8 @@ export function Comunicacions() {
                     </thead>
                     <tbody>
                       {filtrades.filter((f) => f.grup === g).map((f) => (
-                        <FilaComunicacio key={f.placa_id} d={d} f={f} gestiona={gestiona} enCurs={enCurs === f.placa_id}
+                        <FilaComunicacio key={f.placa_id} d={d} f={f} gestiona={gestiona} enCurs={enCurs === f.placa_id || !!enviament.estat?.enCurs}
+                          api={api} missatge={missatgesWa.get(f.placa_id) ?? null} onEnviaApi={() => void enviaApi([f])}
                           onEnviat={() => enviat(f)} onDesfer={() => void desfer(f)}
                           onNoContactat={() => { setMotiu("sense_whatsapp"); setNota(""); setNoContactat(f); }}
                           onTrucada={() => void registra(f, { canal: "telefon", estat: "contactat_telefon" }, `${f.nom} ${f.cognoms}: trucada registrada.`)} />
@@ -236,9 +261,9 @@ export function Comunicacions() {
   );
 }
 
-function FilaComunicacio({ d, f, gestiona, enCurs, onEnviat, onDesfer, onNoContactat, onTrucada }: {
-  d: DadesComunicacions; f: Fila; gestiona: boolean; enCurs: boolean;
-  onEnviat: () => void; onDesfer: () => void; onNoContactat: () => void; onTrucada: () => void;
+function FilaComunicacio({ d, f, gestiona, enCurs, api, missatge, onEnviaApi, onEnviat, onDesfer, onNoContactat, onTrucada }: {
+  d: DadesComunicacions; f: Fila; gestiona: boolean; enCurs: boolean; api: boolean; missatge: MissatgeWhatsappPlaca | null;
+  onEnviaApi: () => void; onEnviat: () => void; onDesfer: () => void; onNoContactat: () => void; onTrucada: () => void;
 }) {
   const e = estatComunicacio(f);
   const text = e.tipus === "pendent" ? (e.reenviar ? "Cal tornar a avisar: ha canviat la situació" : "Per enviar")
@@ -251,11 +276,16 @@ function FilaComunicacio({ d, f, gestiona, enCurs, onEnviat, onDesfer, onNoConta
       <td>{f.cognoms}</td>
       <td className="nowrap">{f.telefon ?? "—"}</td>
       <td>{situacioText(f)}</td>
-      <td>{text}</td>
+      <td>{text}{missatge && <div className="text-secundari">{textMissatgeWhatsapp(missatge)}</div>}</td>
       <td>
         {gestiona && (
           <div className="accions-fila accions-fila--horitzontal">
-            {e.tipus === "pendent" && (
+            {e.tipus === "pendent" && api && (
+              <button type="button" className="boto boto--whatsapp boto--petit" disabled={enCurs} onClick={onEnviaApi}>
+                Envia<span className="visualment-amagat"> per WhatsApp Business a {f.nom} {f.cognoms}</span>
+              </button>
+            )}
+            {e.tipus === "pendent" && !api && (
               <a className="boto boto--whatsapp boto--petit" href={enllac(d, f)} target="_blank" rel="noopener noreferrer"
                 onClick={onEnviat} aria-disabled={enCurs}>
                 Envia per WhatsApp<span className="visualment-amagat"> a {f.nom} {f.cognoms} (s'obre en una finestra nova)</span>

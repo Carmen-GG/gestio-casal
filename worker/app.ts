@@ -7,6 +7,7 @@ import { ErrorAplicacio, errors, respostaError } from "./http/errors";
 import { capcaleresSeguretat, idPeticio, MIDA_MAXIMA_COS, midaMaximaCos, politicaOrigen } from "./middleware/seguretat";
 import { rutesPubliques } from "./routes/public";
 import { rutesAuth } from "./routes/auth";
+import { rutesWhatsapp } from "./routes/whatsapp";
 import { rutesGestio } from "./routes/gestio";
 import { esPujadaFitxer, rutesCartells } from "./routes/cartells";
 import { rutesInstagram, rutesInstagramPubliques } from "./routes/instagram";
@@ -14,13 +15,15 @@ import type { UsuariAutenticat } from "./auth/permisos";
 
 export type Entorn = {
   Bindings: Env;
-  Variables: { idPeticio: string; repos: Repositoris; rellotge: Rellotge; usuari: UsuariAutenticat };
+  Variables: { idPeticio: string; repos: Repositoris; rellotge: Rellotge; usuari: UsuariAutenticat; fetchMeta: typeof fetch };
 };
 
 export interface DependenciesApp {
   /** Permet substituir els repositoris o el rellotge a les proves. */
   repositoris?: (env: Env, rellotge: Rellotge) => Repositoris;
   rellotge?: Rellotge;
+  /** Permet simular l'API de WhatsApp Business de Meta a les proves. */
+  fetchMeta?: typeof fetch;
 }
 
 export function crearApp(deps: DependenciesApp = {}) {
@@ -32,6 +35,7 @@ export function crearApp(deps: DependenciesApp = {}) {
   app.use("*", idPeticio, capcaleresSeguretat, politicaOrigen, midaMaximaCos(MIDA_MAXIMA_COS, esPujadaFitxer));
   app.use("*", async (c, next) => {
     c.set("rellotge", rellotge);
+    c.set("fetchMeta", deps.fetchMeta ?? ((input, init) => fetch(input, init)));
     c.set("repos", fabricaRepos(c.env, rellotge));
     await next();
   });
@@ -49,6 +53,7 @@ export function crearApp(deps: DependenciesApp = {}) {
   app.route("/public/instagram", rutesInstagramPubliques);
   app.route("/public", rutesPubliques);
   app.route("/auth", rutesAuth);
+  app.route("/whatsapp", rutesWhatsapp);
   app.route("/gestio", rutesGestio);
   app.route("/gestio", rutesCartells);
   app.route("/gestio", rutesInstagram);

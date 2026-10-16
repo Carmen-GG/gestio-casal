@@ -21,6 +21,12 @@ import { ServeiAssistencia } from "../services/assistencia";
 import { ServeiIndicadors } from "../services/indicadors";
 import { ServeiComunicacions } from "../services/comunicacions";
 import { registreComunicacio } from "../../shared/schemas/comunicacions";
+import { ServeiWhatsapp } from "../services/whatsapp";
+import { ServeiComunicats } from "../services/comunicats";
+import { ServeiIncidencies } from "../services/incidencies";
+import { faltaTallerista, incidenciaNova, incidenciaResolucio, referentCanvis, referentNou, territoriCasal } from "../../shared/schemas/territori";
+import { comunicat, configWhatsappCentral, telefonUsuari } from "../../shared/schemas/comunicats";
+import { configWhatsapp, enviamentActivitat, enviamentGeneral } from "../../shared/schemas/whatsapp";
 import { ServeiPersonesPlataforma } from "../services/persones-plataforma";
 import { cercaPersones, importacioPersones } from "../../shared/schemas/persones-plataforma";
 import type { CampPersona } from "../../shared/domain/persones-plataforma";
@@ -43,8 +49,13 @@ const importacions = (c: C) => new ServeiImportacions(c.get("repos"), c.get("rel
 const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rellotge"));
 const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
 const comunicacions = (c: C) => new ServeiComunicacions(c.get("repos"), c.get("rellotge"));
+const whatsapp = (c: C) => new ServeiWhatsapp(c.get("repos"), c.get("rellotge"), c.env, c.get("fetchMeta"));
+const comunicats = (c: C) => new ServeiComunicats(c.get("repos"), c.get("rellotge"), c.env, c.get("fetchMeta"));
 const personesPlataforma = (c: C) => new ServeiPersonesPlataforma(c.get("repos"), c.get("rellotge"));
 const indicadors = (c: C) => new ServeiIndicadors(c.get("repos"), c.get("rellotge"));
+const incidencies = (c: C) => new ServeiIncidencies(c.get("repos"), c.get("rellotge"));
+const INCIDENCIES = ["assistencia.registrar", "activitats.gestionar"];
+const anyConsulta = (c: C) => { const a = c.req.query("any"); return a && /^\d{4}$/.test(a) ? Number(a) : null; };
 
 /** Registra una exportació a l'auditoria (sense dades personals) i retorna la taula. */
 async function exportacioAuditada(c: C, casalId: string, tipus: string, entitat: string, entitatId: string, taula: { files: unknown[] }, extra: Record<string, unknown> = {}) {
@@ -78,6 +89,19 @@ function casalAutoritzat(c: C, permis: string): string {
   usuari.exigeix(permis, casalId);
   return casalId;
 }
+
+/** Com casalAutoritzat, però n'hi ha prou amb un dels permisos. */
+function casalAutoritzatAlgun(c: C, permisos: string[]): string {
+  const casalId = idRuta(c, "casalId");
+  const usuari = c.get("usuari");
+  if (!usuari.teAccesCasal(casalId)) throw errors.sensePermis();
+  if (!permisos.some((p) => usuari.pot(p, casalId))) throw errors.sensePermis();
+  return casalId;
+}
+/** L'assistència la veu qui gestiona les inscripcions i qui passa llista (conserge), amb el telèfon a les graelles. */
+const ASSISTENCIA = ["sollicituds.consultar", "assistencia.registrar"];
+const visibilitatAssistencia = (c: C, casalId: string) =>
+  ({ contacte: c.get("usuari").pot("sollicituds.dades_contacte", casalId) || c.get("usuari").pot("assistencia.registrar", casalId) });
 
 /**
  * Rutes del panell de gestió. Totes exigeixen sessió, i cada ruta comprova el
@@ -377,6 +401,38 @@ export const rutesGestio = new Hono<Entorn>()
     c.get("usuari").exigeix("sollicituds.consultar", casalId);
     return c.json(await comunicacions(c).assignacions(casalId, idRuta(c, "cicleId")));
   })
+  // ---------- WhatsApp Business ----------
+  .get("/casals/:casalId/whatsapp", async (c) => {
+    const casalId = casalAutoritzat(c, "casal.consultar");
+    return c.json(await whatsapp(c).estat(casalId));
+  })
+  .put("/casals/:casalId/whatsapp", async (c) => {
+    const casalId = casalAutoritzat(c, "casal.configurar");
+    const cos = await cosValidat(c, configWhatsapp);
+    return c.json(await whatsapp(c).configurar(casalId, { ...cos, numero_visible: cos.numero_visible?.trim() || null }, ctx(c)));
+  })
+  .post("/casals/:casalId/whatsapp/comprovacio", async (c) => {
+    const casalId = casalAutoritzat(c, "casal.configurar");
+    return c.json(await whatsapp(c).comprovar(casalId));
+  })
+  .get("/casals/:casalId/cicles/:cicleId/whatsapp", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    return c.json(await whatsapp(c).resum(casalId, idRuta(c, "cicleId")));
+  })
+  .post("/casals/:casalId/cicles/:cicleId/whatsapp/activitats", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    const cos = await cosValidat(c, enviamentActivitat);
+    return c.json(await whatsapp(c).crearEnviamentActivitat(casalId, idRuta(c, "cicleId"), cos, ctx(c)), 201);
+  })
+  .post("/casals/:casalId/cicles/:cicleId/whatsapp/generals", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    const cos = await cosValidat(c, enviamentGeneral);
+    return c.json(await whatsapp(c).crearEnviamentGeneral(casalId, idRuta(c, "cicleId"), cos, ctx(c)), 201);
+  })
+  .post("/casals/:casalId/whatsapp/enviaments/:enviamentId/continua", async (c) => {
+    const casalId = casalAutoritzat(c, "sollicituds.dades_contacte");
+    return c.json(await whatsapp(c).continuar(casalId, idRuta(c, "enviamentId"), ctx(c)));
+  })
   .put("/casals/:casalId/places/:placaId/comunicacio", async (c) => {
     const casalId = casalAutoritzat(c, "places.gestionar");
     c.get("usuari").exigeix("sollicituds.dades_contacte", casalId);
@@ -391,7 +447,18 @@ export const rutesGestio = new Hono<Entorn>()
   .post("/casals/:casalId/places/:placaId/baixa-voluntaria", async (c) => {
     const casalId = casalAutoritzat(c, "places.gestionar");
     const cos = await cosValidat(c, baixaVoluntaria);
-    return c.json(await assistencia(c).baixaVoluntaria(casalId, idRuta(c, "placaId"), cos, visibilitat(c.get("usuari"), casalId), ctx(c)));
+    const r = await assistencia(c).baixaVoluntaria(casalId, idRuta(c, "placaId"), cos, visibilitat(c.get("usuari"), casalId), ctx(c));
+    // Amb WhatsApp Business actiu, l'oferta s'envia sola. La baixa ja és desada: un error aquí no la desfà.
+    let whatsappOferta = null;
+    if (r.oferta) {
+      try {
+        const placa = await c.get("repos").adjudicacio.placa(casalId, r.oferta.placa_id);
+        if (placa) whatsappOferta = await whatsapp(c).ofertaAutomatica(casalId, placa.cicle_id, placa.id, ctx(c));
+      } catch {
+        whatsappOferta = { enviat: false, estat: "error", motiu: null, error: "No s'ha pogut enviar l'oferta per WhatsApp Business." };
+      }
+    }
+    return c.json({ ...r, whatsapp: whatsappOferta });
   })
   .post("/casals/:casalId/places/:placaId/baixa-assistencia", async (c) => {
     const casalId = casalAutoritzat(c, "places.gestionar");
@@ -419,12 +486,12 @@ export const rutesGestio = new Hono<Entorn>()
     return c.json(await indicadors(c).cicle(casalId, idRuta(c, "cicleId")));
   })
   .get("/casals/:casalId/cicles/:cicleId/assistencia", async (c) => {
-    const casalId = casalAutoritzat(c, "sollicituds.consultar");
+    const casalId = casalAutoritzatAlgun(c, ASSISTENCIA);
     return c.json(await assistencia(c).resumCicle(casalId, idRuta(c, "cicleId")));
   })
   .get("/casals/:casalId/activitats/:activitatId/assistencia", async (c) => {
-    const casalId = casalAutoritzat(c, "sollicituds.consultar");
-    return c.json(await assistencia(c).activitat(casalId, idRuta(c, "activitatId"), visibilitat(c.get("usuari"), casalId)));
+    const casalId = casalAutoritzatAlgun(c, ASSISTENCIA);
+    return c.json(await assistencia(c).activitat(casalId, idRuta(c, "activitatId"), visibilitatAssistencia(c, casalId)));
   })
   .post("/casals/:casalId/activitats/:activitatId/sessions/generacio", async (c) => {
     const casalId = casalAutoritzat(c, "assistencia.registrar");
@@ -440,16 +507,36 @@ export const rutesGestio = new Hono<Entorn>()
     const cos = await cosValidat(c, cancellarSessio);
     return c.json(await assistencia(c).cancellarSessio(casalId, idRuta(c, "sessioId"), cos, ctx(c)));
   })
+  .put("/casals/:casalId/sessions/:sessioId/tallerista", async (c) => {
+    const casalId = casalAutoritzat(c, "assistencia.registrar");
+    const cos = await cosValidat(c, faltaTallerista);
+    return c.json(await assistencia(c).faltaTallerista(casalId, idRuta(c, "sessioId"), cos, ctx(c)));
+  })
+
+  // ---------- Incidències del casal ----------
+  .get("/casals/:casalId/incidencies", async (c) => {
+    const casalId = casalAutoritzatAlgun(c, INCIDENCIES);
+    return c.json(await incidencies(c).llistar(casalId, anyConsulta(c)));
+  })
+  .post("/casals/:casalId/incidencies", async (c) => {
+    const casalId = casalAutoritzatAlgun(c, INCIDENCIES);
+    return c.json(await incidencies(c).crear(casalId, await cosValidat(c, incidenciaNova), ctx(c)), 201);
+  })
+  .post("/casals/:casalId/incidencies/:incidenciaId/resolucio", async (c) => {
+    const casalId = casalAutoritzatAlgun(c, INCIDENCIES);
+    return c.json(await incidencies(c).resoldre(casalId, idRuta(c, "incidenciaId"), await cosValidat(c, incidenciaResolucio), ctx(c)));
+  })
   .put("/casals/:casalId/sessions/:sessioId/assistencia", async (c) => {
     const casalId = casalAutoritzat(c, "assistencia.registrar");
     const cos = await cosValidat(c, registrarAssistencia);
     return c.json(await assistencia(c).registrar(casalId, idRuta(c, "sessioId"), cos, ctx(c)));
   })
   .get("/casals/:casalId/cicles/:cicleId/exportacions/graelles", async (c) => {
-    const casalId = casalAutoritzat(c, "dades.exportar");
-    c.get("usuari").exigeix("sollicituds.consultar", casalId);
+    // Graelles per imprimir: qui exporta dades del casal, o qui passa llista (conserge).
+    const casalId = casalAutoritzatAlgun(c, ["dades.exportar", "assistencia.registrar"]);
+    if (!c.get("usuari").pot("assistencia.registrar", casalId)) c.get("usuari").exigeix("sollicituds.consultar", casalId);
     const cicleId = idRuta(c, "cicleId");
-    const vis = visibilitat(c.get("usuari"), casalId);
+    const vis = visibilitatAssistencia(c, casalId);
     const dades = await assistencia(c).graelles(casalId, cicleId, vis, c.req.query("telefon") !== "0");
     await c.get("repos").auditoria.registrar({
       casal_id: casalId, usuari_id: c.get("usuari").id, tipus_operacio: "exportacio.graelles", entitat: "cicle", entitat_id: cicleId,
@@ -482,6 +569,10 @@ export const rutesGestio = new Hono<Entorn>()
     const assignacions = await repos.usuaris.assignacionsCasal(casalId);
     const estat = await repos.usuaris.estatAcces(assignacions.map((a) => a.usuari_id), new Date(c.get("rellotge").ara()).toISOString());
     return c.json({ assignacions: assignacions.map((a) => ({ ...a, ...estat[a.usuari_id] })) });
+  })
+  .get("/casals/:casalId/usuaris/historial", async (c) => {
+    const casalId = casalAutoritzat(c, "usuaris.gestionar");
+    return c.json({ historial: await c.get("repos").usuaris.historialEquip(casalId) });
   })
   .post("/casals/:casalId/usuaris", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
@@ -524,11 +615,60 @@ export const rutesGestio = new Hono<Entorn>()
     exigeixSuperadministracio(c);
     return c.json({ codi: await administracio(c).nouCodiResponsable(idRuta(c, "casalId"), idRuta(c, "assignacioId"), ctx(c)) });
   })
+  .put("/administracio/usuaris/:usuariId/telefon", async (c) => {
+    exigeixSuperadministracio(c);
+    const usuariId = idRuta(c, "usuariId");
+    const { telefon } = await cosValidat(c, telefonUsuari);
+    if (!(await c.get("repos").usuaris.responsables()).some((r) => r.usuari_id === usuariId)) throw errors.noTrobat("No s'ha trobat la persona responsable.");
+    await c.get("repos").usuaris.fixarTelefon(usuariId, telefon, c.get("rellotge").ara().toISOString());
+    return c.json({ ok: true });
+  })
+  // Comunicats als casals (petició de 2026-10-16).
+  .get("/administracio/comunicats", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).estat());
+  })
+  .put("/administracio/comunicats/whatsapp", async (c) => {
+    exigeixSuperadministracio(c);
+    const d = await cosValidat(c, configWhatsappCentral);
+    return c.json(await comunicats(c).configurarCentral({ ...d, numero_visible: d.numero_visible ?? null }, ctx(c)));
+  })
+  .post("/administracio/comunicats/whatsapp/comprovacio", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).comprovarCentral());
+  })
+  .post("/administracio/comunicats", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).crear(await cosValidat(c, comunicat), ctx(c)), 201);
+  })
+  .post("/administracio/comunicats/:comunicatId/continua", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).continuar(idRuta(c, "comunicatId")));
+  })
+  .get("/administracio/comunicats/:comunicatId", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).resultat(idRuta(c, "comunicatId")));
+  })
   .get("/administracio/quadre", async (c) => {
     if (!c.get("usuari").esGlobal("estadistiques.consultar")) throw errors.sensePermis();
-    const any = c.req.query("any");
-    const valor = any && /^\d{4}$/.test(any) ? Number(any) : null;
-    return c.json(await administracio(c).quadre(valor, ctx(c)));
+    return c.json(await administracio(c).quadre(anyConsulta(c), ctx(c)));
+  })
+  // Territori i referents (petició de 2026-10-16).
+  .get("/administracio/territori", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await administracio(c).territori());
+  })
+  .post("/administracio/referents", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await administracio(c).crearReferent(await cosValidat(c, referentNou), ctx(c)), 201);
+  })
+  .put("/administracio/referents/:referentId", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await administracio(c).actualitzarReferent(idRuta(c, "referentId"), await cosValidat(c, referentCanvis), ctx(c)));
+  })
+  .put("/administracio/casals/:casalId/territori", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await administracio(c).fixarTerritori(idRuta(c, "casalId"), await cosValidat(c, territoriCasal), ctx(c)));
   })
 
   // ---------- Auditoria ----------

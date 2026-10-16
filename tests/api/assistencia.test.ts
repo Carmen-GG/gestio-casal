@@ -270,3 +270,29 @@ describe("baixa voluntària", () => {
     expect(despres).toMatchObject({ estat: "renuncia", baixa_voluntaria: { data: "2026-11-01", motiu: "Es trasllada de barri" } });
   });
 });
+
+describe("rol de conserge", () => {
+  it("només gestiona l'assistència: passa llista i treu les graelles amb telèfon, però no veu inscripcions ni comunicacions", async () => {
+    const e = await escenari();
+    const k = await clientAutenticat("conserge", e.casal.id);
+    expect((await k.json(`${e.base}/cicles`)).status).toBe(200);
+    expect((await k.json(`${e.base}/cicles/${e.cicle.id}/assistencia`)).status).toBe(200);
+    expect((await k.json(`${e.base}/activitats/${e.A.id}/sessions/generacio`, { method: "POST" })).status).toBe(200);
+    const f = (await k.json(`${e.base}/activitats/${e.A.id}/assistencia`)).cos;
+    const z = f.persones.find((p: Persona) => p.participant.cognom1 === "Zapata") as Persona;
+    expect(z.participant.telefon).toBe("600000001");
+    const marca = await k.json(`${e.base}/sessions/${f.sessions[0].id}/assistencia`, { method: "PUT", json: { marques: [{ placa_id: z.id, estat: "present", versio: null }] } });
+    expect(marca.status).toBe(200);
+    const graelles = await k.json(`${e.base}/cicles/${e.cicle.id}/exportacions/graelles`);
+    expect(graelles.status).toBe(200);
+    expect(JSON.stringify(graelles.cos)).toContain("600000001");
+
+    // Res més: ni inscripcions, ni comunicacions, ni baixes, ni equip, ni exportacions de dades.
+    expect((await k.json(`${e.base}/cicles/${e.cicle.id}/sollicituds`)).status).toBe(403);
+    expect((await k.json(`${e.base}/cicles/${e.cicle.id}/comunicacions`)).status).toBe(403);
+    expect((await k.json(`${e.base}/cicles/${e.cicle.id}/exportacions/assistencia`)).status).toBe(403);
+    expect((await k.json(`${e.base}/places/${z.id}/baixa-voluntaria`, { method: "POST", json: { versio: z.versio, motiu: "Prova" } })).status).toBe(403);
+    expect((await k.json(`${e.base}/usuaris`)).status).toBe(403);
+    expect((await k.json(`${e.base}/cicles`, { method: "POST", json: { nom: "No", any: 2027, data_inici: "2027-01-10", data_fi: "2027-03-30" } })).status).toBe(403);
+  });
+});

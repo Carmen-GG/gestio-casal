@@ -2,7 +2,8 @@ import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
-  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal,
+  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal, PeriodeEquip, Referent, CasalTerritori, Incidencia, EstatWhatsapp, ConfigWhatsapp, ResumWhatsapp, ProgresEnviament,
+  EstatComunicats, ConfigWhatsappCentral, ComunicatCreat, ResultatComunicat,
 } from "../types/gestio";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
@@ -16,6 +17,7 @@ export const serveiAuth = {
     api.post<{ ok: true }>("/auth/entrar-contrasenya", { email, contrasenya }),
   canviarContrasenya: (dades: { actual?: string; nova: string }) => api.post<{ ok: true }>("/auth/contrasenya", dades),
   sortir: () => api.post<{ ok: true }>("/auth/sortir"),
+  desarTelefon: (telefon: string | null) => api.put<{ ok: true }>("/auth/telefon", { telefon }),
   entrarSuperadministracio: (contrasenya: string) => api.post<{ ok: true }>("/auth/superadministracio", { contrasenya }),
   primerAcces: (dades: { email: string; codi: string; contrasenya: string }) => api.post<{ ok: true }>("/auth/primer-acces", dades),
 };
@@ -87,6 +89,17 @@ export const serveiGestio = {
     api.get<FitxaPersonaPlataforma>(`${g(casalId)}/persones-plataforma/${encodeURIComponent(id)}`, s),
   importarPersones: (casalId: string, dades: { origen: "usuaris" | "carnets" | "altres"; nom_fitxer?: string; primera_fila: number; files: Record<string, string>[] }) =>
     api.post<ResultatImportacioPersones>(`${g(casalId)}/persones-plataforma/importacio`, dades),
+  estatWhatsapp: (casalId: string, s?: AbortSignal) => api.get<EstatWhatsapp>(`${g(casalId)}/whatsapp`, s),
+  desarWhatsapp: (casalId: string, dades: unknown) => api.put<{ config: ConfigWhatsapp }>(`${g(casalId)}/whatsapp`, dades),
+  comprovarWhatsapp: (casalId: string) =>
+    api.post<{ numero: { numero: string | null; nom_verificat: string | null; qualitat: string | null } }>(`${g(casalId)}/whatsapp/comprovacio`, {}),
+  resumWhatsapp: (casalId: string, cicleId: string, s?: AbortSignal) => api.get<ResumWhatsapp>(`${g(casalId)}/cicles/${cicleId}/whatsapp`, s),
+  enviamentWhatsappActivitats: (casalId: string, cicleId: string, dades: { activitat_ids?: string[]; placa_ids?: string[]; nomes_pendents: boolean }) =>
+    api.post<{ enviament_id: string; total: number }>(`${g(casalId)}/cicles/${cicleId}/whatsapp/activitats`, dades),
+  enviamentWhatsappGeneral: (casalId: string, cicleId: string, dades: { text: string; activitat_ids?: string[]; situacions: ("admesa" | "espera")[] }) =>
+    api.post<{ enviament_id: string; total: number }>(`${g(casalId)}/cicles/${cicleId}/whatsapp/generals`, dades),
+  continuaEnviamentWhatsapp: (casalId: string, enviamentId: string) =>
+    api.post<ProgresEnviament>(`${g(casalId)}/whatsapp/enviaments/${enviamentId}/continua`, {}),
   comunicacions: (casalId: string, cicleId: string, s?: AbortSignal) =>
     api.get<DadesComunicacions>(`${g(casalId)}/cicles/${cicleId}/comunicacions`, s),
   registrarComunicacio: (casalId: string, placaId: string, dades: { tipus: "admesa" | "espera"; canal: CanalComunicacio; estat: EstatComunicacio; motiu?: MotiuNoContacte | null; nota?: string | null }) =>
@@ -120,6 +133,7 @@ export const serveiGestio = {
   historial: (casalId: string, entitat: string, id: string, s?: AbortSignal) =>
     api.get<{ historial: EntradaHistorial[] }>(`${g(casalId)}/historial/${entitat}/${id}`, s),
 
+  historialEquip: (casalId: string, s?: AbortSignal) => api.get<{ historial: PeriodeEquip[] }>(`${g(casalId)}/usuaris/historial`, s),
   assignacions: (casalId: string, s?: AbortSignal) => api.get<{ assignacions: AssignacioRol[] }>(`${g(casalId)}/usuaris`, s),
   assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`${g(casalId)}/usuaris`, dades),
   nouCodiUsuari: (casalId: string, id: string) => api.post<{ codi: CodiAcces }>(`${g(casalId)}/usuaris/${id}/codi-acces`),
@@ -130,6 +144,28 @@ export const serveiGestio = {
     api.post<{ ok: true }>(`/gestio/administracio/casals/${casalId}/responsables/${id}/revocar`, { motiu }),
   nouCodiResponsable: (casalId: string, id: string) =>
     api.post<{ codi: CodiAcces }>(`/gestio/administracio/casals/${casalId}/responsables/${id}/codi-acces`),
+  telefonResponsable: (usuariId: string, telefon: string | null) =>
+    api.put<{ ok: true }>(`/gestio/administracio/usuaris/${encodeURIComponent(usuariId)}/telefon`, { telefon }),
+  estatComunicats: (s?: AbortSignal) => api.get<EstatComunicats>("/gestio/administracio/comunicats", s),
+  desarWhatsappCentral: (dades: unknown) => api.put<{ config: ConfigWhatsappCentral }>("/gestio/administracio/comunicats/whatsapp", dades),
+  comprovarWhatsappCentral: () =>
+    api.post<{ numero: { numero: string | null; nom_verificat: string | null; qualitat: string | null } }>("/gestio/administracio/comunicats/whatsapp/comprovacio", {}),
+  crearComunicat: (dades: unknown) => api.post<ComunicatCreat>("/gestio/administracio/comunicats", dades),
+  continuaComunicat: (id: string) => api.post<ProgresEnviament>(`/gestio/administracio/comunicats/${encodeURIComponent(id)}/continua`, {}),
+  resultatComunicat: (id: string, s?: AbortSignal) => api.get<ResultatComunicat>(`/gestio/administracio/comunicats/${encodeURIComponent(id)}`, s),
+  territori: (s?: AbortSignal) => api.get<{ referents: Referent[]; casals: CasalTerritori[] }>("/gestio/administracio/territori", s),
+  crearReferent: (dades: { nom: string; email: string }) => api.post<{ id: string }>("/gestio/administracio/referents", dades),
+  actualitzarReferent: (id: string, dades: { nom: string; email: string; actiu: boolean }) =>
+    api.put<{ ok: true }>(`/gestio/administracio/referents/${encodeURIComponent(id)}`, dades),
+  territoriCasal: (casalId: string, dades: { comarca: string; demarcacio: string; referent_id: string | null }) =>
+    api.put<{ ok: true }>(`/gestio/administracio/casals/${casalId}/territori`, dades),
+  incidencies: (casalId: string, any: number | null, s?: AbortSignal) =>
+    api.get<{ incidencies: Incidencia[]; activitats: { id: string; nom: string; cicle: string }[] }>(`${g(casalId)}/incidencies${any ? `?any=${any}` : ""}`, s),
+  novaIncidencia: (casalId: string, dades: unknown) => api.post<{ id: string }>(`${g(casalId)}/incidencies`, dades),
+  resoldreIncidencia: (casalId: string, id: string, resolucio: string) =>
+    api.post<{ ok: true }>(`${g(casalId)}/incidencies/${id}/resolucio`, { resolucio }),
+  faltaTallerista: (casalId: string, sessioId: string, dades: { absent: boolean; motiu?: string }) =>
+    api.put<{ ok: true }>(`${g(casalId)}/sessions/${sessioId}/tallerista`, dades),
   quadreGlobal: (any: number | null, s?: AbortSignal) =>
     api.get<QuadreGlobal>(`/gestio/administracio/quadre${any ? `?any=${any}` : ""}`, s),
   revocarRol: (casalId: string, id: string, motiu: string) => api.post<{ ok: true }>(`${g(casalId)}/usuaris/${id}/revocar`, { motiu }),

@@ -60,7 +60,7 @@ describe("superadministració i responsables", () => {
     const base = `/api/gestio/casals/${casal.id}/usuaris`;
 
     const emailEquip = `equip-${crypto.randomUUID()}@exemple.invalid`;
-    const nou = await resp.json(base, { method: "POST", json: { email: emailEquip, nom_visible: "Persona de l'equip", rol_codi: "gestor_casal" } });
+    const nou = await resp.json(base, { method: "POST", json: { email: emailEquip, nom_visible: "Persona de l'equip", rol_codi: "conserge" } });
     expect(nou.status).toBe(201);
     expect(nou.cos.acces.estat).toBe("codi");
     // No pot fer responsable ningú.
@@ -75,7 +75,7 @@ describe("superadministració i responsables", () => {
     expect((await resp.json(`${base}/${propia.id}/revocar`, { method: "POST", json: { motiu: "Prova" } })).status).toBe(409);
     expect((await resp.json(`${base}/${propia.id}/codi-acces`, { method: "POST", json: {} })).status).toBe(409);
     // Nou codi per a qui ha oblidat la contrasenya, i baixa.
-    const deEquip = assignacions.find((a) => a.rol_codi === "gestor_casal")!;
+    const deEquip = assignacions.find((a) => a.rol_codi === "conserge")!;
     expect((await resp.json(`${base}/${deEquip.id}/codi-acces`, { method: "POST", json: {} })).status).toBe(200);
     expect((await resp.json(`${base}/${deEquip.id}/revocar`, { method: "POST", json: { motiu: "Baixa" } })).status).toBe(200);
     expect((await equip.json(`/api/gestio/casals/${casal.id}/cicles`)).status).toBe(403);
@@ -90,8 +90,8 @@ describe("superadministració i responsables", () => {
     const { c: resp } = await primerAcces(email, alta.cos.acces.codi.codi);
     // Persona que ja és d'un altre casal i encara no té contrasenya.
     const compartida = `compartida-${crypto.randomUUID()}@exemple.invalid`;
-    await admin.json(`/api/gestio/casals/${altre.casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "consulta_casal" } });
-    const r = await resp.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "consulta_casal" } });
+    await admin.json(`/api/gestio/casals/${altre.casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "conserge" } });
+    const r = await resp.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "conserge" } });
     expect(r.status).toBe(201);
     expect(r.cos.acces).toEqual({ estat: "altres_casals" });
   });
@@ -119,16 +119,18 @@ describe("superadministració i responsables", () => {
   });
 
   it("quadre de comandament global amb tots els casals i cicles, sense dades personals", async () => {
-    const { casal, cicle } = await crearEscenari();
+    const { casal, cicle, activa } = await crearEscenari();
+    // Només compten les activitats de la Generalitat; l'esborrany és d'una associació.
+    await env.DB.prepare("UPDATE activitats SET gestio = 'generalitat' WHERE id = ?").bind(activa.id).run();
     const admin = await clientAutenticat("admin_central", null);
     const r = await admin.json("/api/gestio/administracio/quadre?any=2027");
     expect(r.status).toBe(200);
     expect(r.cos.anys).toContain(2027);
     const fila = r.cos.cicles.find((c: { cicle_id: string }) => c.cicle_id === cicle.id);
-    expect(fila).toMatchObject({ casal: "Casal de prova", activitats: 2, places_ofertes: 15, sollicituds: 0 });
+    expect(fila).toMatchObject({ casal: "Casal de prova", activitats: 1, places_ofertes: 10, sollicituds: 0 });
     const k = r.cos.casals.find((c: { casal_id: string }) => c.casal_id === casal.id);
-    expect(k).toMatchObject({ cicles: 1, activitats: 2 });
-    expect(r.cos.totals.casals).toBeGreaterThan(0);
+    expect(k).toMatchObject({ cicles: 1, activitats: 1 });
+    expect(Array.isArray(r.cos.referents)).toBe(true);
     const gestor = await clientAutenticat("gestor_casal", casal.id);
     expect((await gestor.json("/api/gestio/administracio/quadre")).status).toBe(403);
   });
