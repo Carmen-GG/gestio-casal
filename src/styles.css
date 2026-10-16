@@ -459,3 +459,20 @@ main:focus { outline: none; }
 .llista-casals-comunicat .casella { align-items: flex-start; }
 .formulari--en-linia { margin-top: 0.5rem; }
 .resultat-comunicat { margin-top: 1.5rem; }
+
+/* Quadre de comandament: gràfiques de barres i filtres (2026-10-16) */
+.graella-grafics { display: grid; gap: 0.5rem 2rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); margin: 0.5rem 0 1rem; }
+.grafic { margin: 0; }
+.grafic figcaption { font-weight: 600; margin-bottom: 0.4rem; }
+.barres { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.3rem; }
+.barres li { display: grid; grid-template-columns: minmax(6rem, 40%) 1fr; gap: 0.6rem; align-items: center; }
+.barres__etiqueta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+.barres__pista { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.barres__barra { flex: 0 1 auto; height: 1rem; min-width: 2px; background: var(--color-primari); border-radius: 0 3px 3px 0; }
+.barres__valor { flex: none; font-size: 0.85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seleccio-casals { margin: 0 0 1rem; }
+.seleccio-casals summary { cursor: pointer; font-weight: 600; }
+.llista-seleccio { list-style: none; padding: 0; margin: 0.5rem 0 0; max-height: 18rem; overflow: auto; border: 1px solid var(--color-vora); border-radius: var(--radi); padding: 0.4rem 0.6rem; background: var(--color-superficie); }
+.formulari-en-linia { display: flex; flex-wrap: wrap; gap: 0 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.formulari-en-linia .camp { flex: 1 1 14rem; }
+.formulari-en-linia .boto { margin-bottom: 1rem; }

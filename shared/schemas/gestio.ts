@@ -87,6 +87,8 @@ const campsActivitat = {
   data_inici: data.nullable().optional(),
   data_fi: data.nullable().optional(),
   espai: textOpcional(120).optional(),
+  tallerista: textOpcional(120).optional(),
+  gestio: z.enum(["generalitat", "associacio"]).optional(),
   destinataris: textOpcional(200).optional(),
   grup: z.number().int().min(1, "Mínim 1.").max(99, "Màxim 99.").nullable().optional(),
   capacitat: z.number().int().min(0).max(10000),
