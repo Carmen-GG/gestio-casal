@@ -31,6 +31,7 @@ export const MENU: ElementMenu[] = [
     ],
   },
   { text: "Gestionar assistència", desti: { seccio: "assistencia" }, permis: "assistencia.registrar" },
+  { text: "Incidències", desti: { ruta: "incidencies" }, permis: "assistencia.registrar" },
   { text: "Buscar usuari/a", desti: { ruta: "persones" }, permis: "sollicituds.consultar" },
   { text: "Prescripció social", desti: { properament: "prescripcio-social" }, permis: "sollicituds.gestionar" },
   {

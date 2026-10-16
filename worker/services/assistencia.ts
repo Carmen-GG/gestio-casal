@@ -80,7 +80,7 @@ export class ServeiAssistencia {
     return {
       casal: { nom: casal.nom },
       activitat: { id: activitat.id, nom: activitat.nom, capacitat: activitat.capacitat, horari: horariText(activitat), nombre_sessions: activitat.nombre_sessions,
-        dies_setmana: activitat.dies_setmana, data_inici: activitat.data_inici, data_fi: activitat.data_fi, espai: activitat.espai },
+        dies_setmana: activitat.dies_setmana, data_inici: activitat.data_inici, data_fi: activitat.data_fi, espai: activitat.espai, tallerista: activitat.tallerista },
       cicle: { id: cicle.id, nom: cicle.nom, estat: cicle.estat, llindar_assistencia: cicle.llindar_assistencia, data_inici: cicle.data_inici, data_fi: cicle.data_fi },
       sessions, persones, espera,
       avui: avuiLocal(this.rellotge.ara()),
@@ -215,6 +215,26 @@ export class ServeiAssistencia {
       this.repos.auditoria.operacioRegistrar({
         casal_id: casalId, usuari_id: ctx.usuariId, tipus_operacio: "sessions.cancellacio", entitat: "sessio", entitat_id: sessioId,
         resultat: "exit", motiu: d.motiu, id_peticio: ctx.idPeticio ?? null, detalls: { activitat_id: sessio.activitat_id, data: sessio.data },
+      }, ara, condicio),
+    ]);
+    if (!r || r.canvis !== 1) throw errors.conflicte("conflicte_concurrencia", "La sessió s'ha modificat mentrestant. Recarregueu-la.");
+    return { ok: true };
+  }
+
+  /** Marca (o desmarca) que la persona tallerista no ha vingut a la sessió. */
+  async faltaTallerista(casalId: string, sessioId: string, d: { absent: boolean; motiu?: string | null }, ctx: ContextOperacio) {
+    const sessio = await this.repos.assistencia.sessio(casalId, sessioId);
+    if (!sessio) throw errors.noTrobat("No s'ha trobat la sessió.");
+    if (sessio.estat === "cancellada") throw errors.conflicte("transicio_no_permesa", "La sessió està cancel·lada.");
+    const ara = isoAra(this.rellotge);
+    const operacio = nouId();
+    const condicio = { taula: "sessions_activitat" as const, id: sessioId, operacio };
+    const [r] = await this.repos.unitat.executar([
+      this.repos.assistencia.operacioFaltaTallerista(sessioId, d.absent, d.motiu ?? null, ara, operacio),
+      this.repos.auditoria.operacioRegistrar({
+        casal_id: casalId, usuari_id: ctx.usuariId, tipus_operacio: "sessions.falta_tallerista", entitat: "sessio", entitat_id: sessioId,
+        resultat: "exit", motiu: d.motiu ?? null, id_peticio: ctx.idPeticio ?? null,
+        detalls: { activitat_id: sessio.activitat_id, data: sessio.data, absent: d.absent },
       }, ara, condicio),
     ]);
     if (!r || r.canvis !== 1) throw errors.conflicte("conflicte_concurrencia", "La sessió s'ha modificat mentrestant. Recarregueu-la.");

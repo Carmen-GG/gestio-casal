@@ -33,6 +33,8 @@ import { CartellsInici } from "./pages/cartells/CartellsInici";
 import { Plantilles } from "./pages/cartells/Plantilles";
 import { DetallPlantilla } from "./pages/cartells/DetallPlantilla";
 import { NouMaterial } from "./pages/cartells/NouMaterial";
+import { Territori } from "./pages/gestio/Territori";
+import { Incidencies } from "./pages/gestio/Incidencies";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -53,6 +55,7 @@ const router = createBrowserRouter([
           { path: "administracio/casal", element: <AdministracioCasal /> },
           { path: "administracio/quadre", element: <QuadreGlobal /> },
           { path: "administracio/comunicats", element: <ComunicatsCasals /> },
+          { path: "administracio/territori", element: <Territori /> },
           { path: ":casalId", element: <CasalCicles /> },
           { path: ":casalId/cicles/:cicleId", element: <DetallCicle /> },
           { path: ":casalId/anar/:seccio", element: <AnarASeccio /> },
@@ -67,6 +70,7 @@ const router = createBrowserRouter([
           { path: ":casalId/cicles/:cicleId/comunicacions-generals", element: <ComunicacionsGenerals /> },
           { path: ":casalId/cicles/:cicleId/assistencia", element: <AssistenciaCicle /> },
           { path: ":casalId/whatsapp", element: <WhatsappBusiness /> },
+          { path: ":casalId/incidencies", element: <Incidencies /> },
           { path: ":casalId/persones", element: <BuscarUsuari /> },
           { path: ":casalId/persones/:personaId", element: <FitxaPersona /> },
           { path: ":casalId/cartells", element: <CartellsInici /> },

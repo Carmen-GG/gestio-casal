@@ -480,7 +480,7 @@ export class ServeiImportacions {
         const operacio = nouId();
         operacions.push(
           this.repos.activitats.operacioCrear(id, {
-            ...dades, nom, capacitat: dades.capacitat ?? 0, casal_id: casalId, cicle_id: cicle.id, estat: "activa",
+            ...dades, nom, capacitat: dades.capacitat ?? 0, casal_id: casalId, cicle_id: cicle.id, estat: "activa", gestio: "generalitat",
           }, ara, operacio),
           this.repos.historial.operacioAfegir({
             casal_id: casalId, entitat: "activitat", entitat_id: id, accio: "importacio", canvis: { nom },

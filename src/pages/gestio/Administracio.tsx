@@ -39,11 +39,17 @@ export function AdministracioInici() {
             <p>Envieu un avís per correu i WhatsApp a les responsables i per WhatsApp a les persones usuàries dels casals que trieu.</p>
           </Link>
         </li>
+        <li>
+          <Link to="/gestio/administracio/territori">
+            <h2>Territori i referents</h2>
+            <p>Doneu d'alta les referents, indiqueu quins casals porta cadascuna i reviseu-ne la comarca i la demarcació.</p>
+          </Link>
+        </li>
         {jo.quadre_global && (
           <li>
             <Link to="/gestio/administracio/quadre">
               <h2>Quadre de comandament</h2>
-              <p>Indicadors de tots els casals i cicles: inscripcions, places, assistència, persones i equips.</p>
+              <p>Indicadors i gràfiques de tots els casals, d'un casal, d'una comarca, d'una demarcació o dels casals d'una referent.</p>
             </Link>
           </li>
         )}
