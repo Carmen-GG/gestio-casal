@@ -34,30 +34,36 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
     };
   }
 
+  /**
+   * Només les activitats gestionades per la Generalitat (petició de 2026-10-16): les que el casal
+   * afegeix a mà per a associacions no compten a les estadístiques de la superadministració.
+   */
   async global(any: number | null) {
     const [cicles, casals, anys, incidencies] = await this.db.batch([
       this.db.prepare(
         `SELECT c.casal_id, c.id AS cicle_id, c.nom AS cicle, c.any, c.estat, c.data_inici, c.data_fi,
-           (SELECT COUNT(*) FROM activitats a WHERE a.cicle_id = c.id AND a.estat <> 'arxivada') AS activitats,
-           (SELECT COALESCE(SUM(a.capacitat), 0) FROM activitats a WHERE a.cicle_id = c.id AND a.estat <> 'arxivada') AS places_ofertes,
-           (SELECT COUNT(*) FROM sollicituds s WHERE s.cicle_id = c.id AND s.estat <> 'anullada') AS sollicituds,
-           (SELECT COUNT(DISTINCT s.participant_id) FROM sollicituds s WHERE s.cicle_id = c.id AND s.estat <> 'anullada') AS persones,
-           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND p.estat = 'admesa') AS admeses,
-           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND p.estat IN ('llista_espera', 'oferta_pendent')) AS espera,
-           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND p.estat = 'renuncia') AS renuncies,
-           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND p.estat = 'baixa') AS baixes,
-           (SELECT COUNT(*) FROM baixes_voluntaries b WHERE b.cicle_id = c.id) AS baixes_voluntaries,
-           (SELECT COUNT(*) FROM sessions_activitat se JOIN activitats a ON a.id = se.activitat_id WHERE a.cicle_id = c.id AND se.estat = 'realitzada') AS sessions_realitzades,
+           (SELECT COUNT(*) FROM activitats a WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND a.estat <> 'arxivada') AS activitats,
+           (SELECT COALESCE(SUM(a.capacitat), 0) FROM activitats a WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND a.estat <> 'arxivada') AS places_ofertes,
+           (SELECT COUNT(*) FROM sollicituds s WHERE s.cicle_id = c.id AND s.estat <> 'anullada'
+             AND EXISTS (SELECT 1 FROM preferencies pr JOIN activitats a ON a.id = pr.activitat_id WHERE pr.sollicitud_id = s.id AND a.gestio = 'generalitat')) AS sollicituds,
+           (SELECT COUNT(DISTINCT s.participant_id) FROM sollicituds s WHERE s.cicle_id = c.id AND s.estat <> 'anullada'
+             AND EXISTS (SELECT 1 FROM preferencies pr JOIN activitats a ON a.id = pr.activitat_id WHERE pr.sollicitud_id = s.id AND a.gestio = 'generalitat')) AS persones,
+           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND p.estat = 'admesa') AS admeses,
+           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND p.estat IN ('llista_espera', 'oferta_pendent')) AS espera,
+           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND p.estat = 'renuncia') AS renuncies,
+           (SELECT COUNT(*) FROM places p JOIN activitats a ON a.id = p.activitat_id WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND p.estat = 'baixa') AS baixes,
+           (SELECT COUNT(*) FROM baixes_voluntaries b JOIN activitats a ON a.id = b.activitat_id WHERE b.cicle_id = c.id AND a.gestio = 'generalitat') AS baixes_voluntaries,
+           (SELECT COUNT(*) FROM sessions_activitat se JOIN activitats a ON a.id = se.activitat_id WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND se.estat = 'realitzada') AS sessions_realitzades,
            (SELECT COUNT(*) FROM registres_assistencia r JOIN sessions_activitat se ON se.id = r.sessio_id JOIN activitats a ON a.id = se.activitat_id
-             WHERE a.cicle_id = c.id AND r.estat = 'present') AS presencies,
+             WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND r.estat = 'present') AS presencies,
            (SELECT COUNT(*) FROM registres_assistencia r JOIN sessions_activitat se ON se.id = r.sessio_id JOIN activitats a ON a.id = se.activitat_id
-             WHERE a.cicle_id = c.id AND r.estat = 'absent') AS absencies,
+             WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND r.estat = 'absent') AS absencies,
            (SELECT COUNT(*) FROM registres_assistencia r JOIN sessions_activitat se ON se.id = r.sessio_id JOIN activitats a ON a.id = se.activitat_id
-             WHERE a.cicle_id = c.id AND r.estat = 'absencia_justificada') AS absencies_justificades,
-           (SELECT COUNT(*) FROM activitats a WHERE a.cicle_id = c.id AND a.estat <> 'arxivada'
+             WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND r.estat = 'absencia_justificada') AS absencies_justificades,
+           (SELECT COUNT(*) FROM activitats a WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND a.estat <> 'arxivada'
              AND (a.tallerista IS NULL OR trim(a.tallerista) = '')) AS activitats_sense_tallerista,
            (SELECT COUNT(*) FROM sessions_activitat se JOIN activitats a ON a.id = se.activitat_id
-             WHERE a.cicle_id = c.id AND se.estat <> 'cancellada' AND se.tallerista_absent = 1) AS sessions_falta_tallerista
+             WHERE a.cicle_id = c.id AND a.gestio = 'generalitat' AND se.estat <> 'cancellada' AND se.tallerista_absent = 1) AS sessions_falta_tallerista
          FROM cicles c WHERE (?1 IS NULL OR c.any = ?1) ORDER BY c.casal_id, c.data_inici`,
       ).bind(any),
       // Persones diferents del casal en els cicles triats: mateix document o, si no n'hi ha, mateix nom i data de naixement.
@@ -67,7 +73,8 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
                 THEN 'D:' || upper(replace(replace(replace(p.document_identitat, ' ', ''), '-', ''), '.', ''))
                 ELSE 'N:' || p.clau_ordenacio || '|' || COALESCE(p.data_naixement, '') END)
              FROM sollicituds s JOIN participants p ON p.id = s.participant_id JOIN cicles c ON c.id = s.cicle_id
-             WHERE s.casal_id = k.id AND s.estat <> 'anullada' AND (?1 IS NULL OR c.any = ?1)) AS persones_diferents,
+             WHERE s.casal_id = k.id AND s.estat <> 'anullada' AND (?1 IS NULL OR c.any = ?1)
+               AND EXISTS (SELECT 1 FROM preferencies pr JOIN activitats a ON a.id = pr.activitat_id WHERE pr.sollicitud_id = s.id AND a.gestio = 'generalitat')) AS persones_diferents,
            (SELECT COUNT(*) FROM persones_plataforma pp WHERE pp.casal_id = k.id) AS persones_plataforma,
            (SELECT COUNT(DISTINCT a.usuari_id) FROM assignacions_rols a JOIN usuaris u ON u.id = a.usuari_id AND u.actiu = 1
              WHERE a.casal_id = k.id AND a.revocat_el IS NULL) AS equip,
@@ -77,8 +84,9 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
       ).bind(any),
       this.db.prepare("SELECT DISTINCT any FROM cicles ORDER BY any DESC"),
       this.db.prepare(
-        `SELECT casal_id, categoria, estat, COUNT(*) AS n FROM incidencies
-         WHERE (?1 IS NULL OR substr(data, 1, 4) = ?1) GROUP BY casal_id, categoria, estat`,
+        `SELECT i.casal_id, i.categoria, i.estat, COUNT(*) AS n FROM incidencies i LEFT JOIN activitats a ON a.id = i.activitat_id
+         WHERE (?1 IS NULL OR substr(i.data, 1, 4) = ?1) AND (i.activitat_id IS NULL OR a.gestio = 'generalitat')
+         GROUP BY i.casal_id, i.categoria, i.estat`,
       ).bind(any === null ? null : String(any)),
     ]);
     return {

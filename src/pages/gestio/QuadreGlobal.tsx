@@ -286,6 +286,8 @@ export function QuadreGlobal() {
           </Seccio>
 
           <p className="text-secundari">
+            Només compten les activitats gestionades per la Generalitat: les que els casals afegeixen a mà per a associacions o entitats
+            en queden fora, i també les sol·licituds, places, sessions i incidències d'aquestes activitats.
             Les persones diferents es compten per casal (mateix document o mateix nom i data de naixement); qui va a dos casals compta a tots dos.
             L'assistència és el percentatge de presències sobre totes les marques; les faltes justificades compten com a faltes.
           </p>

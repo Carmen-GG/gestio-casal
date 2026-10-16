@@ -282,8 +282,8 @@ export class D1RepositoriGestioSollicituds implements RepositoriGestioSollicitud
     return [
       this.operacioImportacio(d, "activitats", ara),
       comOperacio(this.db
-        .prepare(`INSERT INTO activitats (casal_id, cicle_id, ${columnes.join(", ")}, estat, importacio_id, creat_el, actualitzat_el)
-                  SELECT ?, ?, ${columnes.map((c) => `json_extract(value, '$.${c}')`).join(", ")}, 'esborrany', ?, ?, ? FROM json_each(?)`)
+        .prepare(`INSERT INTO activitats (casal_id, cicle_id, ${columnes.join(", ")}, estat, gestio, importacio_id, creat_el, actualitzat_el)
+                  SELECT ?, ?, ${columnes.map((c) => `json_extract(value, '$.${c}')`).join(", ")}, 'esborrany', 'generalitat', ?, ?, ? FROM json_each(?)`)
         .bind(d.casal_id, d.cicle_id, d.importacio_id, ara, ara, JSON.stringify(files))),
       comOperacio(this.db
         .prepare(`INSERT INTO historial_canvis (casal_id, entitat, entitat_id, accio, canvis, usuari_id, motiu, creat_el)

@@ -244,7 +244,7 @@ describe("importacions", () => {
     const conf = await g.json(ruta, { method: "POST", json: { files, clau: crypto.randomUUID(), confirmacio: true, files_esperades: 1 } });
     expect(conf.status).toBe(201);
     const act = await env.DB.prepare("SELECT * FROM activitats WHERE cicle_id = ? AND codi_extern = 'PIL-1'").bind(cicle.id).first<Record<string, unknown>>();
-    expect(act).toMatchObject({ estat: "esborrany", dies_setmana: "[1,3]", hora_inici: "09:30", data_inici: "2027-01-11", capacitat: 15 });
+    expect(act).toMatchObject({ estat: "esborrany", dies_setmana: "[1,3]", hora_inici: "09:30", data_inici: "2027-01-11", capacitat: 15, gestio: "generalitat" });
     // La consulta no pot importar.
     const consulta = await clientAutenticat("consulta_casal", casal.id);
     expect((await consulta.json(`${ruta}/previsualitzacio`, { method: "POST", json: { files } })).status).toBe(403);
@@ -287,7 +287,7 @@ describe("importació del llistat d'activitats de la PGEc", () => {
       .first<Record<string, unknown>>();
     expect(pilates).toMatchObject({
       nom: "Pilates 1", capacitat: 25, dies_setmana: "[1,3]", hora_inici: "10:00", hora_fi: "11:00", data_inici: "2026-10-05",
-      data_fi: "2026-12-16", espai: "Aula 2", destinataris: "Adults", estat: "activa",
+      data_fi: "2026-12-16", espai: "Aula 2", destinataris: "Adults", estat: "activa", gestio: "generalitat",
     });
     const forma = await env.DB.prepare("SELECT capacitat, hora_inici, estat FROM activitats WHERE cicle_id = ? AND codi_extern = 'FA563/2026/07464'")
       .bind(cicle.id).first();

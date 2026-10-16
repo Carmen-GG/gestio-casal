@@ -41,7 +41,7 @@ describe("quadre de comandament: territori, referents, talleristes i incidèncie
     const { casal, cicle, activa } = await crearEscenari({ estatCicle: "inscripcions_obertes" });
     const g = await clientAutenticat("gestor_casal", casal.id);
     const base = `/api/gestio/casals/${casal.id}`;
-    await env.DB.prepare("UPDATE activitats SET data_inici = '2026-10-05', data_fi = '2026-10-16', tallerista = NULL WHERE id = ?").bind(activa.id).run();
+    await env.DB.prepare("UPDATE activitats SET data_inici = '2026-10-05', data_fi = '2026-10-16', tallerista = NULL, gestio = 'generalitat' WHERE id = ?").bind(activa.id).run();
     expect((await g.json(`${base}/activitats/${activa.id}/sessions/generacio`, { method: "POST" })).status).toBe(200);
     const sessions = (await g.json(`${base}/activitats/${activa.id}/assistencia`)).cos.sessions as { id: string; tallerista_absent: number }[];
     expect(sessions.length).toBeGreaterThan(1);
@@ -55,17 +55,26 @@ describe("quadre de comandament: territori, referents, talleristes i incidèncie
     const admin = await clientAutenticat("admin_central", null);
     const quadre = async () => (await admin.json("/api/gestio/administracio/quadre")).cos;
     let q = await quadre();
-    expect(q.cicles.find((c: { cicle_id: string }) => c.cicle_id === cicle.id)).toMatchObject({ activitats_sense_tallerista: 2, sessions_falta_tallerista: 1 });
+    // L'activitat en esborrany és d'una associació: no compta.
+    expect(q.cicles.find((c: { cicle_id: string }) => c.cicle_id === cicle.id)).toMatchObject({ activitats: 1, activitats_sense_tallerista: 1, sessions_falta_tallerista: 1 });
 
     // Desmarcar-la i indicar la tallerista.
     await conserge.json(`${base}/sessions/${sessions[0]!.id}/tallerista`, { method: "PUT", json: { absent: false } });
     await env.DB.prepare("UPDATE activitats SET tallerista = 'Persona fictícia' WHERE id = ?").bind(activa.id).run();
     q = await quadre();
-    expect(q.casals.find((k: FilaCasal) => k.casal_id === casal.id)).toMatchObject({ activitats_sense_tallerista: 1, sessions_falta_tallerista: 0 });
+    expect(q.casals.find((k: FilaCasal) => k.casal_id === casal.id)).toMatchObject({ activitats_sense_tallerista: 0, sessions_falta_tallerista: 0 });
+
+    // Si l'activitat passa a ser d'una associació, desapareix de les estadístiques.
+    await env.DB.prepare("UPDATE activitats SET tallerista = NULL WHERE id = ?").bind(activa.id).run();
+    await conserge.json(`${base}/sessions/${sessions[0]!.id}/tallerista`, { method: "PUT", json: { absent: true } });
+    await env.DB.prepare("UPDATE activitats SET gestio = 'associacio' WHERE id = ?").bind(activa.id).run();
+    q = await quadre();
+    expect(q.casals.find((k: FilaCasal) => k.casal_id === casal.id)).toMatchObject({ activitats: 0, activitats_sense_tallerista: 0, sessions_falta_tallerista: 0 });
   });
 
   it("el casal registra i resol incidències, i el quadre les compta per categoria", async () => {
-    const { casal, activa } = await crearEscenari();
+    const { casal, activa, esborrany } = await crearEscenari();
+    await env.DB.prepare("UPDATE activitats SET gestio = 'generalitat' WHERE id = ?").bind(activa.id).run();
     const base = `/api/gestio/casals/${casal.id}/incidencies`;
     const conserge = await clientAutenticat("conserge", casal.id);
     const nova = await conserge.json(base, { method: "POST", json: { data: "2026-10-20", categoria: "instal·lacions", descripcio: "S'ha espatllat la calefacció de la sala 2." } });
@@ -74,9 +83,11 @@ describe("quadre de comandament: territori, referents, talleristes i incidèncie
     expect((await conserge.json(base, { method: "POST", json: { data: "2026-10-21", categoria: "inventada", descripcio: "xxx" } })).status).toBe(400);
     expect((await conserge.json(base, { method: "POST", json: { data: "2026-10-21", categoria: "altres", descripcio: "xxx", activitat_id: crypto.randomUUID() } })).status).toBe(404);
 
+    // Incidència d'una activitat d'associació: es registra, però no compta al quadre.
+    expect((await conserge.json(base, { method: "POST", json: { data: "2026-10-22", categoria: "activitat", descripcio: "Activitat d'associació", activitat_id: esborrany.id } })).status).toBe(201);
     const llista = await conserge.json(`${base}?any=2026`);
-    expect(llista.cos.incidencies).toHaveLength(2);
-    expect(llista.cos.incidencies[0]).toMatchObject({ categoria: "tallerista", activitat: "Taller fictici", estat: "oberta" });
+    expect(llista.cos.incidencies).toHaveLength(3);
+    expect(llista.cos.incidencies[1]).toMatchObject({ categoria: "tallerista", activitat: "Taller fictici", estat: "oberta" });
     expect(llista.cos.activitats.map((a: { id: string }) => a.id)).toContain(activa.id);
 
     const resol = `${base}/${nova.cos.id}/resolucio`;

@@ -85,6 +85,8 @@ export interface Activitat {
   espai: string | null;
   /** Persona tallerista (buit: sense tallerista assignada). */
   tallerista: string | null;
+  /** Qui la gestiona: només les de la Generalitat compten a les estadístiques de la superadministració. */
+  gestio: GestioActivitat;
   /** Persones a qui va dirigida (text de la PGEc). */
   destinataris: string | null;
   /** Grup d'activitats que no es poden acumular (vegeu `cicles.limits_grups`). */
@@ -102,12 +104,14 @@ export interface Activitat {
   actualitzat_el: string;
 }
 
+export type GestioActivitat = "generalitat" | "associacio";
+
 export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "capacitat"> &
   Partial<
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "tallerista" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "tallerista" | "gestio" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;

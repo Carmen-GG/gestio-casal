@@ -119,15 +119,17 @@ describe("superadministració i responsables", () => {
   });
 
   it("quadre de comandament global amb tots els casals i cicles, sense dades personals", async () => {
-    const { casal, cicle } = await crearEscenari();
+    const { casal, cicle, activa } = await crearEscenari();
+    // Només compten les activitats de la Generalitat; l'esborrany és d'una associació.
+    await env.DB.prepare("UPDATE activitats SET gestio = 'generalitat' WHERE id = ?").bind(activa.id).run();
     const admin = await clientAutenticat("admin_central", null);
     const r = await admin.json("/api/gestio/administracio/quadre?any=2027");
     expect(r.status).toBe(200);
     expect(r.cos.anys).toContain(2027);
     const fila = r.cos.cicles.find((c: { cicle_id: string }) => c.cicle_id === cicle.id);
-    expect(fila).toMatchObject({ casal: "Casal de prova", activitats: 2, places_ofertes: 15, sollicituds: 0 });
+    expect(fila).toMatchObject({ casal: "Casal de prova", activitats: 1, places_ofertes: 10, sollicituds: 0 });
     const k = r.cos.casals.find((c: { casal_id: string }) => c.casal_id === casal.id);
-    expect(k).toMatchObject({ cicles: 1, activitats: 2 });
+    expect(k).toMatchObject({ cicles: 1, activitats: 1 });
     expect(Array.isArray(r.cos.referents)).toBe(true);
     const gestor = await clientAutenticat("gestor_casal", casal.id);
     expect((await gestor.json("/api/gestio/administracio/quadre")).status).toBe(403);
