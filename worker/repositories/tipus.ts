@@ -198,6 +198,20 @@ export interface ResponsableCasal {
   telefon: string | null;
 }
 
+/** Un període d'una persona en un rol del casal (des de l'alta fins a la baixa, si n'hi ha). */
+export interface PeriodeEquip {
+  id: string;
+  usuari_id: string;
+  email: string;
+  nom_visible: string;
+  rol_codi: string;
+  atorgat_el: string;
+  atorgat_per: string | null;
+  revocat_el: string | null;
+  revocat_per: string | null;
+  motiu: string | null;
+}
+
 export interface AssignacioRol {
   id: string;
   usuari_id: string;
@@ -219,6 +233,8 @@ export interface RepositoriUsuaris {
   superadministracio(): Promise<{ id: string; contrasenya_resum: string }[]>;
   fixarContrasenya(usuariId: string, resum: string, ara: string): Promise<void>;
   assignacionsCasal(casalId: string): Promise<AssignacioRol[]>;
+  /** Totes les assignacions del casal, també les revocades: una fila per període. */
+  historialEquip(casalId: string): Promise<PeriodeEquip[]>;
   assignacioPerId(id: string): Promise<AssignacioRol | null>;
   rolExisteix(codi: string): Promise<{ abast: "casal" | "global" } | null>;
   /** Responsables vigents de tots els casals. */

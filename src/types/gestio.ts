@@ -58,6 +58,10 @@ export interface EntradaHistorial {
   id: number; accio: string; canvis: Record<string, unknown>; usuari_id: string | null; motiu: string | null; creat_el: string;
 }
 
+export interface PeriodeEquip {
+  id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string;
+  atorgat_el: string; atorgat_per: string | null; revocat_el: string | null; revocat_per: string | null; motiu: string | null;
+}
 export interface AssignacioRol {
   id: string; usuari_id: string; email: string; nom_visible: string; rol_codi: string; casal_id: string | null; atorgat_el: string;
   te_contrasenya?: boolean; darrer_acces_el?: string | null; codi_pendent_fins?: string | null;

@@ -2,7 +2,7 @@ import type {
   Activitat, AssignacioRol, AutoritzacioTutor, Casal, Cicle, ConfiguracioAdjudicacio, DetallCicle, DetallExecucio, DetallSollicitud, EntradaHistorial,
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
-  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal, Referent, CasalTerritori, Incidencia, EstatWhatsapp, ConfigWhatsapp, ResumWhatsapp, ProgresEnviament,
+  AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal, PeriodeEquip, Referent, CasalTerritori, Incidencia, EstatWhatsapp, ConfigWhatsapp, ResumWhatsapp, ProgresEnviament,
   EstatComunicats, ConfigWhatsappCentral, ComunicatCreat, ResultatComunicat,
 } from "../types/gestio";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
@@ -135,6 +135,7 @@ export const serveiGestio = {
 
   eliminarCicle: (casalId: string, cicleId: string, dades: { versio: number; motiu: string }) =>
     api.delete<{ ok: true; activitats: number }>(`${g(casalId)}/cicles/${cicleId}`, { ...dades, confirmacio: true }),
+  historialEquip: (casalId: string, s?: AbortSignal) => api.get<{ historial: PeriodeEquip[] }>(`${g(casalId)}/usuaris/historial`, s),
   assignacions: (casalId: string, s?: AbortSignal) => api.get<{ assignacions: AssignacioRol[] }>(`${g(casalId)}/usuaris`, s),
   assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`${g(casalId)}/usuaris`, dades),
   nouCodiUsuari: (casalId: string, id: string) => api.post<{ codi: CodiAcces }>(`${g(casalId)}/usuaris/${id}/codi-acces`),
