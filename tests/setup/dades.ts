@@ -25,7 +25,7 @@ export async function crearEscenari(opcions: { estatCicle?: EstatCicle } = {}) {
     tancament_inscripcions: "2026-12-31T22:59:59.000Z",
     data_resolucio_prevista: "2027-01-08",
   });
-  if (opcions.estatCicle && opcions.estatCicle !== "esborrany") {
+  if (opcions.estatCicle && opcions.estatCicle !== "preparacio") {
     await env.DB.prepare("UPDATE cicles SET estat = ? WHERE id = ?").bind(opcions.estatCicle, cicle.id).run();
   }
   const activa = await repos.activitats.crear({

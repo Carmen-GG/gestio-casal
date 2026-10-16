@@ -19,7 +19,7 @@ describe("gestió de cicles", () => {
     const creat = await c.json(`/api/gestio/casals/${casal.id}/cicles`, { method: "POST", json: NOU_CICLE });
     expect(creat.status).toBe(201);
     const cicle = creat.cos.cicle;
-    expect(cicle.estat).toBe("esborrany");
+    expect(cicle.estat).toBe("preparacio");
     expect(cicle.llindar_assistencia).toBe(80); // regla del casal per defecte
     const senseLlindar = await c.json(`/api/gestio/casals/${casal.id}/cicles`, { method: "POST", json: { ...NOU_CICLE, llindar_assistencia: null } });
     expect(senseLlindar.cos.cicle.llindar_assistencia).toBeNull();
@@ -38,10 +38,10 @@ describe("gestió de cicles", () => {
     expect(antic.status).toBe(409);
 
     const estat = await c.json(`/api/gestio/casals/${casal.id}/cicles/${cicle.id}/estat`, {
-      method: "POST", json: { estat: "preparacio", versio: mod.cos.cicle.versio },
+      method: "POST", json: { estat: "inscripcions_obertes", versio: mod.cos.cicle.versio },
     });
     expect(estat.status).toBe(200);
-    expect(estat.cos.cicle.estat).toBe("preparacio");
+    expect(estat.cos.cicle.estat).toBe("inscripcions_obertes");
 
     const historial = await c.json(`/api/gestio/casals/${casal.id}/historial/cicle/${cicle.id}`);
     expect(historial.cos.historial.map((h: { accio: string }) => h.accio)).toEqual(["creacio", "modificacio", "canvi_estat"]);
@@ -73,7 +73,7 @@ describe("gestió de cicles", () => {
   });
 
   it("reobrir un cicle tancat exigeix confirmació", async () => {
-    const { casal, cicle } = await crearEscenari({ estatCicle: "inscripcions_tancades" });
+    const { casal, cicle } = await crearEscenari({ estatCicle: "adjudicacio_en_proces" });
     const c = await clientAutenticat("gestor_casal", casal.id);
     const url = `/api/gestio/casals/${casal.id}/cicles/${cicle.id}/estat`;
     expect((await c.peticio(url, { method: "POST", json: { estat: "inscripcions_obertes", versio: cicle.versio } })).status).toBe(428);

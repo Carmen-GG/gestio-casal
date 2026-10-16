@@ -11,7 +11,7 @@ import { filtraParticipant, type TaulaExportacio, type Visibilitat } from "./ges
 import type { ContextOperacio } from "./traca";
 
 /** Estats del cicle en què es poden crear o cancel·lar sessions. */
-const ESTATS_SESSIONS = ["preparacio", "inscripcions_obertes", "inscripcions_tancades", "adjudicacio_en_proces", "adjudicat", "publicat"];
+const ESTATS_SESSIONS = ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces", "adjudicat"];
 const DIES = ["", "dl", "dt", "dc", "dj", "dv", "ds", "dg"];
 
 const nomPersona = (p: { cognom1: string | null; cognom2: string | null; nom: string | null }) =>

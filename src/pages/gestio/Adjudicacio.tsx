@@ -95,7 +95,7 @@ export function Adjudicacio({ casalId, cicleId, pot, versioCicle }: {
       ) : (
         <p className="text-secundari">
           {!d.configuracio ? "Per calcular una proposta, primer deseu els paràmetres." :
-            "Per calcular una proposta, passeu el cicle a «En procés d'adjudicació»."}
+            "Per calcular una proposta, passeu el cicle a «Adjudicació»."}
         </p>
       ))}
       {d.execucions.length === 0 ? <p>Encara no s'ha calculat cap proposta.</p> : (

@@ -6,56 +6,50 @@
  * requereixen una confirmació explícita i un motiu, que el servidor exigeix.
  */
 export const ESTATS_CICLE = [
-  "esborrany",
   "preparacio",
   "inscripcions_obertes",
-  "inscripcions_tancades",
   "adjudicacio_en_proces",
   "adjudicat",
-  "publicat",
-  "finalitzat",
   "arxivat",
 ] as const;
 
 export type EstatCicle = (typeof ESTATS_CICLE)[number];
 
 export const ETIQUETES_ESTAT_CICLE: Record<EstatCicle, string> = {
-  esborrany: "Esborrany",
   preparacio: "Preparació",
   inscripcions_obertes: "Inscripcions obertes",
-  inscripcions_tancades: "Inscripcions tancades",
-  adjudicacio_en_proces: "En procés d'adjudicació",
+  adjudicacio_en_proces: "Adjudicació",
   adjudicat: "Adjudicat",
+  arxivat: "Arxivat",
+};
+
+/**
+ * Estats que existien abans de la simplificació de 2026-10-16 (migració 0031). Ja no n'hi ha cap
+ * cicle, però l'historial els pot contenir i s'han de poder llegir.
+ */
+export const ETIQUETES_ESTAT_CICLE_ANTIC: Record<string, string> = {
+  esborrany: "Esborrany",
+  inscripcions_tancades: "Inscripcions tancades",
   publicat: "Publicat",
   finalitzat: "Finalitzat",
-  arxivat: "Arxivat",
 };
 
 export type TipusTransicio = "normal" | "requereix_confirmacio";
 
 const TRANSICIONS: Record<EstatCicle, Partial<Record<EstatCicle, TipusTransicio>>> = {
-  esborrany: { preparacio: "normal", arxivat: "normal" },
-  preparacio: { esborrany: "normal", inscripcions_obertes: "normal", arxivat: "normal" },
-  inscripcions_obertes: { inscripcions_tancades: "normal" },
-  inscripcions_tancades: {
-    adjudicacio_en_proces: "normal",
-    // Reobrir un cicle tancat pot alterar l'ordre i el volum de sol·licituds.
-    inscripcions_obertes: "requereix_confirmacio",
-  },
+  preparacio: { inscripcions_obertes: "normal", arxivat: "normal" },
+  // Tancar les inscripcions porta directament a l'adjudicació.
+  inscripcions_obertes: { adjudicacio_en_proces: "normal" },
   adjudicacio_en_proces: {
     adjudicat: "normal",
-    inscripcions_tancades: "normal",
+    // Reobrir les inscripcions pot alterar l'ordre i el volum de sol·licituds.
+    inscripcions_obertes: "requereix_confirmacio",
   },
   adjudicat: {
-    publicat: "normal",
+    arxivat: "normal",
     // Tornar a adjudicar una adjudicació definitiva: cal confirmació i motiu.
     adjudicacio_en_proces: "requereix_confirmacio",
   },
-  publicat: {
-    finalitzat: "normal",
-    adjudicacio_en_proces: "requereix_confirmacio",
-  },
-  finalitzat: { arxivat: "normal" },
   arxivat: {},
 };
 

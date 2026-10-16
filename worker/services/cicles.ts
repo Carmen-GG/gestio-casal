@@ -10,7 +10,7 @@ import { diferencies, escriuAmbTraca, type ContextOperacio } from "./traca";
 export type { ContextOperacio };
 
 /** Estats en què encara es pot canviar quines dades personals demana el formulari. */
-const ESTATS_FORMULARI_EDITABLE: EstatCicle[] = ["esborrany", "preparacio"];
+const ESTATS_FORMULARI_EDITABLE: EstatCicle[] = ["preparacio"];
 
 export class ServeiCicles {
   constructor(private readonly repos: Repositoris, private readonly rellotge: Rellotge) {}
@@ -55,7 +55,7 @@ export class ServeiCicles {
     if ("configuracio_formulari" in diff && !ESTATS_FORMULARI_EDITABLE.includes(cicle.estat)) {
       throw errors.conflicte(
         "formulari_bloquejat",
-        "Els camps del formulari només es poden canviar mentre el cicle és en esborrany o preparació.",
+        "Els camps del formulari només es poden canviar mentre el cicle és en preparació.",
       );
     }
 

@@ -159,7 +159,7 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
       `INSERT INTO numeros_sorteig (cicle_id, sollicitud_id, numero, assignat_per, assignat_el)
        SELECT ?, json_extract(value, '$[0]'), json_extract(value, '$[1]'), ?, ?
        FROM json_each(?)
-       WHERE EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat IN ('inscripcions_tancades', 'adjudicacio_en_proces'))`,
+       WHERE EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat = 'adjudicacio_en_proces')`,
     ).bind(d.cicle_id, d.usuari_id, ara, JSON.stringify(bloc.map((a) => [a.sollicitud_id, a.numero])), d.cicle_id, d.casal_id)));
   }
 
@@ -179,7 +179,7 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
       `INSERT INTO sortejos_adjudicacio (id, casal_id, cicle_id, activitat_id, tipus, valor, rang_maxim, numeracio, origen, motiu,
          realitzat_per, realitzat_el, darrera_operacio)
        SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-       WHERE EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat IN ('inscripcions_tancades', 'adjudicacio_en_proces'))
+       WHERE EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat = 'adjudicacio_en_proces')
          AND EXISTS (SELECT 1 FROM activitats WHERE id = ? AND cicle_id = ? AND estat = 'activa')`,
     ).bind(d.id, d.casal_id, d.cicle_id, d.activitat_id, d.tipus, d.valor, d.rang_maxim, d.numeracio, d.origen, d.motiu,
       d.realitzat_per, d.realitzat_el, d.operacio, d.cicle_id, d.casal_id, d.activitat_id, d.cicle_id));
@@ -189,7 +189,7 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
     return comOperacio(this.db.prepare(
       `UPDATE sortejos_adjudicacio SET estat = 'anullat', anullat_per = ?, anullat_el = ?, motiu_anullacio = ?, darrera_operacio = ?
        WHERE id = ? AND casal_id = ? AND estat = 'vigent'
-         AND EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat IN ('inscripcions_tancades', 'adjudicacio_en_proces'))`,
+         AND EXISTS (SELECT 1 FROM cicles WHERE id = ? AND casal_id = ? AND estat = 'adjudicacio_en_proces')`,
     ).bind(d.usuari_id, ara, d.motiu, d.operacio, d.id, d.casal_id, d.cicle_id, d.casal_id));
   }
 

@@ -37,7 +37,7 @@ async function escenari() {
   await envia({ nom: "Núria", cognom1: "Bosch" }, [B.id]);
   await envia({ nom: "Laia", cognom1: "Costa", telefon: "600000004", document_identitat: "00000000-t", data_naixement: "1950-03-02" }, [B.id, A.id]);
   await cicleAnterior(e.casal.id, A.nom, B.nom);
-  await env.DB.prepare("UPDATE cicles SET estat = 'inscripcions_tancades' WHERE id = ?").bind(e.cicle.id).run();
+  await env.DB.prepare("UPDATE cicles SET estat = 'adjudicacio_en_proces' WHERE id = ?").bind(e.cicle.id).run();
   const base = `/api/gestio/casals/${e.casal.id}`;
   const g = await clientAutenticat("gestor_casal", e.casal.id);
   const adj = `${base}/cicles/${e.cicle.id}/adjudicacio`;
@@ -68,7 +68,7 @@ async function cicleAnterior(casalId: string, nomActivitat: string, nomActivitat
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obertura_inscripcions, tancament_inscripcions,
       data_resolucio_prevista, estat, creat_el, actualitzat_el) VALUES (?, ?, 'Cicle anterior fictici', 2026, '2026-09-14', '2026-12-18',
-      '2026-06-01T07:00:00.000Z', '2026-06-30T21:59:59.000Z', '2026-07-10', 'finalitzat', ?, ?)`).bind(id, casalId, ara, ara),
+      '2026-06-01T07:00:00.000Z', '2026-06-30T21:59:59.000Z', '2026-07-10', 'arxivat', ?, ?)`).bind(id, casalId, ara, ara),
     env.DB.prepare(`INSERT INTO activitats (id, casal_id, cicle_id, nom, capacitat, estat, creat_el, actualitzat_el)
       VALUES (?, ?, ?, ?, 1, 'activa', ?, ?)`).bind(actA, casalId, id, nomActivitat, ara, ara),
     env.DB.prepare(`INSERT INTO activitats (id, casal_id, cicle_id, nom, capacitat, estat, creat_el, actualitzat_el)

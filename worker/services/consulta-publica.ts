@@ -8,8 +8,7 @@ import type { Activitat, Casal, Cicle, Repositoris } from "../repositories/tipus
 import type { Rellotge } from "../lib/rellotge";
 
 /** Estats en què un cicle és visible a l'àrea pública. */
-export const ESTATS_CICLE_PUBLICS: EstatCicle[] = ["inscripcions_obertes", "inscripcions_tancades",
-  "adjudicacio_en_proces", "adjudicat", "publicat"];
+export const ESTATS_CICLE_PUBLICS: EstatCicle[] = ["inscripcions_obertes", "adjudicacio_en_proces", "adjudicat"];
 
 /** Proteccions de format abans de consultar la base de dades. */
 const PATRO_CODI_CASAL = /^[A-Z0-9-]{2,40}$/;

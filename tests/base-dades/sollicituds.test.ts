@@ -26,7 +26,7 @@ describe("repositori de sol·licituds: atomicitat", () => {
   });
 
   it("comprova dins de la transacció que el cicle accepta sol·licituds", async () => {
-    const e = await crearEscenari({ estatCicle: "inscripcions_tancades" });
+    const e = await crearEscenari({ estatCicle: "adjudicacio_en_proces" });
     expect(await nova(e, [e.activa.id])).toEqual({ tipus: "cicle_no_accepta" });
     const o = await crearEscenari({ estatCicle: "inscripcions_obertes" });
     expect(await nova(o, [o.activa.id], "2027-01-01T00:00:00.000Z")).toEqual({ tipus: "cicle_no_accepta" });

@@ -3,7 +3,7 @@ import { errors } from "../http/errors";
 import type { Rellotge } from "../lib/rellotge";
 import type { Repositoris } from "../repositories/tipus";
 
-const ESTATS_PREVIS = ["esborrany", "preparacio"];
+const ESTATS_PREVIS = ["preparacio"];
 
 /**
  * Quadre de comandament d'un cicle. Totes les xifres surten de la base de dades en el moment

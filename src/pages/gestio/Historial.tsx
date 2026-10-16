@@ -2,7 +2,7 @@ import { Carregant, MissatgeError } from "../../components/EstatsConsulta";
 import { useConsulta } from "../../hooks/useConsulta";
 import { serveiGestio } from "../../services/gestio";
 import { formataDataHora } from "../../utils/format";
-import { ETIQUETES_ESTAT_CICLE, esEstatCicle } from "../../../shared/domain/cicles";
+import { ETIQUETES_ESTAT_CICLE, ETIQUETES_ESTAT_CICLE_ANTIC, esEstatCicle } from "../../../shared/domain/cicles";
 import { ETIQUETES_ASSISTENCIA, type EstatAssistencia } from "../../../shared/domain/assistencia";
 import { formataData } from "../../utils/format";
 
@@ -16,7 +16,7 @@ const ACCIONS: Record<string, string> = {
 
 const valor = (v: unknown, camp?: string) => {
   if (v === null || v === undefined || v === "") return "—";
-  if (camp === "estat" && typeof v === "string") return esEstatCicle(v) ? ETIQUETES_ESTAT_CICLE[v] : (ESTATS_ACTIVITAT[v] ?? ESTATS_SOLLICITUD[v] ?? v);
+  if (camp === "estat" && typeof v === "string") return esEstatCicle(v) ? ETIQUETES_ESTAT_CICLE[v] : (ETIQUETES_ESTAT_CICLE_ANTIC[v] ?? ESTATS_ACTIVITAT[v] ?? ESTATS_SOLLICITUD[v] ?? v);
   if (Array.isArray(v)) return v.join("; ") || "—";
   return typeof v === "object" ? JSON.stringify(v) : String(v);
 };

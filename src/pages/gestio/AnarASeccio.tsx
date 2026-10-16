@@ -7,7 +7,7 @@ import { serveiGestio } from "../../services/gestio";
 import { formataData } from "../../utils/format";
 
 /** Cicles amb què es treballa des del menú (els tancats es consulten des de la llista de cicles). */
-const ESTATS_EN_CURS: EstatCicle[] = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades", "adjudicacio_en_proces", "adjudicat", "publicat"];
+const ESTATS_EN_CURS: EstatCicle[] = ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces", "adjudicat"];
 
 const TITOLS: Record<string, string> = {
   activitats: "Gestionar activitats",
