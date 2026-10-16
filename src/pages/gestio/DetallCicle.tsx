@@ -26,7 +26,7 @@ import { Sorteig } from "./Sorteig";
 import { Indicadors } from "./Indicadors";
 
 /** Estats del cicle en què pot existir una adjudicació confirmada. */
-const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat", "finalitzat", "arxivat"];
+const ESTATS_AMB_PLACES: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "arxivat"];
 
 const ETIQUETES_ESTAT_ACTIVITAT: Record<EstatActivitat, string> = { esborrany: "Esborrany", activa: "Activa", inactiva: "Inactiva", arxivada: "Arxivada" };
 
@@ -131,7 +131,7 @@ export function DetallCicle() {
         </Seccio>
       )}
 
-      {!["finalitzat", "arxivat"].includes(cicle.estat) && activitats.tipus === "dades" && (
+      {cicle.estat !== "arxivat" && activitats.tipus === "dades" && (
         <Seccio titol="Formulari a la pàgina pública">
           <EstatFormulariPublic casalId={casalId} codiCasal={jo.casals.find((c) => c.id === casalId)?.codi} cicle={cicle}
             acceptaSollicituds={accepta_sollicituds} privacitatDeProva={!formulari.informacio_privacitat}
@@ -140,8 +140,8 @@ export function DetallCicle() {
         </Seccio>
       )}
 
-      <Seccio titol="Formulari d'inscripció" obertaInicial={!formulari.informacio_privacitat && ["esborrany", "preparacio"].includes(cicle.estat)}>
-        <CampsFormulari formulari={formulari} cicle={cicle} editable={pot("cicles.gestionar") && ["esborrany", "preparacio"].includes(cicle.estat)}
+      <Seccio titol="Formulari d'inscripció" obertaInicial={!formulari.informacio_privacitat && cicle.estat === "preparacio"}>
+        <CampsFormulari formulari={formulari} cicle={cicle} editable={pot("cicles.gestionar") && cicle.estat === "preparacio"}
           onDesar={(conf) => accio(() => serveiGestio.actualitzarCicle(casalId, cicleId, { versio: cicle.versio, configuracio_formulari: conf }),
             "S'ha desat la configuració del formulari.")} />
       </Seccio>
@@ -152,7 +152,7 @@ export function DetallCicle() {
         {activitats.tipus === "dades" && (
           <GestioActivitats casalId={casalId} cicle={cicle} activitats={activitats.dades.activitats}
             potGestionar={pot("activitats.gestionar")} potCartells={pot("cartells.generar")} potCicle={pot("cicles.gestionar")}
-            editable={!["finalitzat", "arxivat"].includes(cicle.estat)} onCanvi={recarrega} />
+            editable={cicle.estat !== "arxivat"} onCanvi={recarrega} />
         )}
       </Seccio>
 
@@ -160,7 +160,7 @@ export function DetallCicle() {
         <Seccio titol="Sol·licituds rebudes">
           <LlistatSollicituds casalId={casalId} cicleId={cicleId} activitats={activitats.tipus === "dades" ? activitats.dades.activitats : []}
             versio={versioPlaces + versio} />
-          {pot("dades.importar") && ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"].includes(cicle.estat) && (
+          {pot("dades.importar") && ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces"].includes(cicle.estat) && (
             <ImportacioSollicituds casalId={casalId} cicleId={cicleId} onImportat={recarrega} />
           )}
         </Seccio>
@@ -178,26 +178,26 @@ export function DetallCicle() {
         </Seccio>
       )}
 
-      {pot("sollicituds.consultar") && ["inscripcions_tancades", "adjudicacio_en_proces", "adjudicat", "publicat"].includes(cicle.estat) && (
-        <Seccio titol="Sorteig per activitat" obertaInicial={["inscripcions_tancades", "adjudicacio_en_proces"].includes(cicle.estat)}>
+      {pot("sollicituds.consultar") && ["adjudicacio_en_proces", "adjudicat"].includes(cicle.estat) && (
+        <Seccio titol="Sorteig per activitat" obertaInicial={cicle.estat === "adjudicacio_en_proces"}>
           <Sorteig casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} />
         </Seccio>
       )}
 
-      {pot("sollicituds.consultar") && !["esborrany", "arxivat"].includes(cicle.estat) && (
+      {pot("sollicituds.consultar") && cicle.estat !== "arxivat" && (
         <Seccio titol="Adjudicació" obertaInicial={cicle.estat === "adjudicacio_en_proces"}>
           <Adjudicacio casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} />
         </Seccio>
       )}
 
       {pot("sollicituds.consultar") && ESTATS_AMB_PLACES.includes(cicle.estat) && (
-        <Seccio titol="Places i llistes d'espera" obertaInicial={["adjudicat", "publicat"].includes(cicle.estat)}>
+        <Seccio titol="Places i llistes d'espera" obertaInicial={cicle.estat === "adjudicat"}>
           <Places casalId={casalId} cicleId={cicleId} pot={pot} versioCicle={cicle.versio} onCanvi={() => setVersioPlaces((v) => v + 1)} />
         </Seccio>
       )}
 
-      {(pot("sollicituds.consultar") || pot("assistencia.registrar")) && ["adjudicat", "publicat", "finalitzat"].includes(cicle.estat) && (
-        <Seccio titol="Assistència" obertaInicial={cicle.estat === "publicat"}>
+      {(pot("sollicituds.consultar") || pot("assistencia.registrar")) && ["adjudicat", "arxivat"].includes(cicle.estat) && (
+        <Seccio titol="Assistència" obertaInicial={cicle.estat === "adjudicat"}>
           <Assistencia casalId={casalId} cicle={cicle} pot={pot} onCanviCicle={recarrega} />
         </Seccio>
       )}
@@ -253,7 +253,7 @@ function CampsFormulari({ formulari, editable, onDesar }: {
   return (
     <div>
       <p>Trieu quins camps surten al formulari i quins són obligatoris. Recolliu només les dades necessàries. La data de naixement sempre es demana: si la persona és menor d'edat, el formulari demana les dades, el DNI i la signatura del pare, mare o tutor.</p>
-      {!editable && <p className="text-secundari">Els camps només es poden modificar mentre el cicle és en esborrany o preparació.</p>}
+      {!editable && <p className="text-secundari">Els camps només es poden modificar mentre el cicle és en preparació.</p>}
       <div className="taula-contenidor">
         <table className="taula">
           <thead><tr><th scope="col">Camp</th><th scope="col">Es demana</th><th scope="col">Obligatori</th></tr></thead>

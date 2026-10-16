@@ -41,7 +41,7 @@ export class D1RepositoriCicles implements RepositoriCicles {
           `INSERT INTO cicles (id, casal_id, nom, any, data_inici, data_fi, obertura_inscripcions,
              tancament_inscripcions, data_resolucio_prevista, estat, configuracio_formulari, llindar_assistencia,
              darrera_operacio, creat_el, actualitzat_el)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'esborrany', ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'preparacio', ?, ?, ?, ?, ?)`,
         )
         .bind(id, dades.casal_id, dades.nom, dades.any, dades.data_inici, dades.data_fi,
           dades.obertura_inscripcions, dades.tancament_inscripcions, dades.data_resolucio_prevista,

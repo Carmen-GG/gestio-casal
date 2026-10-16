@@ -17,9 +17,9 @@ import type { ContextOperacio } from "./traca";
 const CAMPS_BASICS: CampPersonal[] = ["nom", "cognom1", "cognom2"];
 
 /** Estats del cicle en què es poden modificar les preferències (abans de l'adjudicació). */
-export const ESTATS_PREFERENCIES_EDITABLES: EstatCicle[] = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"];
+export const ESTATS_PREFERENCIES_EDITABLES: EstatCicle[] = ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces"];
 /** Estats del cicle en què es pot canviar l'estat d'una sol·licitud. */
-const ESTATS_CANVI_ESTAT: EstatCicle[] = [...ESTATS_PREFERENCIES_EDITABLES, "adjudicacio_en_proces"];
+const ESTATS_CANVI_ESTAT: EstatCicle[] = ESTATS_PREFERENCIES_EDITABLES;
 
 /** El DNI/NIE no es mostra mai sencer: només els darrers caràcters per poder-lo contrastar. */
 export const emmascaraDocument = (d: string | null) => (d ? `${"•".repeat(Math.max(d.length - 4, 0))}${d.slice(-4)}` : null);

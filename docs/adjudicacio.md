@@ -46,7 +46,7 @@ El nom i el telèfon **no** serveixen: hi ha gent gran que comparteix telèfon f
 1. **Paràmetres.** Al panell del cicle, a la secció «Adjudicació», es desen els paràmetres.
    - Cada desament crea una **versió nova**: les anteriors no es poden modificar, perquè ho impedeix un *trigger* a la base de dades.
    - Cada proposta indica amb quina versió s'ha calculat.
-2. **Proposta.** Quan el cicle és «En procés d'adjudicació», es pot calcular una proposta.
+2. **Proposta.** Quan el cicle és «Adjudicació», es pot calcular una proposta.
    - El motor és una funció pura (`shared/domain/adjudicacio.ts`), separada de la interfície i de la base de dades.
    - Es desa el resultat de cada parella sol·licitud-activitat.
    - Calcular una proposta nova marca les anteriors pendents com a «descartades». No s'esborren.
@@ -54,7 +54,7 @@ El nom i el telèfon **no** serveixen: hi ha gent gran que comparteix telèfon f
    - En confirmar-la, es creen les places i les llistes d'espera, i el cicle passa a «Adjudicat».
    - Si les sol·licituds, les activitats o les renúncies han canviat des del càlcul, la confirmació es rebutja i cal calcular una proposta nova. Es comprova amb una empremta SHA-256 de les dades d'entrada.
 4. **Substitució.** No es pot recalcular una adjudicació confirmada sense una operació explícita:
-   - Cal tornar el cicle a «En procés d'adjudicació», que requereix confirmació i motiu.
+   - Cal tornar el cicle a «Adjudicació», que requereix confirmació i motiu.
    - Després es calcula una proposta nova i es confirma, i aquesta confirmació també requereix motiu.
    - L'adjudicació anterior queda com a «substituïda», amb l'enllaç a la nova, i es conserva sencera.
    - Les renúncies i baixes registrades a mà es respecten: aquestes parelles no es tornen a adjudicar.

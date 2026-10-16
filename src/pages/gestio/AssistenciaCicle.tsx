@@ -24,7 +24,7 @@ export function AssistenciaCicle() {
     <div>
       <p className="subtitol"><Link to={`/gestio/${casalId}`}>Tornar al casal</Link></p>
       <h1>Assistència · {cicle.nom}</h1>
-      {["adjudicat", "publicat", "finalitzat"].includes(cicle.estat)
+      {["adjudicat", "arxivat"].includes(cicle.estat)
         ? <Assistencia casalId={casalId} cicle={cicle} pot={pot} onCanviCicle={() => setVersio((v) => v + 1)} />
         : <p>Aquest cicle encara no té les places adjudicades: l'assistència es podrà passar quan les tingui.</p>}
     </div>

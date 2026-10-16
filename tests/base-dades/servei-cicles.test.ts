@@ -18,13 +18,13 @@ describe("ServeiCicles.canviarEstat", () => {
   it("canvia l'estat i deixa historial i auditoria", async () => {
     const { repos, casal, cicle } = await crearEscenari();
     const servei = new ServeiCicles(repos, rellotgeFix(ARA));
-    const resultat = await servei.canviarEstat(casal.id, cicle.id, "preparacio", { usuariId: null });
-    expect(resultat.estat).toBe("preparacio");
+    const resultat = await servei.canviarEstat(casal.id, cicle.id, "inscripcions_obertes", { usuariId: null });
+    expect(resultat.estat).toBe("inscripcions_obertes");
     expect(resultat.versio).toBe(cicle.versio + 1);
 
     const historial = await repos.historial.llistar("cicle", cicle.id);
     expect(historial).toHaveLength(1);
-    expect(historial[0]!.canvis).toEqual({ estat: { abans: "esborrany", despres: "preparacio" } });
+    expect(historial[0]!.canvis).toEqual({ estat: { abans: "preparacio", despres: "inscripcions_obertes" } });
     const auditoria = await repos.auditoria.llistar({ entitat: "cicle", entitatId: cicle.id });
     expect(auditoria).toHaveLength(1);
     expect(auditoria[0]!.tipus_operacio).toBe("cicle.canvi_estat");
@@ -37,7 +37,7 @@ describe("ServeiCicles.canviarEstat", () => {
   });
 
   it("exigeix confirmació i motiu per reobrir un cicle tancat", async () => {
-    const { repos, casal, cicle } = await crearEscenari({ estatCicle: "inscripcions_tancades" });
+    const { repos, casal, cicle } = await crearEscenari({ estatCicle: "adjudicacio_en_proces" });
     const servei = new ServeiCicles(repos, rellotgeFix(ARA));
     expect((await errorDe(servei.canviarEstat(casal.id, cicle.id, "inscripcions_obertes", { usuariId: null }))).codi)
       .toBe("confirmacio_requerida");
@@ -73,9 +73,9 @@ describe("ServeiCicles.canviarEstat", () => {
         operacioCanviEstat: repos.cicles.operacioCanviEstat.bind(repos.cicles),
       },
     };
-    const err = await errorDe(new ServeiCicles(reposConcurrent, rellotgeFix(ARA)).canviarEstat(casal.id, cicle.id, "preparacio", { usuariId: null }));
+    const err = await errorDe(new ServeiCicles(reposConcurrent, rellotgeFix(ARA)).canviarEstat(casal.id, cicle.id, "inscripcions_obertes", { usuariId: null }));
     expect(err.codi).toBe("conflicte_concurrencia");
-    expect((await repos.cicles.perId(casal.id, cicle.id))!.estat).toBe("esborrany");
+    expect((await repos.cicles.perId(casal.id, cicle.id))!.estat).toBe("preparacio");
     expect(await repos.historial.llistar("cicle", cicle.id)).toHaveLength(0);
     expect(await repos.auditoria.llistar({ entitat: "cicle", entitatId: cicle.id })).toHaveLength(0);
   });

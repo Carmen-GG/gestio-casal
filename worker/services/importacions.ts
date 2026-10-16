@@ -36,8 +36,8 @@ export interface Previsualitzacio {
 }
 
 /** Estats del cicle que admeten importar sol·licituds (abans de l'adjudicació). */
-const ESTATS_IMPORTACIO_SOLLICITUDS: EstatCicle[] = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"];
-const ESTATS_IMPORTACIO_ACTIVITATS: EstatCicle[] = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades"];
+const ESTATS_IMPORTACIO_SOLLICITUDS: EstatCicle[] = ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces"];
+const ESTATS_IMPORTACIO_ACTIVITATS: EstatCicle[] = ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces"];
 /** Màxim de files del llistat de la PGEc que s'importen d'una vegada (un sol lot atòmic). */
 export const MAX_FILES_IMPORTACIO_DIRECTA = 400;
 
@@ -405,7 +405,7 @@ export class ServeiImportacions {
 
     const existents = await this.repos.activitats.llistarPerCicle(casalId, cicle.id);
     const perCodi = new Map(existents.filter((a) => a.codi_extern).map((a) => [a.codi_extern!.toLowerCase(), a]));
-    const capacitatBloquejada = ["adjudicacio_en_proces", "adjudicat", "publicat"].includes(cicle.estat);
+    const capacitatBloquejada = ["adjudicacio_en_proces", "adjudicat"].includes(cicle.estat);
     const ara = isoAra(this.rellotge);
     const operacions: Operacio[] = [];
     const resultat: ResultatImportacioDirecta = { creades: 0, actualitzades: 0, sense_canvis: 0, omeses: 0, avisos: [] };

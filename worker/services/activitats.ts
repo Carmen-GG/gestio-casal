@@ -6,9 +6,9 @@ import { nouId } from "../lib/ids";
 import { diferencies, escriuAmbTraca, type ContextOperacio } from "./traca";
 
 /** Cicles on ja no es poden crear ni modificar activitats. */
-const ESTATS_CICLE_TANCATS: EstatCicle[] = ["finalitzat", "arxivat"];
+const ESTATS_CICLE_TANCATS: EstatCicle[] = ["arxivat"];
 /** A partir d'aquests estats, canviar la capacitat afecta l'adjudicació: cal confirmació. */
-const ESTATS_CAPACITAT_SENSIBLE: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat", "publicat"];
+const ESTATS_CAPACITAT_SENSIBLE: EstatCicle[] = ["adjudicacio_en_proces", "adjudicat"];
 
 const TRANSICIONS_ACTIVITAT: Record<EstatActivitat, EstatActivitat[]> = {
   esborrany: ["activa", "arxivada"],
@@ -37,7 +37,7 @@ export class ServeiActivitats {
     const cicle = await this.repos.cicles.perId(casalId, cicleId);
     if (!cicle) throw errors.noTrobat("No s'ha trobat el cicle.");
     if (ESTATS_CICLE_TANCATS.includes(cicle.estat)) {
-      throw errors.conflicte("cicle_tancat", "Aquest cicle està finalitzat o arxivat i no admet canvis d'activitats.");
+      throw errors.conflicte("cicle_tancat", "Aquest cicle està arxivat i no admet canvis d'activitats.");
     }
     return cicle;
   }

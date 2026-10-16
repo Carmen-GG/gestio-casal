@@ -109,7 +109,7 @@ export function DetallAdjudicacio() {
           )}
         </div>
         {e.estat === "proposta" && !pot_confirmar && (
-          <p className="text-secundari">Per confirmar-la, el cicle ha d'estar «En procés d'adjudicació».</p>
+          <p className="text-secundari">Per confirmar-la, el cicle ha d'estar «Adjudicació».</p>
         )}
         {sotaMinim.length > 0 && (
           <p className="avis avis--alerta">

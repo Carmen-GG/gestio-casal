@@ -159,7 +159,7 @@ describe("API pública: enviament de sol·licituds", () => {
     const abans = await enviador(rellotgeMobil("2026-09-30T10:00:00.000Z"))(ruta, cos([activa.id]));
     expect(abans.status).toBe(409);
     expect(abans.cos.error.codi).toBe("cicle_tancat");
-    await env.DB.prepare("UPDATE cicles SET estat = 'inscripcions_tancades' WHERE id = ?").bind(cicle.id).run();
+    await env.DB.prepare("UPDATE cicles SET estat = 'adjudicacio_en_proces' WHERE id = ?").bind(cicle.id).run();
     const tancat = await enviador()(ruta, cos([activa.id]));
     expect(tancat.status).toBe(409);
     expect(tancat.cos.error.codi).toBe("cicle_tancat");

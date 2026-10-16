@@ -15,12 +15,12 @@ import { dataHoraLocal, filtraParticipant, type TaulaExportacio, type Visibilita
 import type { ContextOperacio } from "./traca";
 
 /** Estats del cicle en què es poden desar paràmetres d'adjudicació. */
-const ESTATS_PARAMETRES = ["esborrany", "preparacio", "inscripcions_obertes", "inscripcions_tancades", "adjudicacio_en_proces"];
+const ESTATS_PARAMETRES = ["preparacio", "inscripcions_obertes", "adjudicacio_en_proces"];
 /** Estats del cicle en què es gestionen les places (després de confirmar l'adjudicació). */
-export const ESTATS_PLACES = ["adjudicat", "publicat"];
+export const ESTATS_PLACES = ["adjudicat"];
 
 /** Estats del cicle en què es fan els sortejos i s'assignen els números. */
-const ESTATS_SORTEIG = ["inscripcions_tancades", "adjudicacio_en_proces"];
+const ESTATS_SORTEIG = ["adjudicacio_en_proces"];
 
 const LLETRES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -152,7 +152,7 @@ export class ServeiAdjudicacio {
   async calcularProposta(casalId: string, cicleId: string, d: { lletra?: string }, ctx: ContextOperacio) {
     const cicle = await this.cicle(casalId, cicleId);
     if (cicle.estat !== "adjudicacio_en_proces") {
-      throw errors.conflicte("cicle_no_en_adjudicacio", "Per calcular una proposta, el cicle ha d'estar «En procés d'adjudicació».");
+      throw errors.conflicte("cicle_no_en_adjudicacio", "Per calcular una proposta, el cicle ha d'estar «Adjudicació».");
     }
     const config = await this.repos.adjudicacio.configuracioVigent(cicleId);
     if (!config) throw errors.conflicte("sense_parametres", "Abans de calcular cal desar els paràmetres d'adjudicació del cicle.");
@@ -319,7 +319,7 @@ export class ServeiAdjudicacio {
   async assignarNumeros(casalId: string, cicleId: string, ctx: ContextOperacio) {
     const cicle = await this.cicle(casalId, cicleId);
     if (!ESTATS_SORTEIG.includes(cicle.estat)) {
-      throw errors.conflicte("cicle_bloquejat", "Els números de sorteig s'assignen amb les inscripcions tancades o l'adjudicació en procés.");
+      throw errors.conflicte("cicle_bloquejat", "Els números de sorteig s'assignen quan el cicle és a «Adjudicació».");
     }
     const [dades, numeros] = await Promise.all([
       this.repos.adjudicacio.dadesMotor(casalId, cicleId),
@@ -355,7 +355,7 @@ export class ServeiAdjudicacio {
   async ferSorteig(casalId: string, cicleId: string, activitatId: string, d: { valor_manual?: string; motiu?: string }, ctx: ContextOperacio) {
     const cicle = await this.cicle(casalId, cicleId);
     if (!ESTATS_SORTEIG.includes(cicle.estat)) {
-      throw errors.conflicte("cicle_bloquejat", "Els sortejos es fan amb les inscripcions tancades o l'adjudicació en procés.");
+      throw errors.conflicte("cicle_bloquejat", "Els sortejos es fan quan el cicle és a «Adjudicació».");
     }
     const config = await this.repos.adjudicacio.configuracioVigent(cicleId);
     if (!config || config.parametres.criteri_ordre !== "sorteig_activitat") {
@@ -464,7 +464,7 @@ export class ServeiAdjudicacio {
     const cicle = await this.cicle(casalId, execucio.cicle_id);
     if (execucio.estat !== "proposta") throw errors.conflicte("execucio_no_proposta", "Només es pot confirmar una proposta pendent.");
     if (cicle.estat !== "adjudicacio_en_proces") {
-      throw errors.conflicte("cicle_no_en_adjudicacio", "El cicle ha d'estar «En procés d'adjudicació» per confirmar.");
+      throw errors.conflicte("cicle_no_en_adjudicacio", "El cicle ha d'estar «Adjudicació» per confirmar.");
     }
     const anterior = await this.repos.adjudicacio.execucioConfirmada(cicle.id);
     const motiu = d.motiu?.trim() || null;

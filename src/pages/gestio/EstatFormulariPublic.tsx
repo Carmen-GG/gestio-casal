@@ -26,7 +26,7 @@ export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollici
   const obert = cicle.estat === "inscripcions_obertes";
 
   const punts: Punt[] = [
-    { fet: obert, text: obert ? "El cicle és a «Inscripcions obertes»." : `El cicle és a «${ETIQUETES_ESTAT_CICLE[cicle.estat]}»: passeu-lo a «Inscripcions obertes» a la secció «Estat del cicle»${cicle.estat === "esborrany" ? " (primer a «Preparació»)" : ""}.` },
+    { fet: obert, text: obert ? "El cicle és a «Inscripcions obertes»." : `El cicle és a «${ETIQUETES_ESTAT_CICLE[cicle.estat]}»: passeu-lo a «Inscripcions obertes» a la secció «Estat del cicle».` },
     { fet: !obert || acceptaSollicituds, text: `Termini d'inscripció: del ${formataDataHora(cicle.obertura_inscripcions)} al ${formataDataHora(cicle.tancament_inscripcions)}.` },
     { fet: actives.length > 0, text: actives.length > 0 ? (actives.length === 1 ? "1 activitat activa." : `${actives.length} activitats actives.`) : "Cap activitat activa: les activitats importades o noves queden en esborrany fins que s'activen." },
     { fet: !privacitatDeProva, text: privacitatDeProva ? "Es mostra un text de protecció de dades de prova: substituïu-lo pel definitiu a la secció «Formulari d'inscripció»." : "Té el text de protecció de dades." },
@@ -65,7 +65,7 @@ export function EstatFormulariPublic({ casalId, codiCasal, cicle, acceptaSollici
         ))}
       </ul>
       {error && <MissatgeError error={error} />}
-      {potGestionar && esborranys.length > 0 && cicle.estat !== "finalitzat" && (
+      {potGestionar && esborranys.length > 0 && cicle.estat !== "arxivat" && (
         <p>
           <button type="button" className="boto" disabled={activant} onClick={() => void activaTotes()}>
             {activant ? "Activant…" : esborranys.length === 1 ? "Activa l'activitat en esborrany" : `Activa les ${esborranys.length} activitats en esborrany`}

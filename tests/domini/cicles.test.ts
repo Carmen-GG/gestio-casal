@@ -3,21 +3,21 @@ import { acceptaSollicituds, tipusTransicioCicle, transicionsPermeses } from "..
 
 describe("transicions d'estat dels cicles", () => {
   it("permet el flux habitual", () => {
-    expect(tipusTransicioCicle("esborrany", "preparacio")).toBe("normal");
     expect(tipusTransicioCicle("preparacio", "inscripcions_obertes")).toBe("normal");
-    expect(tipusTransicioCicle("inscripcions_obertes", "inscripcions_tancades")).toBe("normal");
-    expect(tipusTransicioCicle("adjudicat", "publicat")).toBe("normal");
+    expect(tipusTransicioCicle("inscripcions_obertes", "adjudicacio_en_proces")).toBe("normal");
+    expect(tipusTransicioCicle("adjudicacio_en_proces", "adjudicat")).toBe("normal");
+    expect(tipusTransicioCicle("adjudicat", "arxivat")).toBe("normal");
+    expect(tipusTransicioCicle("preparacio", "arxivat")).toBe("normal");
   });
 
-  it("exigeix confirmació per reobrir un cicle tancat o recalcular una adjudicació", () => {
-    expect(tipusTransicioCicle("inscripcions_tancades", "inscripcions_obertes")).toBe("requereix_confirmacio");
+  it("exigeix confirmació per reobrir les inscripcions o recalcular una adjudicació", () => {
+    expect(tipusTransicioCicle("adjudicacio_en_proces", "inscripcions_obertes")).toBe("requereix_confirmacio");
     expect(tipusTransicioCicle("adjudicat", "adjudicacio_en_proces")).toBe("requereix_confirmacio");
-    expect(tipusTransicioCicle("publicat", "adjudicacio_en_proces")).toBe("requereix_confirmacio");
   });
 
   it("no permet salts no previstos", () => {
-    expect(tipusTransicioCicle("esborrany", "adjudicat")).toBeNull();
-    expect(tipusTransicioCicle("inscripcions_obertes", "esborrany")).toBeNull();
+    expect(tipusTransicioCicle("preparacio", "adjudicat")).toBeNull();
+    expect(tipusTransicioCicle("inscripcions_obertes", "preparacio")).toBeNull();
     expect(transicionsPermeses("arxivat")).toEqual([]);
   });
 });
@@ -39,6 +39,6 @@ describe("acceptaSollicituds", () => {
   });
 
   it("rebutja si l'estat no és obert", () => {
-    expect(acceptaSollicituds({ ...cicle, estat: "inscripcions_tancades" }, new Date("2026-10-15T10:00:00Z"))).toBe(false);
+    expect(acceptaSollicituds({ ...cicle, estat: "adjudicacio_en_proces" }, new Date("2026-10-15T10:00:00Z"))).toBe(false);
   });
 });
