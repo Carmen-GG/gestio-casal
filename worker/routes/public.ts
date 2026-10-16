@@ -5,6 +5,7 @@ import { ErrorAplicacio } from "../http/errors";
 import { cosValidat } from "../http/validacio";
 import { resumSha256 } from "../lib/cripto";
 import { ServeiConsultaPublica } from "../services/consulta-publica";
+import { ServeiAvisRebuda } from "../services/avis-rebuda";
 import { ServeiSollicitudsPubliques } from "../services/sollicituds-publiques";
 
 /**
@@ -36,7 +37,8 @@ export const rutesPubliques = new Hono<Entorn>()
       }
     }
     const cos = await cosValidat(c, sollicitudPublica);
-    const servei = new ServeiSollicitudsPubliques(c.get("repos"), c.get("rellotge"));
+    const avis = new ServeiAvisRebuda(c.get("repos"), c.get("rellotge"), c.env, c.get("fetchMeta"));
+    const servei = new ServeiSollicitudsPubliques(c.get("repos"), c.get("rellotge"), avis);
     const resultat = await servei.registrar(c.req.param("codi"), c.req.param("cicleId"),
       c.req.header("Idempotency-Key"), cos, c.get("idPeticio"));
     return c.json(resultat, resultat.repetida ? 200 : 201);

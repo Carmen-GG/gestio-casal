@@ -84,7 +84,8 @@ export class ServeiGestioSollicituds {
   async obtenir(casalId: string, id: string): Promise<DetallSollicitud> {
     const s = await this.repos.gestioSollicituds.detall(casalId, id);
     if (!s) throw errors.noTrobat("No s'ha trobat la sol·licitud.");
-    return s;
+    const avis = await this.repos.avisosRebuda.perSollicitud(id);
+    return { ...s, avis_rebuda: avis && { canal: avis.canal, estat: avis.estat, motiu: avis.motiu, creat_el: avis.creat_el } };
   }
 
   private comprovaVersio(actual: number, esperada: number) {

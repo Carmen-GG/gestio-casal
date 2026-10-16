@@ -75,6 +75,7 @@ export function DetallSollicitud() {
         <dl className="dades">
           <div><dt>Rebuda el</dt><dd>{formataDataHora(s.rebuda_el)}</dd></div>
           <div><dt>Origen</dt><dd>{ORIGENS[s.origen]}</dd></div>
+          {s.avis_rebuda && <div><dt>Avís de rebuda</dt><dd>{textAvisRebuda(s.avis_rebuda)}</dd></div>}
           <div><dt>Codi de confirmació</dt><dd className="codi">{s.codi_confirmacio}</dd></div>
           <div><dt>Protecció de dades acceptada</dt><dd>{s.privacitat_acceptada_el ? formataDataHora(s.privacitat_acceptada_el) : "No consta (importada o registrada al panell)"}</dd></div>
         </dl>
@@ -228,4 +229,18 @@ function AutoritzacioTutorSollicitud({ casalId, sollicitudId }: { casalId: strin
       <img className="signatura-desada" src={a.signatura} alt={`Signatura de ${a.nom} ${a.cognoms}`} />
     </div>
   );
+}
+
+const MOTIUS_AVIS: Record<string, string> = {
+  sense_contacte: "no hi ha correu ni mòbil",
+  telefon_fix: "el telèfon és fix",
+  servei_no_configurat: "el servei d'enviament no està configurat",
+  sense_whatsapp: "el número no té WhatsApp",
+  error_servei: "el servei ha retornat un error",
+};
+
+function textAvisRebuda(a: NonNullable<Detall["avis_rebuda"]>) {
+  const canal = a.canal === "correu" ? "per correu" : "per WhatsApp";
+  if (a.estat === "enviat") return `Enviat ${canal} el ${formataDataHora(a.creat_el)}`;
+  return `No enviat${a.canal === "cap" ? "" : ` ${canal}`}: ${MOTIUS_AVIS[a.motiu ?? ""] ?? "motiu desconegut"}`;
 }

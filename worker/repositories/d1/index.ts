@@ -15,6 +15,7 @@ import { D1RepositoriComunicats } from "./comunicats";
 import { D1RepositoriPersonesPlataforma } from "./persones-plataforma";
 import { D1RepositoriCartells } from "./cartells";
 import { D1RepositoriInstagram } from "./instagram";
+import { D1RepositoriAvisosRebuda } from "./avisos-rebuda";
 import { D1RepositoriIncidencies, D1RepositoriTerritori } from "./territori";
 import { D1RepositoriAuditoria, D1RepositoriHistorial, D1UnitatDeTreball } from "./registres";
 
@@ -40,6 +41,7 @@ export function repositorisD1(db: D1Database, rellotge: Rellotge): Repositoris {
     incidencies: new D1RepositoriIncidencies(db),
     cartells: new D1RepositoriCartells(db),
     instagram: new D1RepositoriInstagram(db),
+    avisosRebuda: new D1RepositoriAvisosRebuda(db),
     unitat: new D1UnitatDeTreball(db),
   };
 }

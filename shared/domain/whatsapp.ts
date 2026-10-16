@@ -83,6 +83,15 @@ export const PLANTILLES_WHATSAPP = {
     },
     botons: { ca: ["Sí, la vull", "No, gràcies"], es: ["Sí, la quiero", "No, gracias"] },
   },
+  sollicitud_rebuda: {
+    titol: "Sol·licitud rebuda",
+    parametres: ["nom", "casal", "cicle", "codi"],
+    text: {
+      ca: "Hola, {{1}}!\n\nUs escrivim del {{2}}. Hem rebut la vostra sol·licitud d'inscripció al cicle «{{3}}». El codi de confirmació és {{4}}.\n\nAixò encara no és l'adjudicació de places: us avisarem quan estigui feta.\n\nGràcies!",
+      es: "¡Hola, {{1}}!\n\nOs escribimos del {{2}}. Hemos recibido vuestra solicitud de inscripción al ciclo «{{3}}». El código de confirmación es {{4}}.\n\nEsto todavía no es la adjudicación de plazas: os avisaremos cuando esté hecha.\n\n¡Gracias!",
+    },
+    botons: null,
+  },
   avis_general: {
     titol: "Comunicació general",
     parametres: ["nom", "casal", "text"],
