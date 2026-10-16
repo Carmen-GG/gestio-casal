@@ -450,3 +450,12 @@ main:focus { outline: none; }
 .llista-estat li { padding: 0.15rem 0; }
 .trencable { overflow-wrap: anywhere; }
 .sense-vora { border: 0; padding: 0; margin: 0; min-width: 0; }
+
+/* Comunicats de la superadministració */
+.bloc { display: block; }
+.llista-casals-comunicat { max-height: 28rem; overflow-y: auto; border: 1px solid var(--color-vora, #d0d7de); border-radius: 0.5rem; padding: 0.25rem 0.75rem; }
+.llista-casals-comunicat li { padding: 0.5rem 0; border-bottom: 1px solid var(--color-vora, #d0d7de); }
+.llista-casals-comunicat li:last-child { border-bottom: 0; }
+.llista-casals-comunicat .casella { align-items: flex-start; }
+.formulari--en-linia { margin-top: 0.5rem; }
+.resultat-comunicat { margin-top: 1.5rem; }

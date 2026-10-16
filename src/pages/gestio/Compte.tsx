@@ -62,6 +62,7 @@ export function Compte() {
         <dt>Nom</dt><dd>{jo.usuari.nom_visible}</dd>
         <dt>Correu</dt><dd>{jo.usuari.email}</dd>
       </dl>
+      {!jo.superadministracio && <MobilAvisos />}
       <p className="text-secundari">
         {jo.superadministracio
           ? "Des de la pàgina principal, al bloc «Superadministració», s'hi entra només amb la contrasenya."
@@ -89,5 +90,39 @@ export function Compte() {
         </div>
       </form>
     </section>
+  );
+}
+
+/** Mòbil per rebre per WhatsApp els comunicats de la superadministració (tancaments, incidències…). */
+function MobilAvisos() {
+  const { jo, recarregarJo } = useGestio();
+  const [valor, setValor] = useState(jo.usuari.telefon ?? "");
+  const [error, setError] = useState("");
+  const [exit, setExit] = useState("");
+  const [desant, setDesant] = useState(false);
+
+  async function desa(e: FormEvent) {
+    e.preventDefault();
+    setError(""); setExit(""); setDesant(true);
+    try {
+      await serveiAuth.desarTelefon(valor.trim() || null);
+      setExit(valor.trim() ? "S'ha desat el mòbil." : "S'ha tret el mòbil.");
+      recarregarJo();
+    } catch (err) {
+      if (err instanceof ErrorClientApi) setError(err.errorsCamps.telefon ?? err.missatgeUsuari); else throw err;
+    } finally { setDesant(false); }
+  }
+
+  return (
+    <>
+      <h2>Mòbil per als avisos</h2>
+      <p className="text-secundari">La superadministració hi envia per WhatsApp els avisos generals, com el tancament d'un casal. Només el veu la superadministració.</p>
+      {exit && <AvisExit>{exit}</AvisExit>}
+      <form onSubmit={(e) => void desa(e)} noValidate className="formulari">
+        <CampText etiqueta="Mòbil" inputMode="tel" autoComplete="tel" value={valor} onChange={(e) => setValor(e.target.value)} error={error}
+          ajuda="Deixeu-lo buit per treure'l." />
+        <div className="botonera"><button type="submit" className="boto boto--secundari" disabled={desant}>Desa el mòbil</button></div>
+      </form>
+    </>
   );
 }

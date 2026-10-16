@@ -6,6 +6,7 @@ import { isoAra, type Rellotge } from "../../lib/rellotge";
 type FilaUsuari = Omit<Usuari, "actiu"> & { actiu: number };
 const mapaUsuari = (f: FilaUsuari): Usuari => ({
   id: f.id, email: f.email, nom_visible: f.nom_visible, proveidor_identitat: f.proveidor_identitat, actiu: f.actiu === 1,
+  telefon: f.telefon ?? null,
 });
 
 export class D1RepositoriUsuaris implements RepositoriUsuaris {
@@ -111,9 +112,13 @@ export class D1RepositoriUsuaris implements RepositoriUsuaris {
     return this.db.prepare("SELECT abast FROM rols WHERE codi = ?").bind(codi).first<{ abast: "casal" | "global" }>();
   }
 
+  async fixarTelefon(usuariId: string, telefon: string | null, ara: string) {
+    await this.db.prepare("UPDATE usuaris SET telefon = ?, actualitzat_el = ? WHERE id = ?").bind(telefon, ara, usuariId).run();
+  }
+
   async responsables() {
     const { results } = await this.db.prepare(
-      `SELECT a.id AS assignacio_id, a.casal_id, u.id AS usuari_id, u.email, u.nom_visible, a.atorgat_el,
+      `SELECT a.id AS assignacio_id, a.casal_id, u.id AS usuari_id, u.email, u.nom_visible, u.telefon, a.atorgat_el,
          u.contrasenya_resum IS NOT NULL AS te_contrasenya, u.darrer_acces_el,
          (SELECT max(t.caduca_el) FROM testimonis_acces t WHERE t.usuari_id = u.id AND t.tipus = 'primer_acces'
            AND t.usat_el IS NULL AND t.caduca_el > ?) AS codi_pendent_fins

@@ -22,6 +22,8 @@ import { ServeiIndicadors } from "../services/indicadors";
 import { ServeiComunicacions } from "../services/comunicacions";
 import { registreComunicacio } from "../../shared/schemas/comunicacions";
 import { ServeiWhatsapp } from "../services/whatsapp";
+import { ServeiComunicats } from "../services/comunicats";
+import { comunicat, configWhatsappCentral, telefonUsuari } from "../../shared/schemas/comunicats";
 import { configWhatsapp, enviamentActivitat, enviamentGeneral } from "../../shared/schemas/whatsapp";
 import { ServeiPersonesPlataforma } from "../services/persones-plataforma";
 import { cercaPersones, importacioPersones } from "../../shared/schemas/persones-plataforma";
@@ -46,6 +48,7 @@ const adjudicacio = (c: C) => new ServeiAdjudicacio(c.get("repos"), c.get("rello
 const assistencia = (c: C) => new ServeiAssistencia(c.get("repos"), c.get("rellotge"));
 const comunicacions = (c: C) => new ServeiComunicacions(c.get("repos"), c.get("rellotge"));
 const whatsapp = (c: C) => new ServeiWhatsapp(c.get("repos"), c.get("rellotge"), c.env, c.get("fetchMeta"));
+const comunicats = (c: C) => new ServeiComunicats(c.get("repos"), c.get("rellotge"), c.env, c.get("fetchMeta"));
 const personesPlataforma = (c: C) => new ServeiPersonesPlataforma(c.get("repos"), c.get("rellotge"));
 const indicadors = (c: C) => new ServeiIndicadors(c.get("repos"), c.get("rellotge"));
 
@@ -583,6 +586,40 @@ export const rutesGestio = new Hono<Entorn>()
   .post("/administracio/casals/:casalId/responsables/:assignacioId/codi-acces", async (c) => {
     exigeixSuperadministracio(c);
     return c.json({ codi: await administracio(c).nouCodiResponsable(idRuta(c, "casalId"), idRuta(c, "assignacioId"), ctx(c)) });
+  })
+  .put("/administracio/usuaris/:usuariId/telefon", async (c) => {
+    exigeixSuperadministracio(c);
+    const usuariId = idRuta(c, "usuariId");
+    const { telefon } = await cosValidat(c, telefonUsuari);
+    if (!(await c.get("repos").usuaris.responsables()).some((r) => r.usuari_id === usuariId)) throw errors.noTrobat("No s'ha trobat la persona responsable.");
+    await c.get("repos").usuaris.fixarTelefon(usuariId, telefon, c.get("rellotge").ara().toISOString());
+    return c.json({ ok: true });
+  })
+  // Comunicats als casals (petició de 2026-10-16).
+  .get("/administracio/comunicats", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).estat());
+  })
+  .put("/administracio/comunicats/whatsapp", async (c) => {
+    exigeixSuperadministracio(c);
+    const d = await cosValidat(c, configWhatsappCentral);
+    return c.json(await comunicats(c).configurarCentral({ ...d, numero_visible: d.numero_visible ?? null }, ctx(c)));
+  })
+  .post("/administracio/comunicats/whatsapp/comprovacio", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).comprovarCentral());
+  })
+  .post("/administracio/comunicats", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).crear(await cosValidat(c, comunicat), ctx(c)), 201);
+  })
+  .post("/administracio/comunicats/:comunicatId/continua", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).continuar(idRuta(c, "comunicatId")));
+  })
+  .get("/administracio/comunicats/:comunicatId", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).resultat(idRuta(c, "comunicatId")));
   })
   .get("/administracio/quadre", async (c) => {
     if (!c.get("usuari").esGlobal("estadistiques.consultar")) throw errors.sensePermis();

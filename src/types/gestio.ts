@@ -17,7 +17,7 @@ export interface CasalAccessible {
 }
 
 export interface Jo {
-  usuari: { id: string; nom_visible: string; email: string };
+  usuari: { id: string; nom_visible: string; email: string; telefon: string | null };
   administracio_central: boolean;
   /** Superadministració: assigna responsables i veu tots els casals. */
   superadministracio: boolean;
@@ -68,7 +68,7 @@ export type AccesAlta = { estat: "codi"; codi: CodiAcces } | { estat: "te_contra
 
 export interface ResponsableCasal {
   assignacio_id: string; usuari_id: string; email: string; nom_visible: string; atorgat_el: string;
-  te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null;
+  te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null; telefon: string | null;
 }
 export interface CasalResponsables {
   id: string; codi: string; nom: string; municipi: string; actiu: boolean; responsables: ResponsableCasal[];
@@ -366,4 +366,44 @@ export interface ResultatImportacioPersones {
   actualitzades: number;
   sense_canvis: number;
   omeses: { fila: number; motiu: string }[];
+}
+
+// ---------- Comunicats de la superadministració ----------
+export interface ConfigWhatsappCentral {
+  phone_number_id: string; numero_visible: string | null; idioma: IdiomaWhatsapp; remitent: string; actiu: boolean; actualitzat_el: string;
+}
+export interface CasalComunicats {
+  id: string; codi: string; nom: string; municipi: string; actiu: boolean;
+  responsables: { usuari_id: string; nom_visible: string; email: string; te_mobil: boolean }[];
+  /** Des de quin número reben el WhatsApp les persones del casal. */
+  whatsapp: "casal" | "central" | null;
+  persones: number; persones_mobil: number;
+}
+export interface ResumComunicat {
+  id: string; assumpte: string; text: string; casal_ids: string[]; creat_el: string;
+  canals: { correu_responsables: boolean; whatsapp_responsables: boolean; whatsapp_persones: boolean };
+  recompte: Record<string, number>;
+}
+export interface EstatComunicats {
+  serveis: { whatsapp: boolean; correu: boolean };
+  config_central: ConfigWhatsappCentral | null;
+  casals: CasalComunicats[];
+  comunicats: ResumComunicat[];
+}
+export type MotiuComunicat = "telefon_fix" | "sense_telefon" | "telefon_invalid" | "sense_whatsapp" | "error_meta" | "sense_numero" | "sense_correu" | "error_correu" | "duplicat";
+export interface EstatCanalComunicat { estat: EstatMissatgeWhatsapp; motiu: MotiuComunicat | null; error_text: string | null }
+export interface ResultatComunicat {
+  comunicat: { id: string; assumpte: string; text: string; creat_el: string; canals: ResumComunicat["canals"] };
+  casals: {
+    casal_id: string; casal: string;
+    responsables: { nom: string; correu: EstatCanalComunicat | null; whatsapp: EstatCanalComunicat | null }[];
+    persones: {
+      total: number; contactades: number; llegides: number; pendents: number;
+      no_contactades: { nom: string; telefon: string | null; tipus_telefon: string | null; motiu: MotiuComunicat | null; error_text: string | null }[];
+    };
+  }[];
+}
+export interface ComunicatCreat {
+  comunicat_id: string; total: number; pendents: number;
+  correu_manual: { nom: string; email: string; casal: string }[] | null;
 }
