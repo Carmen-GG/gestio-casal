@@ -196,7 +196,7 @@ export function DetallCicle() {
         </Seccio>
       )}
 
-      {pot("sollicituds.consultar") && ["adjudicat", "publicat", "finalitzat"].includes(cicle.estat) && (
+      {(pot("sollicituds.consultar") || pot("assistencia.registrar")) && ["adjudicat", "publicat", "finalitzat"].includes(cicle.estat) && (
         <Seccio titol="Assistència" obertaInicial={cicle.estat === "publicat"}>
           <Assistencia casalId={casalId} cicle={cicle} pot={pot} onCanviCicle={recarrega} />
         </Seccio>

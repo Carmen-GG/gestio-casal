@@ -6,6 +6,7 @@
  * nova de cada repositori (vegeu docs/adr/0003-capa-de-repositoris.md).
  */
 import type { DadesPersona } from "../../shared/domain/persones-plataforma";
+import type { IdiomaWhatsapp, PlantillaWhatsapp } from "../../shared/domain/whatsapp";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte, TipusComunicacio } from "../../shared/schemas/comunicacions";
 import type { EstatCicle } from "../../shared/domain/cicles";
 import type { CampPersonal } from "../../shared/domain/formulari";
@@ -661,6 +662,66 @@ export interface RepositoriComunicacions {
   esborrar(casalId: string, placaId: string): Promise<number>;
 }
 
+export interface ConfigWhatsapp {
+  casal_id: string;
+  phone_number_id: string;
+  numero_visible: string | null;
+  idioma: IdiomaWhatsapp;
+  actiu: boolean;
+  ofertes_automatiques: boolean;
+  actualitzat_el: string;
+}
+
+export type EstatMissatgeWhatsapp = "pendent" | "enviat" | "entregat" | "llegit" | "fallit" | "no_enviable";
+export type MotiuMissatgeWhatsapp = "telefon_fix" | "sense_telefon" | "telefon_invalid" | "sense_whatsapp" | "error_meta";
+
+export interface MissatgeWhatsapp {
+  id: string;
+  enviament_id: string;
+  casal_id: string;
+  cicle_id: string;
+  placa_id: string;
+  plantilla: PlantillaWhatsapp;
+  estat: EstatMissatgeWhatsapp;
+  motiu: MotiuMissatgeWhatsapp | null;
+  wamid: string | null;
+  error_codi: number | null;
+  error_text: string | null;
+  resposta: "si" | "no" | "text" | null;
+  resposta_el: string | null;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface EnviamentWhatsapp {
+  id: string;
+  casal_id: string;
+  cicle_id: string;
+  tipus: "activitat" | "general" | "oferta";
+  text: string | null;
+  abast: string;
+  usuari_id: string | null;
+  creat_el: string;
+}
+
+export interface RepositoriWhatsapp {
+  config(casalId: string): Promise<ConfigWhatsapp | null>;
+  desarConfig(d: Omit<ConfigWhatsapp, "actualitzat_el">, usuariId: string | null, ara: string): Promise<void>;
+  crearEnviament(e: EnviamentWhatsapp, missatges: Pick<MissatgeWhatsapp, "id" | "placa_id" | "plantilla">[], ara: string): Promise<void>;
+  enviament(casalId: string, id: string): Promise<EnviamentWhatsapp | null>;
+  enviaments(casalId: string, cicleId: string, tipus?: EnviamentWhatsapp["tipus"]): Promise<(EnviamentWhatsapp & { recompte: Record<string, number> })[]>;
+  pendents(enviamentId: string, limit: number): Promise<MissatgeWhatsapp[]>;
+  recompte(enviamentId: string): Promise<Record<string, number>>;
+  actualitzar(id: string, canvis: Partial<Pick<MissatgeWhatsapp, "estat" | "motiu" | "wamid" | "error_codi" | "error_text">>, ara: string): Promise<void>;
+  perWamid(wamid: string): Promise<MissatgeWhatsapp | null>;
+  canviEstatPerWamid(wamid: string, estat: EstatMissatgeWhatsapp, error: { codi: number; text: string } | null, ara: string): Promise<MissatgeWhatsapp | null>;
+  resposta(wamid: string, resposta: "si" | "no" | "text", ara: string): Promise<MissatgeWhatsapp | null>;
+  /** Darrer missatge de cada plaça del cicle. */
+  darrersPerPlaca(casalId: string, cicleId: string): Promise<MissatgeWhatsapp[]>;
+  /** Missatges d'un enviament amb la plaça (per mostrar el resultat). */
+  missatges(enviamentId: string): Promise<MissatgeWhatsapp[]>;
+}
+
 export interface PersonaPlataforma {
   id: string;
   clau: string;
@@ -753,6 +814,7 @@ export interface Repositoris {
   adjudicacio: RepositoriAdjudicacio;
   assistencia: RepositoriAssistencia;
   comunicacions: RepositoriComunicacions;
+  whatsapp: RepositoriWhatsapp;
   personesPlataforma: RepositoriPersonesPlataforma;
   indicadors: RepositoriIndicadors;
   cartells: RepositoriCartells;

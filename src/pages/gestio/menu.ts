@@ -19,31 +19,32 @@ export interface ElementMenu {
 
 export const MENU: ElementMenu[] = [
   {
-    text: "Crear cicle", desti: { ruta: "#nou-cicle" },
+    text: "Crear cicle", desti: { ruta: "#nou-cicle" }, permis: "cicles.gestionar",
     fills: [
-      { text: "Gestionar activitats", desti: { seccio: "activitats" } },
+      { text: "Gestionar activitats", desti: { seccio: "activitats" }, permis: "activitats.gestionar" },
       { text: "Crear cartells", desti: { ruta: "cartells/nou" }, permis: "cartells.generar" },
-      { text: "Gestionar inscripcions", desti: { seccio: "sollicituds-rebudes" } },
-      { text: "Sorteig públic", desti: { seccio: "sorteig-per-activitat" } },
-      { text: "Assignació d'activitats", desti: { seccio: "adjudicacio" } },
-      { text: "Creació de graelles d'assistència", desti: { seccio: "assistencia" } },
-      { text: "Informar assignacions", desti: { seccio: "places-i-llistes-d-espera" } },
+      { text: "Gestionar inscripcions", desti: { seccio: "sollicituds-rebudes" }, permis: "sollicituds.consultar" },
+      { text: "Sorteig públic", desti: { seccio: "sorteig-per-activitat" }, permis: "adjudicacio.executar" },
+      { text: "Assignació d'activitats", desti: { seccio: "adjudicacio" }, permis: "adjudicacio.executar" },
+      { text: "Creació de graelles d'assistència", desti: { seccio: "assistencia" }, permis: "assistencia.registrar" },
+      { text: "Informar assignacions", desti: { seccio: "places-i-llistes-d-espera" }, permis: "places.gestionar" },
     ],
   },
-  { text: "Gestionar assistència", desti: { seccio: "assistencia" } },
+  { text: "Gestionar assistència", desti: { seccio: "assistencia" }, permis: "assistencia.registrar" },
   { text: "Buscar usuari/a", desti: { ruta: "persones" }, permis: "sollicituds.consultar" },
-  { text: "Prescripció social", desti: { properament: "prescripcio-social" } },
+  { text: "Prescripció social", desti: { properament: "prescripcio-social" }, permis: "sollicituds.gestionar" },
   {
-    text: "Comunicacions", desti: { properament: "comunicacions" },
+    text: "Comunicacions", desti: { properament: "comunicacions" }, permis: "sollicituds.dades_contacte",
     fills: [
       {
-        text: "WhatsApp", desti: { properament: "whatsapp" },
+        text: "WhatsApp", desti: { ruta: "whatsapp" },
         fills: [
-          { text: "Comunicacions generals", desti: { properament: "whatsapp-generals" } },
+          { text: "Comunicacions generals", desti: { seccio: "comunicacions-generals" }, permis: "sollicituds.dades_contacte" },
           { text: "Comunicacions segons activitat", desti: { seccio: "comunicacions" }, permis: "sollicituds.dades_contacte" },
+          { text: "Configuració de WhatsApp Business", desti: { ruta: "whatsapp" }, permis: "casal.configurar" },
         ],
       },
-      { text: "Instagram", desti: { properament: "instagram" } },
+      { text: "Instagram", desti: { properament: "instagram" }, permis: "cartells.consultar" },
     ],
   },
   { text: "Equip del casal", desti: { ruta: "usuaris" }, permis: "usuaris.gestionar" },

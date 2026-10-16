@@ -37,7 +37,7 @@ export function ImprimirGraelles() {
   return (
     <div className="graelles-impressio">
       <div className="no-imprimir graelles-impressio__barra">
-        <p className="subtitol"><Link to={`/gestio/${casalId}/cicles/${cicleId}#assistencia`}>Tornar a les graelles d'assistència</Link></p>
+        <p className="subtitol"><Link to={`/gestio/${casalId}/cicles/${cicleId}/assistencia`}>Tornar a les graelles d'assistència</Link></p>
         <h1>Graelles d'assistència · {d.cicle}</h1>
         {d.graelles.length === 0 ? <p>No hi ha cap activitat amb places adjudicades.</p> : (
           <div className="botonera">

@@ -19,6 +19,8 @@ export function CasalCicles() {
   const consulta = useConsulta((s) => serveiGestio.cicles(casalId, s), [casalId, versio]);
   const casal = jo.casals.find((c) => c.id === casalId);
   const [exit, setExit] = useState("");
+  // Conserge: només passa llista, així que cada cicle porta directament a l'assistència.
+  const nomesAssistencia = pot("assistencia.registrar") && !pot("sollicituds.consultar") && !pot("cicles.gestionar");
   const senseCicles = consulta.tipus === "dades" && consulta.dades.cicles.length === 0;
 
   if (!casal) return <p role="alert" className="avis avis--error">No teniu accés a aquest casal.</p>;
@@ -31,6 +33,7 @@ export function CasalCicles() {
         <p><Link to={`/gestio/${casalId}/usuaris`}>Equip del casal</Link></p>
       )}
       {exit && <AvisExit>{exit}</AvisExit>}
+      {nomesAssistencia && <p>Trieu un cicle per passar llista a les activitats i imprimir les graelles d'assistència.</p>}
 
       <Seccio titol="Cicles d'activitats">
         {consulta.tipus === "carregant" && <Carregant />}
@@ -47,7 +50,7 @@ export function CasalCicles() {
               <tbody>
                 {consulta.dades.cicles.map((c) => (
                   <tr key={c.id}>
-                    <td><Link to={`/gestio/${casalId}/cicles/${c.id}`}>{c.nom}</Link></td>
+                    <td><Link to={`/gestio/${casalId}/cicles/${c.id}${nomesAssistencia ? "/assistencia" : ""}`}>{c.nom}</Link></td>
                     <td>{c.any}</td>
                     <td>{formataData(c.data_inici)} – {formataData(c.data_fi)}</td>
                     <td><span className="etiqueta">{ETIQUETES_ESTAT_CICLE[c.estat]}</span></td>

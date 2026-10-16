@@ -60,7 +60,7 @@ describe("superadministració i responsables", () => {
     const base = `/api/gestio/casals/${casal.id}/usuaris`;
 
     const emailEquip = `equip-${crypto.randomUUID()}@exemple.invalid`;
-    const nou = await resp.json(base, { method: "POST", json: { email: emailEquip, nom_visible: "Persona de l'equip", rol_codi: "gestor_casal" } });
+    const nou = await resp.json(base, { method: "POST", json: { email: emailEquip, nom_visible: "Persona de l'equip", rol_codi: "conserge" } });
     expect(nou.status).toBe(201);
     expect(nou.cos.acces.estat).toBe("codi");
     // No pot fer responsable ningú.
@@ -75,7 +75,7 @@ describe("superadministració i responsables", () => {
     expect((await resp.json(`${base}/${propia.id}/revocar`, { method: "POST", json: { motiu: "Prova" } })).status).toBe(409);
     expect((await resp.json(`${base}/${propia.id}/codi-acces`, { method: "POST", json: {} })).status).toBe(409);
     // Nou codi per a qui ha oblidat la contrasenya, i baixa.
-    const deEquip = assignacions.find((a) => a.rol_codi === "gestor_casal")!;
+    const deEquip = assignacions.find((a) => a.rol_codi === "conserge")!;
     expect((await resp.json(`${base}/${deEquip.id}/codi-acces`, { method: "POST", json: {} })).status).toBe(200);
     expect((await resp.json(`${base}/${deEquip.id}/revocar`, { method: "POST", json: { motiu: "Baixa" } })).status).toBe(200);
     expect((await equip.json(`/api/gestio/casals/${casal.id}/cicles`)).status).toBe(403);
@@ -90,8 +90,8 @@ describe("superadministració i responsables", () => {
     const { c: resp } = await primerAcces(email, alta.cos.acces.codi.codi);
     // Persona que ja és d'un altre casal i encara no té contrasenya.
     const compartida = `compartida-${crypto.randomUUID()}@exemple.invalid`;
-    await admin.json(`/api/gestio/casals/${altre.casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "consulta_casal" } });
-    const r = await resp.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "consulta_casal" } });
+    await admin.json(`/api/gestio/casals/${altre.casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "conserge" } });
+    const r = await resp.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email: compartida, nom_visible: "Compartida", rol_codi: "conserge" } });
     expect(r.status).toBe(201);
     expect(r.cos.acces).toEqual({ estat: "altres_casals" });
   });

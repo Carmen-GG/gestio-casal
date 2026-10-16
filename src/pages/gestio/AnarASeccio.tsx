@@ -17,10 +17,11 @@ const TITOLS: Record<string, string> = {
   assistencia: "Assistència",
   "places-i-llistes-d-espera": "Informar assignacions",
   comunicacions: "Comunicacions segons activitat",
+  "comunicacions-generals": "Comunicacions generals",
 };
 
 /** Seccions que són una pàgina pròpia del cicle i no una part de la pàgina del cicle. */
-const PAGINES: Record<string, string> = { comunicacions: "comunicacions" };
+const PAGINES: Record<string, string> = { comunicacions: "comunicacions", "comunicacions-generals": "comunicacions-generals", assistencia: "assistencia" };
 const desti = (casalId: string, cicleId: string, seccio: string) =>
   PAGINES[seccio] ? `/gestio/${casalId}/cicles/${cicleId}/${PAGINES[seccio]}` : `/gestio/${casalId}/cicles/${cicleId}#${seccio}`;
 

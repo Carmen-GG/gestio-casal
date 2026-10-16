@@ -250,7 +250,36 @@ export interface ResultatBaixaVoluntaria {
   missatge: { casal: string; activitat: string; horari: string | null; espai: string | null; data_inici: string | null };
   sense_oferta: string | null;
   oferta: { placa_id: string; numero: number; posicio: number | null; nom: string | null; cognom1: string | null; cognom2: string | null; telefon: string | null } | null;
+  /** Oferta enviada sola per WhatsApp Business (null si el casal no el té actiu o no hi havia oferta). */
+  whatsapp: { enviat: boolean; estat: string; motiu: string | null; error: string | null } | null;
 }
+
+export type IdiomaWhatsapp = "ca" | "es";
+export interface ConfigWhatsapp {
+  casal_id: string; phone_number_id: string; numero_visible: string | null; idioma: IdiomaWhatsapp;
+  actiu: boolean; ofertes_automatiques: boolean; actualitzat_el: string;
+}
+export interface PlantillaMeta {
+  nom: string; titol: string; categoria: string; idioma: IdiomaWhatsapp; text: string; parametres: string[]; botons: string[] | null; exemple: string;
+}
+export interface EstatWhatsapp {
+  secrets: { testimoni: boolean; secret_app: boolean; verificacio: boolean };
+  config: ConfigWhatsapp | null;
+  disponible: boolean;
+  plantilles: PlantillaMeta[];
+}
+export type EstatMissatgeWhatsapp = "pendent" | "enviat" | "entregat" | "llegit" | "fallit" | "no_enviable";
+export interface MissatgeWhatsappPlaca {
+  placa_id: string; plantilla: string; estat: EstatMissatgeWhatsapp; motiu: string | null; error_text: string | null;
+  resposta: "si" | "no" | "text" | null; resposta_el: string | null; actualitzat_el: string;
+}
+export interface EnviamentWhatsapp {
+  id: string; tipus: "activitat" | "general" | "oferta"; text: string | null; abast: unknown; creat_el: string; recompte: Record<string, number>;
+}
+export interface ResumWhatsapp {
+  disponible: boolean; ofertes_automatiques: boolean; idioma: IdiomaWhatsapp; enviaments: EnviamentWhatsapp[]; missatges: MissatgeWhatsappPlaca[];
+}
+export interface ProgresEnviament { recompte: Record<string, number>; queden: number; aturat: string | null }
 export interface ResumAssistenciaCicle {
   llindar_assistencia: number | null;
   activitats: { activitat_id: string; activitat: string; horari: string | null; admeses: number; sessions: number; realitzades: number;

@@ -148,9 +148,9 @@ describe("persones autoritzades", () => {
     const { casal } = await crearEscenari();
     const admin = await clientAutenticat("admin_central", null);
     const email = `nova-${crypto.randomUUID()}@exemple.invalid`;
-    const r = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "gestor_casal" } });
+    const r = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "conserge" } });
     expect(r.status).toBe(201);
-    const duplicat = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "gestor_casal" } });
+    const duplicat = await admin.json(`/api/gestio/casals/${casal.id}/usuaris`, { method: "POST", json: { email, nom_visible: "Persona nova", rol_codi: "conserge" } });
     expect(duplicat.status).toBe(409);
     expect(((await admin.json(`/api/gestio/casals/${casal.id}/usuaris`)).cos.assignacions as unknown[]).length).toBe(1);
 

@@ -132,7 +132,7 @@ export function AssistenciaActivitat() {
 
   return (
     <div>
-      <p className="subtitol"><Link to={`/gestio/${casalId}/cicles/${f.cicle.id}#assistencia`}>Tornar a les graelles d'assistència</Link></p>
+      <p className="subtitol"><Link to={`/gestio/${casalId}/cicles/${f.cicle.id}/assistencia`}>Tornar a les graelles d'assistència</Link></p>
       <h1>Assistència · {f.activitat.nom}</h1>
       <p className="text-secundari">
         {[f.activitat.horari, f.activitat.espai ? `Aula ${f.activitat.espai}` : null, `${f.activitat.capacitat} places`, `${admeses.length} persones admeses`].filter(Boolean).join(" · ")}
@@ -343,12 +343,24 @@ function AvisOferta({ persona, r, onTanca }: { persona: string; r: ResultatBaixa
             La plaça s'ha ofert a <strong>{nomICognoms(o)}</strong>{o.posicio ? `, número ${o.posicio} de la llista d'espera` : ""}
             {o.telefon ? ` (telèfon ${o.telefon})` : ""}. Queda pendent que l'accepti.
           </p>
-          <BotoWhatsapp telefon={o.telefon} persona={nomICognoms(o)}
-            text={missatgeOferta({ nom: o.nom ?? "", ...r.missatge })} />
-          <p className="text-secundari">
-            WhatsApp s'obrirà amb el missatge escrit; només cal prémer Envia. Si la persona no té WhatsApp, l'aplicació us ho dirà: aleshores, truqueu-la.
-            Quan respongui, marqueu-ho a la llista d'espera («Ha acceptat» o «No la vol»).
-          </p>
+          {r.whatsapp?.enviat ? (
+            <p><strong>S'ha enviat l'oferta per WhatsApp Business.</strong> Quan respongui, ho veureu a «Comunicacions segons activitat»; marqueu-ho a la llista d'espera («Ha acceptat» o «No la vol»).</p>
+          ) : (
+            <>
+              {r.whatsapp && (
+                <p className="avis avis--alerta">
+                  No s'ha pogut enviar per WhatsApp Business{r.whatsapp.motiu === "telefon_fix" ? ": té un telèfon fix" : r.whatsapp.motiu === "sense_telefon" ? ": no té telèfon"
+                    : r.whatsapp.motiu === "sense_whatsapp" ? ": el número no té WhatsApp" : r.whatsapp.error ? `: ${r.whatsapp.error}` : ""}. Truqueu-la o envieu-ho a mà.
+                </p>
+              )}
+              <BotoWhatsapp telefon={o.telefon} persona={nomICognoms(o)}
+                text={missatgeOferta({ nom: o.nom ?? "", ...r.missatge })} />
+              <p className="text-secundari">
+                WhatsApp s'obrirà amb el missatge escrit; només cal prémer Envia. Si la persona no té WhatsApp, l'aplicació us ho dirà: aleshores, truqueu-la.
+                Quan respongui, marqueu-ho a la llista d'espera («Ha acceptat» o «No la vol»).
+              </p>
+            </>
+          )}
         </>
       ) : <p>{r.sense_oferta}</p>}
       <button type="button" className="boto boto--secundari boto--petit" onClick={onTanca}>Entesos</button>
