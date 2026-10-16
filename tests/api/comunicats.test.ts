@@ -21,7 +21,7 @@ function serveisFicticis() {
       return Response.json({ id: crypto.randomUUID() });
     }
     if (!url.includes("/messages")) return Response.json({ display_phone_number: "+34 600 00 00 00", verified_name: "Casals", quality_rating: "GREEN" });
-    if (cos.to === "34600000009") return Response.json({ error: { code: 131026, message: "Message undeliverable" } }, { status: 400 });
+    if (["34600000009", "34600000008"].includes(cos.to)) return Response.json({ error: { code: 131026, message: "Message undeliverable" } }, { status: 400 });
     return Response.json({ messages: [{ id: `wamid.${crypto.randomUUID()}` }] });
   }) as typeof fetch;
   return { peticions, fetchMeta };
@@ -143,6 +143,53 @@ describe("comunicats de la superadministració", () => {
     const ok = await admin.peticio("/api/whatsapp/webhook", { method: "POST", body: avis, headers: { "x-hub-signature-256": signatura } });
     expect(((await ok.json()) as any).estats).toBe(1);
     expect((await env.DB.prepare("SELECT estat FROM comunicats_destinataris WHERE wamid = ?").bind(wamid).first<{ estat: string }>())!.estat).toBe("llegit");
+  });
+
+  it("a qui no li arriba el WhatsApp li envia per correu, un sol cop, també si Meta avisa més tard", async () => {
+    const { a, admin, serveis } = await escenari();
+    await env.DB.prepare("INSERT INTO whatsapp_config (casal_id, phone_number_id, idioma, actiu, actualitzat_el) VALUES (?, '1110001', 'ca', 1, ?)")
+      .bind(a.casal.id, ARA).run();
+    await persona(a.casal.id, "Laia", "Fix", { telefon_fix: "937000003", email: "laia@exemple.invalid" });
+    await persona(a.casal.id, "Nil", "Sensewa", { telefon_mobil: "600000008", tutor_email: "tutor-nil@exemple.invalid" });
+    await persona(a.casal.id, "Ona", "Sensetel", { email: "ona@exemple.invalid" });
+    await persona(a.casal.id, "Pol", "Mobil", { telefon_mobil: "600000301", email: "pol@exemple.invalid" });
+    const nou = await admin.json("/api/gestio/administracio/comunicats", {
+      method: "POST", json: { ...COMUNICAT, correu_responsables: false, whatsapp_responsables: false, casal_ids: [a.casal.id] },
+    });
+    expect(nou.status).toBe(201);
+    expect((await enviaTot(admin, nou.cos.comunicat_id)).aturat).toBeNull();
+    const correus = () => serveis.peticions.filter((p) => p.url.includes("resend.com")).map((p) => p.cos.to[0]).sort();
+    // Pol té mòbil i rep el WhatsApp: no li cal el correu.
+    expect(correus()).toEqual(["laia@exemple.invalid", "ona@exemple.invalid", "tutor-nil@exemple.invalid"]);
+    expect(serveis.peticions.find((p) => p.url.includes("resend.com"))!.cos.subject).toBe("Tancament per obres");
+
+    // Meta avisa més tard que el WhatsApp d'en Pol no s'ha pogut entregar: se li envia per correu.
+    const { results } = await env.DB.prepare("SELECT * FROM comunicats_destinataris WHERE comunicat_id = ? AND wamid IS NOT NULL").bind(nou.cos.comunicat_id).all<any>();
+    const peticioPol = serveis.peticions.find((p) => p.cos?.to === "34600000301")!;
+    expect(peticioPol).toBeTruthy();
+    const signa = async (cos: string) => {
+      const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(SECRETS.WHATSAPP_APP_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+      return `sha256=${[...new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(cos)))].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+    };
+    for (const d of results) {
+      const avis = JSON.stringify({ entry: [{ changes: [{ value: { statuses: [{ id: d.wamid, status: "failed", errors: [{ code: 131026, title: "Message undeliverable" }] }] } }] }] });
+      const r = await admin.peticio("/api/whatsapp/webhook", { method: "POST", body: avis, headers: { "x-hub-signature-256": await signa(avis) } });
+      expect(r.status).toBe(200);
+    }
+    expect(correus()).toContain("pol@exemple.invalid");
+    // Un segon avís de fallada no torna a enviar el correu.
+    const abans = correus().length;
+    const d = results[0];
+    const avis = JSON.stringify({ entry: [{ changes: [{ value: { statuses: [{ id: d.wamid, status: "failed", errors: [{ code: 131026, title: "Message undeliverable" }] }] } }] }] });
+    await admin.peticio("/api/whatsapp/webhook", { method: "POST", body: avis, headers: { "x-hub-signature-256": await signa(avis) } });
+    expect(correus().length).toBe(abans);
+
+    const r = (await admin.json(`/api/gestio/administracio/comunicats/${nou.cos.comunicat_id}`)).cos;
+    const ra = r.casals.find((k: any) => k.casal_id === a.casal.id);
+    // Contactades: les del primer enviament per WhatsApp que no han fallat després, i les quatre per correu.
+    expect(ra.persones.per_correu).toBe(4);
+    expect(ra.persones.no_contactades.map((p: any) => p.nom)).not.toContain("Laia Fix");
+    expect(ra.persones.no_contactades.map((p: any) => p.nom)).toContain("Jordi Àvila");
   });
 
   it("sense WhatsApp Business ni servei de correu es prepara per enviar-ho a mà, un a un, amb el WhatsApp normal", async () => {

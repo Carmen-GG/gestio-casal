@@ -1063,6 +1063,8 @@ export interface ContactePersona {
   telefon_opcional: string | null;
   telefon_fix: string | null;
   tutor_telefon: string | null;
+  /** Correu de la persona o, si no en té, el del tutor/a. */
+  email: string | null;
 }
 
 export interface ConfigWhatsappCentral {
@@ -1116,4 +1118,7 @@ export interface RepositoriComunicats {
   destinataris(comunicatId: string): Promise<DestinatariComunicat[]>;
   actualitzar(id: string, canvis: Partial<Pick<DestinatariComunicat, "estat" | "motiu" | "wamid" | "error_text">>, ara: string): Promise<void>;
   canviEstatPerWamid(wamid: string, estat: EstatMissatgeWhatsapp, error: { codi: number; text: string } | null, ara: string): Promise<DestinatariComunicat | null>;
+  /** Afegeix un destinatari a un comunicat ja creat (el correu alternatiu quan el WhatsApp no arriba). */
+  afegirDestinatari(d: Omit<DestinatariComunicat, "wamid" | "error_text" | "creat_el" | "actualitzat_el">, ara: string): Promise<void>;
+  teCanal(comunicatId: string, tipus: DestinatariComunicat["tipus"], referenciaId: string, canal: CanalComunicat): Promise<boolean>;
 }

@@ -53,7 +53,7 @@ export function ComunicatsCasals() {
       <p className="text-secundari">
         Per a avisos com el tancament d'un casal o una incidència general. Les responsables el reben per correu i per WhatsApp, i les persones
         usuàries de cada casal (les de la llista importada de la PGEc) per WhatsApp, des del número del seu casal o, si no en té, des del número
-        de la superadministració.
+        de la superadministració. A qui no li arribi el WhatsApp (no té mòbil, té un fix o el número no té WhatsApp) se li envia per correu si en té.
       </p>
       <ul className="llista-neta llista-estat">
         <li>{e.serveis.correu ? "✓ El correu surt sol." : "✗ El servei de correu no està configurat: us prepararem el correu perquè l'envieu des del vostre programa."}</li>
@@ -292,6 +292,7 @@ function Resultat({ id }: { id: string }) {
               <p>
                 <strong>{k.persones.contactades}</strong> {k.persones.contactades === 1 ? "persona contactada" : "persones contactades"}
                 {k.persones.llegides ? ` (${k.persones.llegides} l'han llegit)` : ""}
+                {k.persones.per_correu ? `, ${k.persones.per_correu} per correu perquè el WhatsApp no els arribava` : ""}
                 {k.persones.pendents ? ` · ${k.persones.pendents} pendents d'enviar` : ""}
                 {" · "}<strong>{k.persones.no_contactades.length}</strong> no s'han pogut contactar.
               </p>
