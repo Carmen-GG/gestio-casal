@@ -133,6 +133,8 @@ export const serveiGestio = {
   historial: (casalId: string, entitat: string, id: string, s?: AbortSignal) =>
     api.get<{ historial: EntradaHistorial[] }>(`${g(casalId)}/historial/${entitat}/${id}`, s),
 
+  eliminarCicle: (casalId: string, cicleId: string, dades: { versio: number; motiu: string }) =>
+    api.delete<{ ok: true; activitats: number }>(`${g(casalId)}/cicles/${cicleId}`, { ...dades, confirmacio: true }),
   assignacions: (casalId: string, s?: AbortSignal) => api.get<{ assignacions: AssignacioRol[] }>(`${g(casalId)}/usuaris`, s),
   assignarRol: (casalId: string, dades: unknown) => api.post<{ assignacio: AssignacioRol; acces: AccesAlta }>(`${g(casalId)}/usuaris`, dades),
   nouCodiUsuari: (casalId: string, id: string) => api.post<{ codi: CodiAcces }>(`${g(casalId)}/usuaris/${id}/codi-acces`),

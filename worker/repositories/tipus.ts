@@ -251,10 +251,23 @@ export type CanvisCicle = Partial<Pick<Cicle,
   | "nom" | "any" | "data_inici" | "data_fi" | "obertura_inscripcions" | "tancament_inscripcions"
   | "data_resolucio_prevista" | "configuracio_formulari" | "llindar_assistencia" | "limits_grups">>;
 
+export interface DadesCicle {
+  activitats: number;
+  sollicituds: number;
+  places: number;
+  marques_assistencia: number;
+  adjudicacions: number;
+  altres: number;
+}
+
 export interface RepositoriCicles {
   /** Sempre filtra per casal per evitar accessos horitzontals. */
   perId(casalId: string, id: string): Promise<Cicle | null>;
   llistarPerCasal(casalId: string, opcions?: { estats?: EstatCicle[] }): Promise<Cicle[]>;
+  /** Dades del cicle que impedeixen eliminar-lo (inscripcions, places, assistència, comunicacions…). */
+  dadesVinculades(cicleId: string): Promise<DadesCicle>;
+  /** Esborra el cicle i les seves activitats. Només per a cicles sense dades vinculades. */
+  operacionsEliminar(casalId: string, cicleId: string): Operacio[];
   crear(dades: NouCicle): Promise<Cicle>;
   operacioCrear(id: string, dades: NouCicle, ara: string, operacio: string): Operacio;
   /**
