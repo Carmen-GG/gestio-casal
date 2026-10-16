@@ -32,9 +32,9 @@ export class D1RepositoriComunicats implements RepositoriComunicats {
       .bind(c.id, c.assumpte, c.text, c.casal_ids, c.canals, c.usuari_id, c.creat_el).run();
     for (let i = 0; i < destinataris.length; i += MIDA_INSERCIO) {
       await this.db.batch(destinataris.slice(i, i + MIDA_INSERCIO).map((d) => this.db.prepare(
-        `INSERT INTO comunicats_destinataris (id, comunicat_id, casal_id, tipus, referencia_id, canal, estat, motiu, creat_el, actualitzat_el)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).bind(d.id, c.id, d.casal_id, d.tipus, d.referencia_id, d.canal, d.estat, d.motiu, ara, ara)));
+        `INSERT INTO comunicats_destinataris (id, comunicat_id, casal_id, tipus, referencia_id, canal, estat, motiu, manual, creat_el, actualitzat_el)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(d.id, c.id, d.casal_id, d.tipus, d.referencia_id, d.canal, d.estat, d.motiu, d.manual, ara, ara)));
     }
   }
 
@@ -56,7 +56,7 @@ export class D1RepositoriComunicats implements RepositoriComunicats {
 
   async pendents(comunicatId: string, limit: number) {
     const { results } = await this.db.prepare(
-      `SELECT * FROM comunicats_destinataris WHERE comunicat_id = ? AND estat = 'pendent'
+      `SELECT * FROM comunicats_destinataris WHERE comunicat_id = ? AND estat = 'pendent' AND manual = 0
        ORDER BY tipus = 'persona', creat_el, id LIMIT ?`,
     ).bind(comunicatId, limit).all<DestinatariComunicat>();
     return results;

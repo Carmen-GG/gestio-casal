@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { normalitzaText } from "../../../shared/domain/ordenacio";
-import { netejaParametre, textPlantilla } from "../../../shared/domain/whatsapp";
+import { enllacWhatsapp, netejaParametre, textPlantilla } from "../../../shared/domain/whatsapp";
 import { comunicat as esquemaComunicat, configWhatsappCentral } from "../../../shared/schemas/comunicats";
 import { errorsPerCamp } from "../../../shared/schemas/comuns";
 import { DialegConfirmacio } from "../../components/DialegConfirmacio";
@@ -12,7 +12,7 @@ import { useConsulta } from "../../hooks/useConsulta";
 import { ErrorClientApi } from "../../services/api";
 import { serveiGestio } from "../../services/gestio";
 import type {
-  ComunicatCreat, EstatCanalComunicat, EstatComunicats, IdiomaWhatsapp, MotiuComunicat, ProgresEnviament, ResultatComunicat,
+  ComunicatCreat, EstatCanalComunicat, EstatComunicats, IdiomaWhatsapp, MissatgeManual, MotiuComunicat, ProgresEnviament, ResultatComunicat,
 } from "../../types/gestio";
 import { formataDataHora } from "../../utils/format";
 
@@ -57,7 +57,7 @@ export function ComunicatsCasals() {
       </p>
       <ul className="llista-neta llista-estat">
         <li>{e.serveis.correu ? "✓ El correu surt sol." : "✗ El servei de correu no està configurat: us prepararem el correu perquè l'envieu des del vostre programa."}</li>
-        <li>{centralActiu ? `✓ Número de WhatsApp de la superadministració actiu${e.config_central?.numero_visible ? ` (${e.config_central.numero_visible})` : ""}.` : "✗ El número de WhatsApp de la superadministració no està actiu: les responsables no rebran WhatsApp, ni les persones dels casals sense número propi."}</li>
+        <li>{centralActiu ? `✓ Número de WhatsApp de la superadministració actiu${e.config_central?.numero_visible ? ` (${e.config_central.numero_visible})` : ""}.` : "Sense WhatsApp Business: els WhatsApp s'envien un a un des del vostre WhatsApp, de franc. L'aplicació obre cada missatge ja escrit i només cal prémer Envia."}</li>
       </ul>
 
       <NouComunicat estat={e} onEnviat={(id) => { setResultatId(id); setVersio((v) => v + 1); }} />
@@ -85,7 +85,7 @@ export function ComunicatsCasals() {
         </Seccio>
       )}
 
-      <Seccio titol="Número de WhatsApp de la superadministració" obertaInicial={!e.config_central}>
+      <Seccio titol="WhatsApp Business de la superadministració (opcional, de pagament)" obertaInicial={false}>
         <ConfigCentral estat={e} onDesat={() => setVersio((v) => v + 1)} />
       </Seccio>
     </div>
@@ -119,7 +119,7 @@ function NouComunicat({ estat, onEnviat }: { estat: EstatComunicats; onEnviat: (
   });
 
   const responsables = seleccio.flatMap((k) => k.responsables);
-  const persones = seleccio.reduce((n, k) => n + (k.whatsapp ? k.persones_mobil : 0), 0);
+  const persones = seleccio.reduce((n, k) => n + k.persones_mobil, 0);
   const idioma: IdiomaWhatsapp = estat.config_central?.idioma ?? "ca";
   const exemple = text.trim() ? textPlantilla("avis_general", idioma, ["Maria", seleccio[0]?.nom ?? "Casal Cívic", netejaParametre(text, 900)]) : "";
 
@@ -213,7 +213,7 @@ function NouComunicat({ estat, onEnviat }: { estat: EstatComunicats; onEnviat: (
                     <span className="text-secundari bloc">
                       {k.responsables.length === 0 ? "Sense responsable" : k.responsables.map((r) => `${r.nom_visible}${r.te_mobil ? "" : " (sense mòbil)"}`).join(", ")}
                       {" · "}{k.persones} {k.persones === 1 ? "persona usuària" : "persones usuàries"}, {k.persones_mobil} amb mòbil
-                      {" · "}{k.whatsapp ? ORIGEN_WHATSAPP[k.whatsapp] : "Sense número de WhatsApp"}
+                      {" · "}{k.whatsapp ? ORIGEN_WHATSAPP[k.whatsapp] : "WhatsApp un a un"}
                     </span>
                   </span>
                 </label>
@@ -235,7 +235,8 @@ function NouComunicat({ estat, onEnviat }: { estat: EstatComunicats; onEnviat: (
       <DialegConfirmacio obert={confirmar} titol="Enviar el comunicat" textConfirmar="Envia" onCancelar={() => setConfirmar(false)} onConfirmar={() => void envia()}>
         <p>
           S'enviarà als {seleccio.length} {seleccio.length === 1 ? "casal triat" : "casals triats"}
-          {canals.whatsapp_persones ? `, també per WhatsApp a fins a ${persones} persones usuàries` : ""}. Un cop enviat no es pot desfer.
+          {canals.whatsapp_persones ? `, també per WhatsApp a fins a ${persones} persones usuàries` : ""}.
+          {" "}Els missatges que surten sols no es poden desfer; els que s'envien un a un, els enviareu vosaltres des del vostre WhatsApp.
         </p>
       </DialegConfirmacio>
     </Seccio>
@@ -263,8 +264,9 @@ const textCanal = (c: EstatCanalComunicat | null) => {
 
 /** Resultat per casal: persones contactades i les que no, amb el motiu i el telèfon per trucar-les. */
 function Resultat({ id }: { id: string }) {
-  const consulta = useConsulta((s) => serveiGestio.resultatComunicat(id, s), [id]);
-  useEffect(() => { document.getElementById("resultat-comunicat")?.scrollIntoView({ block: "start" }); }, [consulta.tipus]);
+  const [versio, setVersio] = useState(0);
+  const consulta = useConsulta((s) => serveiGestio.resultatComunicat(id, s), [id, versio]);
+  useEffect(() => { if (versio === 0) document.getElementById("resultat-comunicat")?.scrollIntoView({ block: "start" }); }, [consulta.tipus, versio]);
   if (consulta.tipus === "carregant") return <Carregant text="Carregant el resultat…" />;
   if (consulta.tipus === "error") return <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />;
   const r: ResultatComunicat = consulta.dades;
@@ -275,6 +277,7 @@ function Resultat({ id }: { id: string }) {
         Enviat el {formataDataHora(r.comunicat.creat_el)}. Els estats d'entrega i lectura de WhatsApp s'actualitzen quan Meta els comunica:
         torneu a obrir el resultat més tard per veure'ls.
       </p>
+      <EnviamentUnAUn id={id} onCanvi={() => setVersio((v) => v + 1)} />
       {r.casals.map((k) => (
         <Seccio key={k.casal_id} titol={`${k.casal}: ${k.persones.contactades} de ${k.persones.total} persones contactades`}>
           {k.responsables.length > 0 && (
@@ -371,5 +374,66 @@ function ConfigCentral({ estat, onDesat }: { estat: EstatComunicats; onDesat: ()
       </div>
       {comprovacio && <p role="status">{comprovacio}</p>}
     </form>
+  );
+}
+
+/**
+ * WhatsApp normal, de franc (petició de 2026-10-16): sense WhatsApp Business, cada missatge
+ * s'obre ja escrit al WhatsApp de qui envia i només cal prémer Envia. En obrir-lo queda marcat
+ * com a enviat (es pot desfer).
+ */
+function EnviamentUnAUn({ id, onCanvi }: { id: string; onCanvi: () => void }) {
+  const consulta = useConsulta((s) => serveiGestio.manualsComunicat(id, s), [id]);
+  const [estats, setEstats] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<ErrorClientApi | null>(null);
+  if (consulta.tipus !== "dades" || consulta.dades.missatges.length === 0) return null;
+  const missatges = consulta.dades.missatges;
+  const enviat = (m: MissatgeManual) => estats[m.id] ?? m.estat === "enviat";
+  const fets = missatges.filter(enviat).length;
+  const perCasal = new Map<string, MissatgeManual[]>();
+  for (const m of missatges) perCasal.set(m.casal, [...(perCasal.get(m.casal) ?? []), m]);
+
+  async function marca(m: MissatgeManual, valor: boolean) {
+    setError(null);
+    setEstats((e) => ({ ...e, [m.id]: valor }));
+    try {
+      await serveiGestio.marcarManualComunicat(id, m.id, valor);
+      onCanvi();
+    } catch (err) {
+      setEstats((e) => ({ ...e, [m.id]: !valor }));
+      if (err instanceof ErrorClientApi) setError(err); else throw err;
+    }
+  }
+
+  return (
+    <Seccio titol={`Enviar un a un pel WhatsApp normal: ${fets} de ${missatges.length} enviats`}>
+      <p className="text-secundari">
+        Cada botó obre WhatsApp (al mòbil o a WhatsApp Web) amb el missatge ja escrit per a aquella persona: només cal prémer Envia i tornar aquí.
+        No té cap cost. Si no l'heu arribat a enviar, premeu «Desfés».
+      </p>
+      {error && <MissatgeError error={error} />}
+      {[...perCasal].map(([casal, llista]) => (
+        <div key={casal}>
+          <h3 className="subseccio">{casal} ({llista.filter(enviat).length} de {llista.length})</h3>
+          <ul className="llista-neta llista-enviament">
+            {llista.map((m) => (
+              <li key={m.id}>
+                {enviat(m) ? (
+                  <><span className="etiqueta">✓ Enviat</span> {m.nom}{m.tipus === "responsable" ? " (responsable)" : ""}{" "}
+                    <button type="button" className="boto-enllac" onClick={() => void marca(m, false)}>Desfés</button></>
+                ) : m.telefon ? (
+                  <><a className="boto boto--whatsapp boto--petit" target="_blank" rel="noopener noreferrer"
+                    href={enllacWhatsapp(m.telefon, m.text)} onClick={() => void marca(m, true)}>
+                    Obre WhatsApp<span className="visualment-amagat"> per a {m.nom} (s'obre en una finestra nova)</span>
+                  </a> {m.nom}{m.tipus === "responsable" ? " (responsable)" : ""}</>
+                ) : (
+                  <>{m.nom}: ja no té mòbil</>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </Seccio>
   );
 }
