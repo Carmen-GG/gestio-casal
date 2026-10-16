@@ -1,4 +1,4 @@
-import { analitzaTelefon, netejaParametre, type TelefonAnalitzat } from "../../shared/domain/whatsapp";
+import { analitzaTelefon, netejaParametre, textPlantilla, type TelefonAnalitzat } from "../../shared/domain/whatsapp";
 import type { Env } from "../env";
 import { errors } from "../http/errors";
 import { clientCorreu, ErrorCorreu, type ClientCorreu } from "../lib/correu";
@@ -13,6 +13,7 @@ import type { ContextOperacio } from "./traca";
 /** Destinataris per petició: queda lluny del límit de subpeticions d'un Worker. */
 export const MIDA_LOT_COMUNICATS = 25;
 const CONTACTATS = ["enviat", "entregat", "llegit"];
+const REMITENT_PER_DEFECTE = "servei de Casals Cívics i Comunitaris";
 
 type Secrets = Pick<Env, "WHATSAPP_TOKEN" | "RESEND_API_KEY" | "CORREU_REMITENT">;
 type NumeroWhatsapp = { phone_number_id: string; idioma: "ca" | "es"; origen: "casal" | "central" };
@@ -129,8 +130,9 @@ export class ServeiComunicats {
     const [responsables, central] = await Promise.all([this.repos.usuaris.responsables(), this.repos.comunicats.configCentral()]);
     type Fila = Omit<DestinatariComunicat, "comunicat_id" | "wamid" | "error_text" | "creat_el" | "actualitzat_el">;
     const files: Fila[] = [];
-    const fila = (casal_id: string, tipus: Fila["tipus"], referencia_id: string, canal: Fila["canal"], motiu: MotiuComunicat | null): Fila =>
-      ({ id: nouId(), casal_id, tipus, referencia_id, canal, estat: motiu ? "no_enviable" : "pendent", motiu });
+    // manual: sense número de WhatsApp Business, l'envia una persona des del seu WhatsApp.
+    const fila = (casal_id: string, tipus: Fila["tipus"], referencia_id: string, canal: Fila["canal"], motiu: MotiuComunicat | null, manual = false): Fila =>
+      ({ id: nouId(), casal_id, tipus, referencia_id, canal, estat: motiu ? "no_enviable" : "pendent", motiu, manual: !motiu && manual ? 1 : 0 });
     const correuManual: { nom: string; email: string; casal: string }[] = [];
     const vistosCorreu = new Set<string>(), vistosWaResp = new Set<string>(), vistosMobil = new Set<string>();
 
@@ -145,7 +147,7 @@ export class ServeiComunicats {
           vistosWaResp.add(r.usuari_id);
           const t = analitzaTelefon(r.telefon);
           if (t.internacional) vistosMobil.add(t.internacional);
-          files.push(fila(k.id, "responsable", r.usuari_id, "whatsapp", motiuTelefon(t) ?? (this.centralActiu(central) ? null : "sense_numero")));
+          files.push(fila(k.id, "responsable", r.usuari_id, "whatsapp", motiuTelefon(t), !this.centralActiu(central)));
         }
       }
       if (d.whatsapp_persones) {
@@ -156,7 +158,7 @@ export class ServeiComunicats {
             if (vistosMobil.has(t.internacional)) continue;
             vistosMobil.add(t.internacional);
           }
-          files.push(fila(k.id, "persona", p.id, "whatsapp", motiuTelefon(t) ?? (numero ? null : "sense_numero")));
+          files.push(fila(k.id, "persona", p.id, "whatsapp", motiuTelefon(t), !numero));
         }
       }
     }
@@ -175,7 +177,8 @@ export class ServeiComunicats {
       detalls: { casals: casals.length, destinataris: files.length, pendents: files.filter((f) => f.estat === "pendent").length },
     }, ara);
     return {
-      comunicat_id: id, total: files.length, pendents: files.filter((f) => f.estat === "pendent").length,
+      comunicat_id: id, total: files.filter((f) => !f.manual).length, pendents: files.filter((f) => f.estat === "pendent" && !f.manual).length,
+      manuals: files.filter((f) => f.manual).length,
       correu_manual: correuManual.length ? correuManual : null,
     };
   }
@@ -199,14 +202,52 @@ export class ServeiComunicats {
         : numeros.get(d.casal_id)!, d.tipus === "responsable" ? (central?.remitent ?? "") : (casals.get(d.casal_id) ?? ""));
       if (aturat) break;
     }
-    const recompte = await this.recompte(id);
+    const destinataris = (await this.repos.comunicats.destinataris(id)).filter((d) => !d.manual);
+    const recompte: Record<string, number> = {};
+    for (const d of destinataris) recompte[d.estat] = (recompte[d.estat] ?? 0) + 1;
     return { recompte, queden: recompte.pendent ?? 0, aturat };
   }
 
-  private async recompte(id: string) {
-    const r: Record<string, number> = {};
-    for (const d of await this.repos.comunicats.destinataris(id)) r[d.estat] = (r[d.estat] ?? 0) + 1;
-    return r;
+  /**
+   * Missatges per enviar un a un des del WhatsApp normal (sense WhatsApp Business): per a
+   * cadascun, el mòbil i el text ja escrit. El telèfon es llegeix ara; no es desa.
+   */
+  async manuals(id: string) {
+    const comunicat = await this.repos.comunicats.perId(id);
+    if (!comunicat) throw errors.noTrobat("No s'ha trobat el comunicat.");
+    const files = (await this.repos.comunicats.destinataris(id)).filter((d) => d.manual);
+    const [casals, central] = await Promise.all([this.repos.casals.llistar(), this.repos.comunicats.configCentral()]);
+    const nomCasal = new Map(casals.map((k) => [k.id, k.nom]));
+    const contactes = new Map<string, Map<string, ContactePersona>>();
+    const idioma = central?.idioma ?? "ca";
+    const missatges = [];
+    for (const d of files) {
+      let nom = "", telefon: TelefonAnalitzat = { tipus: "sense", internacional: null }, remitent = nomCasal.get(d.casal_id) ?? "";
+      if (d.tipus === "responsable") {
+        const u = await this.repos.usuaris.perId(d.referencia_id);
+        if (u) { nom = u.nom_visible; telefon = analitzaTelefon(u.telefon); }
+        remitent = central?.remitent ?? REMITENT_PER_DEFECTE;
+      } else {
+        if (!contactes.has(d.casal_id)) contactes.set(d.casal_id, new Map((await this.repos.personesPlataforma.contactes(d.casal_id)).map((p) => [p.id, p])));
+        const p = contactes.get(d.casal_id)!.get(d.referencia_id);
+        if (p) { nom = [p.nom, p.cognoms].filter(Boolean).join(" "); telefon = telefonPersona(p); }
+      }
+      const primer = nom.split(" ")[0] ?? "";
+      missatges.push({
+        id: d.id, casal_id: d.casal_id, casal: nomCasal.get(d.casal_id) ?? "", tipus: d.tipus, nom, estat: d.estat,
+        telefon: telefon.internacional,
+        text: textPlantilla("avis_general", idioma, [netejaParametre(primer, 200), netejaParametre(remitent, 200), comunicat.text.trim()]),
+      });
+    }
+    return { missatges };
+  }
+
+  /** Marca (o desmarca) com a enviat un missatge enviat a mà des del WhatsApp normal. */
+  async marcarManual(id: string, destinatariId: string, enviat: boolean) {
+    const d = (await this.repos.comunicats.destinataris(id)).find((x) => x.id === destinatariId && x.manual);
+    if (!d) throw errors.noTrobat("No s'ha trobat el missatge.");
+    await this.repos.comunicats.actualitzar(d.id, { estat: enviat ? "enviat" : "pendent", motiu: null, error_text: null }, isoAra(this.rellotge));
+    return { estat: enviat ? "enviat" : "pendent" };
   }
 
   private async enviaUn(d: DestinatariComunicat, c: { assumpte: string; text: string }, numero: NumeroWhatsapp | null, remitent: string): Promise<string | null> {

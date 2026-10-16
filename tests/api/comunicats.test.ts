@@ -145,19 +145,35 @@ describe("comunicats de la superadministració", () => {
     expect((await env.DB.prepare("SELECT estat FROM comunicats_destinataris WHERE wamid = ?").bind(wamid).first<{ estat: string }>())!.estat).toBe("llegit");
   });
 
-  it("sense servei de correu prepara la llista per enviar-lo a mà i sense número anota el motiu", async () => {
+  it("sense WhatsApp Business ni servei de correu es prepara per enviar-ho a mà, un a un, amb el WhatsApp normal", async () => {
     const { a, serveis } = await escenari();
     const admin = await clientAmbServeis("admin_central", null, serveis.fetchMeta, {});
     const nou = await admin.json("/api/gestio/administracio/comunicats", { method: "POST", json: { ...COMUNICAT, casal_ids: [a.casal.id] } });
     expect(nou.status).toBe(201);
     expect(nou.cos.correu_manual).toHaveLength(1);
-    expect(nou.cos.pendents).toBe(0);
-    const r = (await admin.json(`/api/gestio/administracio/comunicats/${nou.cos.comunicat_id}`)).cos;
-    // Sense número per enviar: el motiu és aquest, tret que el telèfon ja no ho permeti (fix, sense telèfon).
-    expect(Object.fromEntries(r.casals[0].persones.no_contactades.map((p: any) => [p.nom, p.motiu]))).toEqual({
-      "Marta Zapata": "sense_numero", "Pau Sala": "sense_numero", "Leo Mas": "sense_numero", "Jordi Àvila": "telefon_fix", "Rita Puig": "sense_telefon",
-    });
+    expect(nou.cos).toMatchObject({ pendents: 0, manuals: 3 });
+    // El servidor no envia res: la continuació no té res a fer (i no queda penjada pels manuals).
+    expect((await admin.json(`/api/gestio/administracio/comunicats/${nou.cos.comunicat_id}/continua`, { method: "POST" })).cos.queden).toBe(0);
     expect(serveis.peticions).toHaveLength(0);
+
+    const base = `/api/gestio/administracio/comunicats/${nou.cos.comunicat_id}`;
+    const { missatges } = (await admin.json(`${base}/manuals`)).cos;
+    expect(missatges.map((m: any) => [m.nom, m.telefon]).sort()).toEqual([["Leo Mas", "34600000102"], ["Marta Zapata", "34600000101"], ["Pau Sala", "34600000009"]]);
+    const marta = missatges.find((m: any) => m.nom === "Marta Zapata");
+    expect(marta.text).toContain("Hola, Marta!");
+    expect(marta.text).toContain("Dilluns el casal estarà tancat");
+
+    expect((await admin.json(`${base}/manuals/${marta.id}`, { method: "POST", json: { enviat: true } })).status).toBe(200);
+    let r = (await admin.json(base)).cos.casals[0].persones;
+    expect(r).toMatchObject({ total: 5, contactades: 1, pendents: 2 });
+    // Qui no té mòbil surt amb el motiu.
+    expect(Object.fromEntries(r.no_contactades.map((p: any) => [p.nom, p.motiu]))).toEqual({ "Jordi Àvila": "telefon_fix", "Rita Puig": "sense_telefon" });
+    // Es pot desfer.
+    await admin.json(`${base}/manuals/${marta.id}`, { method: "POST", json: { enviat: false } });
+    r = (await admin.json(base)).cos.casals[0].persones;
+    expect(r.contactades).toBe(0);
+    expect((await admin.json(`${base}/manuals/no-existeix`, { method: "POST", json: { enviat: true } })).status).toBe(404);
+
     // Validació: cal algun canal i algun casal.
     expect((await admin.json("/api/gestio/administracio/comunicats", { method: "POST", json: { ...COMUNICAT, casal_ids: [] } })).status).toBe(400);
     expect((await admin.json("/api/gestio/administracio/comunicats", {

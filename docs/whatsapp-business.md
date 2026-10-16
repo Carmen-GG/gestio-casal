@@ -60,6 +60,9 @@ general…) als casals que es triïn:
   número del casal si el té actiu o, si no, des del número de la superadministració. Es fa servir
   el mòbil, l'opcional o el del tutor/a; qui només té fix o no té telèfon surt al resultat amb el motiu.
 - En acabar, el resultat de cada casal: persones contactades i les que no, amb el motiu i el telèfon.
+- **Sense WhatsApp Business (de franc)**: els WhatsApp que no poden sortir sols queden a la llista
+  «Enviar un a un pel WhatsApp normal»: cada botó obre WhatsApp amb el missatge ja escrit i, en
+  obrir-lo, la persona queda marcada com a enviada (es pot desfer). Migració 0027.
 
 Per posar-ho en marxa:
 

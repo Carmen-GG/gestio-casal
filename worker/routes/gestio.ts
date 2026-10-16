@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Hono, type Context } from "hono";
 import type { Entorn } from "../app";
 import { requereixSessio } from "../auth/sessio";
@@ -616,6 +617,15 @@ export const rutesGestio = new Hono<Entorn>()
   .post("/administracio/comunicats/:comunicatId/continua", async (c) => {
     exigeixSuperadministracio(c);
     return c.json(await comunicats(c).continuar(idRuta(c, "comunicatId")));
+  })
+  .get("/administracio/comunicats/:comunicatId/manuals", async (c) => {
+    exigeixSuperadministracio(c);
+    return c.json(await comunicats(c).manuals(idRuta(c, "comunicatId")));
+  })
+  .post("/administracio/comunicats/:comunicatId/manuals/:destinatariId", async (c) => {
+    exigeixSuperadministracio(c);
+    const { enviat } = await cosValidat(c, z.strictObject({ enviat: z.boolean() }));
+    return c.json(await comunicats(c).marcarManual(idRuta(c, "comunicatId"), idRuta(c, "destinatariId"), enviat));
   })
   .get("/administracio/comunicats/:comunicatId", async (c) => {
     exigeixSuperadministracio(c);

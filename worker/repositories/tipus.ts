@@ -925,6 +925,8 @@ export interface DestinatariComunicat {
   motiu: MotiuComunicat | null;
   wamid: string | null;
   error_text: string | null;
+  /** 1: s'envia a mà des del WhatsApp normal (no l'envia el servidor). */
+  manual: number;
   creat_el: string;
   actualitzat_el: string;
 }

@@ -403,7 +403,12 @@ export interface ResultatComunicat {
     };
   }[];
 }
+export interface MissatgeManual {
+  id: string; casal_id: string; casal: string; tipus: "responsable" | "persona"; nom: string; estat: EstatMissatgeWhatsapp;
+  /** Mòbil en format internacional (sense +), per obrir WhatsApp. */
+  telefon: string | null; text: string;
+}
 export interface ComunicatCreat {
-  comunicat_id: string; total: number; pendents: number;
+  comunicat_id: string; total: number; pendents: number; manuals: number;
   correu_manual: { nom: string; email: string; casal: string }[] | null;
 }

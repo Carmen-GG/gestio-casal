@@ -3,7 +3,7 @@ import type {
   DadesGraelles, Execucio, FullAssistencia, Jo, ResumAssistenciaCicle, MovimentPlaca, ResultatBaixaVoluntaria, DadesComunicacions, ComunicacioPlaca, ParellaDuplicada, Previsualitzacio, RespostaLlistat, RespostaPlaces, ResumAdjudicacio, ResultatImportacioActivitats, TaulaExportacio,
   EstatSorteig, IndicadorsCicle, SorteigActivitat, CercaPersonesPlataforma, FitxaPersonaPlataforma, ResultatImportacioPersones,
   AccesAlta, CasalResponsables, CodiAcces, QuadreGlobal, EstatWhatsapp, ConfigWhatsapp, ResumWhatsapp, ProgresEnviament,
-  EstatComunicats, ConfigWhatsappCentral, ComunicatCreat, ResultatComunicat,
+  EstatComunicats, ConfigWhatsappCentral, ComunicatCreat, ResultatComunicat, MissatgeManual,
 } from "../types/gestio";
 import type { CanalComunicacio, EstatComunicacio, MotiuNoContacte } from "../../shared/schemas/comunicacions";
 import { api } from "./api";
@@ -151,6 +151,10 @@ export const serveiGestio = {
     api.post<{ numero: { numero: string | null; nom_verificat: string | null; qualitat: string | null } }>("/gestio/administracio/comunicats/whatsapp/comprovacio", {}),
   crearComunicat: (dades: unknown) => api.post<ComunicatCreat>("/gestio/administracio/comunicats", dades),
   continuaComunicat: (id: string) => api.post<ProgresEnviament>(`/gestio/administracio/comunicats/${encodeURIComponent(id)}/continua`, {}),
+  manualsComunicat: (id: string, s?: AbortSignal) =>
+    api.get<{ missatges: MissatgeManual[] }>(`/gestio/administracio/comunicats/${encodeURIComponent(id)}/manuals`, s),
+  marcarManualComunicat: (id: string, destinatariId: string, enviat: boolean) =>
+    api.post<{ estat: string }>(`/gestio/administracio/comunicats/${encodeURIComponent(id)}/manuals/${encodeURIComponent(destinatariId)}`, { enviat }),
   resultatComunicat: (id: string, s?: AbortSignal) => api.get<ResultatComunicat>(`/gestio/administracio/comunicats/${encodeURIComponent(id)}`, s),
   quadreGlobal: (any: number | null, s?: AbortSignal) =>
     api.get<QuadreGlobal>(`/gestio/administracio/quadre${any ? `?any=${any}` : ""}`, s),
