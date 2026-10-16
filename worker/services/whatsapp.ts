@@ -311,7 +311,7 @@ export class ServeiWhatsapp {
 
 const EXEMPLES: Record<string, string> = {
   nom: "Maria", casal: "{casal}", activitat: "Ioga", detalls: "dilluns i dimecres, 10:00–11:30, aula 2, a partir del 05/10/2026",
-  posicio: "3", text: "Dimecres que ve el casal estarà tancat per festa local.",
+  posicio: "3", cicle: "Tardor 2026", codi: "7K2QX-M4P9A", text: "Dimecres que ve el casal estarà tancat per festa local.",
 };
 
 function parametres(plantilla: PlantillaWhatsapp, idioma: IdiomaWhatsapp, placa: FilaPlaca, activitat: Activitat,

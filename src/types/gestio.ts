@@ -132,6 +132,7 @@ export type RespostaLlistat =
 export interface DetallSollicitud extends FilaSollicitud {
   cicle_id: string; codi_confirmacio: string; privacitat_acceptada_el: string | null; importacio_id: string | null;
   preferencies: { activitat_id: string; activitat: string; estat_activitat: EstatActivitat; ordre: number }[];
+  avis_rebuda?: { canal: "correu" | "whatsapp" | "cap"; estat: "enviat" | "fallit" | "no_enviable"; motiu: string | null; creat_el: string } | null;
 }
 
 export interface ParellaDuplicada {

@@ -429,6 +429,7 @@ export interface DetallSollicitud extends FilaSollicitud {
   privacitat_acceptada_el: string | null;
   importacio_id: string | null;
   preferencies: PreferenciaDetall[];
+  avis_rebuda?: Pick<AvisRebuda, "canal" | "estat" | "motiu" | "creat_el"> | null;
 }
 
 export interface GrupActivitat {
@@ -925,7 +926,29 @@ export interface Repositoris {
   incidencies: RepositoriIncidencies;
   cartells: RepositoriCartells;
   instagram: RepositoriInstagram;
+  avisosRebuda: RepositoriAvisosRebuda;
   unitat: UnitatDeTreball;
+}
+
+// ---------- Avís de rebuda de la sol·licitud ----------
+
+export type MotiuAvisRebuda = "sense_contacte" | "telefon_fix" | "servei_no_configurat" | "sense_whatsapp" | "error_servei";
+
+/** Com ha anat l'avís de rebuda d'una sol·licitud. No conté l'adreça, el telèfon ni el text. */
+export interface AvisRebuda {
+  sollicitud_id: string;
+  casal_id: string;
+  canal: "correu" | "whatsapp" | "cap";
+  estat: "enviat" | "fallit" | "no_enviable";
+  motiu: MotiuAvisRebuda | null;
+  extern_id: string | null;
+  error_text: string | null;
+  creat_el: string;
+}
+
+export interface RepositoriAvisosRebuda {
+  desar(a: AvisRebuda): Promise<void>;
+  perSollicitud(sollicitudId: string): Promise<AvisRebuda | null>;
 }
 
 // ---------- PG-Cartells ----------
