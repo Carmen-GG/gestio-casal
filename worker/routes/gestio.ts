@@ -570,6 +570,10 @@ export const rutesGestio = new Hono<Entorn>()
     const estat = await repos.usuaris.estatAcces(assignacions.map((a) => a.usuari_id), new Date(c.get("rellotge").ara()).toISOString());
     return c.json({ assignacions: assignacions.map((a) => ({ ...a, ...estat[a.usuari_id] })) });
   })
+  .get("/casals/:casalId/usuaris/historial", async (c) => {
+    const casalId = casalAutoritzat(c, "usuaris.gestionar");
+    return c.json({ historial: await c.get("repos").usuaris.historialEquip(casalId) });
+  })
   .post("/casals/:casalId/usuaris", async (c) => {
     const casalId = casalAutoritzat(c, "usuaris.gestionar");
     const dades = await cosValidat(c, assignarRol);
