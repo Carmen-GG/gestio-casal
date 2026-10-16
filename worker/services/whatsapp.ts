@@ -208,7 +208,11 @@ export class ServeiWhatsapp {
         if (!st.id || !estat) continue;
         const error = st.errors?.[0] ? { codi: Number(st.errors[0].code ?? 0), text: String(st.errors[0].title ?? "Error de Meta") } : null;
         const m = await this.repos.whatsapp.canviEstatPerWamid(st.id, estat, error, ara);
-        if (!m) continue;
+        if (!m) {
+          // Missatges dels comunicats de la superadministració.
+          if (await this.repos.comunicats.canviEstatPerWamid(st.id, estat, error, ara)) estats++;
+          continue;
+        }
         estats++;
         if (estat === "fallit" && m.plantilla !== "avis_general" && error && [131026, 131021, 131030].includes(error.codi)) {
           const placa = await this.repos.adjudicacio.placa(m.casal_id, m.placa_id);

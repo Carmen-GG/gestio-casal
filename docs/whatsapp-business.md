@@ -49,6 +49,33 @@ Què no fa:
 8. **Al panell de cada casal**: a la mateixa pantalla, escriviu l'identificador del número
    (*Phone number ID*), activeu-lo i premeu «Comprova la connexió».
 
+## Comunicats de la superadministració
+
+A *Superadministració → Comunicats als casals* s'envia un avís (tancament d'un casal, incidència
+general…) als casals que es triïn:
+
+- **Responsables**: per correu i per WhatsApp (al mòbil que posen a «El meu compte» o que hi
+  posa la superadministració a «Gestionar responsables»), des del número de la superadministració.
+- **Persones usuàries del casal** (les de la llista importada de la PGEc): per WhatsApp, des del
+  número del casal si el té actiu o, si no, des del número de la superadministració. Es fa servir
+  el mòbil, l'opcional o el del tutor/a; qui només té fix o no té telèfon surt al resultat amb el motiu.
+- En acabar, el resultat de cada casal: persones contactades i les que no, amb el motiu i el telèfon.
+
+Per posar-ho en marxa:
+
+1. Número de la superadministració: doneu d'alta un altre número al mateix compte de WhatsApp
+   Business, amb la plantilla `avis_general` aprovada, i escriviu-ne l'identificador a la mateixa
+   pantalla (secció «Número de WhatsApp de la superadministració»).
+2. Correu: compte a [Resend](https://resend.com) amb el domini verificat, i els secrets:
+
+   ```sh
+   npx wrangler secret put RESEND_API_KEY --env staging    # clau de l'API de Resend
+   npx wrangler secret put CORREU_REMITENT --env staging   # p. ex. Casals Cívics <avisos@domini.cat>
+   ```
+
+   Sense aquests secrets, en enviar el comunicat el panell obre el correu al vostre programa amb
+   les responsables en còpia oculta.
+
 ## Cost i consentiment
 
 - Meta cobra cada conversa iniciada pel casal amb una plantilla, segons la categoria i el país
@@ -64,4 +91,5 @@ Què no fa:
   l'enviament s'atura i es pot reprendre.
 - El webhook comprova la signatura `X-Hub-Signature-256` amb `WHATSAPP_APP_SECRET` i no
   registra mai el cos dels avisos.
-- Taules: `whatsapp_config`, `whatsapp_enviaments`, `whatsapp_missatges` (migració 0024).
+- Taules: `whatsapp_config`, `whatsapp_enviaments`, `whatsapp_missatges` (migració 0024);
+  `whatsapp_config_central`, `comunicats`, `comunicats_destinataris` (migració 0026, sense telèfons ni correus).

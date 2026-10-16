@@ -1,5 +1,5 @@
 import type { DadesPersona } from "../../../shared/domain/persones-plataforma";
-import type { ParticipacioPersona, PersonaPlataforma, RepositoriPersonesPlataforma } from "../tipus";
+import type { ContactePersona, ParticipacioPersona, PersonaPlataforma, RepositoriPersonesPlataforma } from "../tipus";
 import { jsonObjecte, marcadors } from "./util";
 
 type Fila = Omit<PersonaPlataforma, "dades" | "origens"> & { dades: string; origens: string };
@@ -63,6 +63,16 @@ export class D1RepositoriPersonesPlataforma implements RepositoriPersonesPlatafo
   async perId(casalId: string, id: string) {
     const f = await this.db.prepare("SELECT * FROM persones_plataforma WHERE casal_id = ? AND id = ?").bind(casalId, id).first<Fila>();
     return f ? mapa(f) : null;
+  }
+
+  async contactes(casalId: string) {
+    const { results } = await this.db.prepare(
+      `SELECT id, nom, trim(coalesce(cognom1, '') || ' ' || coalesce(cognom2, '')) AS cognoms,
+         json_extract(dades, '$.telefon_mobil') AS telefon_mobil, json_extract(dades, '$.telefon_opcional') AS telefon_opcional,
+         json_extract(dades, '$.telefon_fix') AS telefon_fix, json_extract(dades, '$.tutor_telefon') AS tutor_telefon
+       FROM persones_plataforma WHERE casal_id = ? ORDER BY clau_ordenacio`,
+    ).bind(casalId).all<ContactePersona>();
+    return results;
   }
 
   async resum(casalId: string) {

@@ -4,6 +4,7 @@ import type { Entorn } from "../app";
 import { iniciarSessio, requereixSessio, tancarSessio } from "../auth/sessio";
 import { ErrorAplicacio, errors } from "../http/errors";
 import { cosValidat } from "../http/validacio";
+import { telefonUsuari } from "../../shared/schemas/comunicats";
 import { resumCodiPrimerAcces, resumSha256 } from "../lib/cripto";
 import {
   comprovaContrasenya, LLARGADA_MAXIMA_CONTRASENYA, LLARGADA_MINIMA_CONTRASENYA, resumContrasenya,
@@ -170,6 +171,11 @@ export const rutesAuth = new Hono<Entorn>()
     );
     return c.json({ ok: true });
   })
+  .put("/telefon", requereixSessio, async (c) => {
+    const { telefon } = await cosValidat(c, telefonUsuari);
+    await c.get("repos").usuaris.fixarTelefon(c.get("usuari").id, telefon, c.get("rellotge").ara().toISOString());
+    return c.json({ ok: true });
+  })
   .post("/sortir", async (c) => {
     await tancarSessio(c);
     return c.json({ ok: true });
@@ -179,7 +185,7 @@ export const rutesAuth = new Hono<Entorn>()
     const ids = usuari.casalsAccessibles();
     const casals = await c.get("repos").casals.llistar(ids === null ? {} : { ids, nomesActius: true });
     return c.json({
-      usuari: { id: usuari.id, nom_visible: usuari.usuari.nom_visible, email: usuari.usuari.email },
+      usuari: { id: usuari.id, nom_visible: usuari.usuari.nom_visible, email: usuari.usuari.email, telefon: usuari.usuari.telefon },
       administracio_central: ids === null,
       superadministracio: usuari.esGlobal("usuaris.gestionar"),
       quadre_global: usuari.esGlobal("estadistiques.consultar"),

@@ -22,4 +22,12 @@ export interface Env {
   WHATSAPP_TOKEN?: string;
   WHATSAPP_APP_SECRET?: string;
   WHATSAPP_VERIFY_TOKEN?: string;
+  /**
+   * Correu electrònic dels comunicats de la superadministració (servei Resend). Secrets:
+   * RESEND_API_KEY: clau de l'API de Resend.
+   * CORREU_REMITENT: adreça que envia, d'un domini verificat a Resend (p. ex. «Casals Cívics <avisos@domini.cat>»).
+   * Sense aquests secrets, el panell prepara el correu perquè l'enviï la persona des del seu programa.
+   */
+  RESEND_API_KEY?: string;
+  CORREU_REMITENT?: string;
 }

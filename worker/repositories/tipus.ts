@@ -164,6 +164,8 @@ export interface Usuari {
   nom_visible: string;
   proveidor_identitat: "dev" | "entra_id";
   actiu: boolean;
+  /** Mòbil per als avisos de la superadministració (opcional). */
+  telefon: string | null;
 }
 
 /** Permisos efectius d'un usuari: globals (administració central) i per casal. */
@@ -183,6 +185,7 @@ export interface ResponsableCasal {
   te_contrasenya: boolean;
   darrer_acces_el: string | null;
   codi_pendent_fins: string | null;
+  telefon: string | null;
 }
 
 export interface AssignacioRol {
@@ -215,6 +218,7 @@ export interface RepositoriUsuaris {
   /** Estat d'accés de les persones: si tenen contrasenya i si tenen un codi de primer accés vigent. */
   estatAcces(usuariIds: string[], ara: string): Promise<Record<string, { te_contrasenya: boolean; darrer_acces_el: string | null; codi_pendent_fins: string | null }>>;
   marcarAcces(usuariId: string, ara: string): Promise<void>;
+  fixarTelefon(usuariId: string, telefon: string | null, ara: string): Promise<void>;
   operacioAssignar(dades: { id: string; usuari_id: string; rol_codi: string; casal_id: string | null; atorgat_per: string; motiu: string | null }, ara: string): Operacio;
   operacioRevocar(id: string, revocatPer: string, motiu: string | null, ara: string): Operacio;
 }
@@ -757,6 +761,8 @@ export interface RepositoriPersonesPlataforma {
   desar(casalId: string, persones: PersonaPlataforma[]): Promise<void>;
   cercar(casalId: string, f: { paraules: string[]; data_naixement: string | null; contacte: boolean; limit: number }): Promise<{ persones: PersonaPlataforma[]; total: number }>;
   perId(casalId: string, id: string): Promise<PersonaPlataforma | null>;
+  /** Nom i telèfons de totes les persones del casal (per als comunicats). */
+  contactes(casalId: string): Promise<ContactePersona[]>;
   resum(casalId: string): Promise<{ total: number; darrera_importacio: string | null }>;
   /** Sol·licituds i places de l'aplicació de la mateixa persona (per document o per nom i data de naixement). */
   participacions(casalId: string, documentNorm: string | null, clauOrdenacio: string, dataNaixement: string | null): Promise<ParticipacioPersona[]>;
@@ -815,6 +821,7 @@ export interface Repositoris {
   assistencia: RepositoriAssistencia;
   comunicacions: RepositoriComunicacions;
   whatsapp: RepositoriWhatsapp;
+  comunicats: RepositoriComunicats;
   personesPlataforma: RepositoriPersonesPlataforma;
   indicadors: RepositoriIndicadors;
   cartells: RepositoriCartells;
@@ -873,4 +880,65 @@ export interface RepositoriCartells {
   plantillaPerFitxer(fitxerId: string): Promise<PlantillaCartells | null>;
   /** Plantilles comunes i, si s'indica, les específiques del casal. */
   plantilles(filtre: { casalId: string | null; tipus?: TipusPlantilla; estats?: EstatPlantilla[] }): Promise<PlantillaCartells[]>;
+}
+
+export interface ContactePersona {
+  id: string;
+  nom: string | null;
+  cognoms: string;
+  telefon_mobil: string | null;
+  telefon_opcional: string | null;
+  telefon_fix: string | null;
+  tutor_telefon: string | null;
+}
+
+export interface ConfigWhatsappCentral {
+  phone_number_id: string;
+  numero_visible: string | null;
+  idioma: "ca" | "es";
+  remitent: string;
+  actiu: boolean;
+  actualitzat_el: string;
+}
+
+export type CanalComunicat = "correu" | "whatsapp";
+export type MotiuComunicat = MotiuMissatgeWhatsapp | "sense_numero" | "sense_correu" | "error_correu" | "duplicat";
+
+export interface Comunicat {
+  id: string;
+  assumpte: string;
+  text: string;
+  casal_ids: string;
+  canals: string;
+  usuari_id: string | null;
+  creat_el: string;
+}
+
+export interface DestinatariComunicat {
+  id: string;
+  comunicat_id: string;
+  casal_id: string;
+  tipus: "responsable" | "persona";
+  referencia_id: string;
+  canal: CanalComunicat;
+  estat: EstatMissatgeWhatsapp;
+  motiu: MotiuComunicat | null;
+  wamid: string | null;
+  error_text: string | null;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface RepositoriComunicats {
+  configCentral(): Promise<ConfigWhatsappCentral | null>;
+  desarConfigCentral(d: Omit<ConfigWhatsappCentral, "actualitzat_el">, usuariId: string | null, ara: string): Promise<void>;
+  crear(c: Comunicat, destinataris: Omit<DestinatariComunicat, "comunicat_id" | "wamid" | "error_text" | "creat_el" | "actualitzat_el">[], ara: string): Promise<void>;
+  perId(id: string): Promise<Comunicat | null>;
+  /** Darrers comunicats amb recomptes per estat. */
+  llistar(limit: number): Promise<(Comunicat & { recompte: Record<string, number> })[]>;
+  /** Pendents: primer les responsables, després les persones. */
+  pendents(comunicatId: string, limit: number): Promise<DestinatariComunicat[]>;
+  destinataris(comunicatId: string): Promise<DestinatariComunicat[]>;
+  actualitzar(id: string, canvis: Partial<Pick<DestinatariComunicat, "estat" | "motiu" | "wamid" | "error_text">>, ara: string): Promise<void>;
+  canviEstatPerWamid(wamid: string, estat: EstatMissatgeWhatsapp, error: { codi: number; text: string } | null, ara: string): Promise<DestinatariComunicat | null>;
 }
