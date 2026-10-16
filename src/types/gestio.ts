@@ -5,6 +5,7 @@ import type { ConfiguracioFormulari } from "../../shared/domain/formulari";
 import type { ParametresAdjudicacio } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
 import type { EstatAssistencia } from "../../shared/domain/assistencia";
+import type { CategoriaIncidencia } from "../../shared/domain/territori";
 
 export interface Casal {
   id: string; codi: string; nom: string; municipi: string; adreca: string | null; actiu: boolean; versio: number;
@@ -49,7 +50,7 @@ export type EstatActivitat = "esborrany" | "activa" | "inactiva" | "arxivada";
 export interface Activitat {
   id: string; casal_id: string; cicle_id: string; nom: string; descripcio: string | null; categoria: string | null;
   dies_setmana: number[]; hora_inici: string | null; hora_fi: string | null; horari_text: string | null;
-  data_inici: string | null; data_fi: string | null; espai: string | null; destinataris: string | null; grup: number | null; capacitat: number;
+  data_inici: string | null; data_fi: string | null; espai: string | null; tallerista?: string | null; destinataris: string | null; grup: number | null; capacitat: number;
   nombre_sessions: number | null; minim_participants: number | null; estat: EstatActivitat; codi_extern: string | null; versio: number;
 }
 
@@ -78,19 +79,30 @@ export interface RecomptesGlobals {
   activitats: number; places_ofertes: number; sollicituds: number; persones: number; admeses: number; espera: number;
   renuncies: number; baixes: number; baixes_voluntaries: number; sessions_realitzades: number;
   presencies: number; absencies: number; absencies_justificades: number; percentatge_assistencia: number | null;
+  activitats_sense_tallerista: number; sessions_falta_tallerista: number;
+}
+export interface CasalQuadre extends RecomptesGlobals {
+  casal_id: string; casal: string; municipi: string; actiu: boolean; cicles: number;
+  comarca: string | null; demarcacio: string | null; referent_id: string | null; referent: string | null;
+  persones_diferents: number; persones_plataforma: number; equip: number; responsables: number;
+  incidencies: number; incidencies_obertes: number; incidencies_per_categoria: Record<CategoriaIncidencia, number>;
 }
 export interface QuadreGlobal {
   any: number | null;
   anys: number[];
-  totals: RecomptesGlobals & {
-    casals: number; casals_amb_responsable: number; casals_amb_cicles: number; cicles: number;
-    persones_diferents: number; persones_plataforma: number; equip: number;
-  };
-  casals: (RecomptesGlobals & {
-    casal_id: string; casal: string; municipi: string; actiu: boolean; cicles: number;
-    persones_diferents: number; persones_plataforma: number; equip: number; responsables: number;
-  })[];
+  casals: CasalQuadre[];
   cicles: (RecomptesGlobals & { casal_id: string; casal: string; cicle_id: string; cicle: string; any: number; estat: EstatCicle; data_inici: string; data_fi: string })[];
+  referents: { id: string; nom: string; actiu: boolean }[];
+}
+
+export interface Referent { id: string; nom: string; email: string | null; actiu: boolean }
+export interface CasalTerritori {
+  id: string; codi: string; nom: string; municipi: string; actiu: boolean;
+  comarca: string | null; demarcacio: string | null; referent_id: string | null;
+}
+export interface Incidencia {
+  id: string; data: string; categoria: CategoriaIncidencia; descripcio: string; activitat_id: string | null; activitat: string | null;
+  estat: "oberta" | "resolta"; resolucio: string | null; resolta_el: string | null; creat_el: string;
 }
 
 export type EstatSollicitud = "rebuda" | "validada" | "pendent_revisio" | "anullada";
@@ -220,6 +232,7 @@ export type { EstatAssistencia };
 export interface Sessio {
   id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada"; motiu_cancellacio: string | null; versio: number; marques: number;
+  tallerista_absent: 0 | 1; tallerista_motiu: string | null;
 }
 export interface ResumAssistencia { presents: number; absents: number; justificades: number; percentatge: number | null }
 export interface PersonaAssistencia extends FilaPlaca {
@@ -228,7 +241,7 @@ export interface PersonaAssistencia extends FilaPlaca {
 }
 export interface FullAssistencia {
   casal: { nom: string };
-  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null };
+  activitat: { id: string; nom: string; capacitat: number; horari: string | null; nombre_sessions: number | null; dies_setmana: number[]; data_inici: string | null; data_fi: string | null; espai: string | null; tallerista?: string | null };
   cicle: { id: string; nom: string; estat: EstatCicle; llindar_assistencia: number | null; data_inici: string; data_fi: string };
   sessions: Sessio[]; persones: PersonaAssistencia[]; espera: FilaPlaca[]; avui: string; pot_registrar: boolean; pot_crear_sessions: boolean;
 }

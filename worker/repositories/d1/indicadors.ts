@@ -1,4 +1,4 @@
-import type { DadesIndicadors, IndicadorsCasalGlobal, IndicadorsCicleGlobal, RepositoriIndicadors } from "../tipus";
+import type { DadesIndicadors, IndicadorsCasalGlobal, IndicadorsCicleGlobal, RecompteIncidencies, RepositoriIndicadors } from "../tipus";
 
 /** Comptes per al quadre de comandament d'un cicle, calculats directament a la base de dades. */
 export class D1RepositoriIndicadors implements RepositoriIndicadors {
@@ -35,7 +35,7 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
   }
 
   async global(any: number | null) {
-    const [cicles, casals, anys] = await this.db.batch([
+    const [cicles, casals, anys, incidencies] = await this.db.batch([
       this.db.prepare(
         `SELECT c.casal_id, c.id AS cicle_id, c.nom AS cicle, c.any, c.estat, c.data_inici, c.data_fi,
            (SELECT COUNT(*) FROM activitats a WHERE a.cicle_id = c.id AND a.estat <> 'arxivada') AS activitats,
@@ -53,7 +53,11 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
            (SELECT COUNT(*) FROM registres_assistencia r JOIN sessions_activitat se ON se.id = r.sessio_id JOIN activitats a ON a.id = se.activitat_id
              WHERE a.cicle_id = c.id AND r.estat = 'absent') AS absencies,
            (SELECT COUNT(*) FROM registres_assistencia r JOIN sessions_activitat se ON se.id = r.sessio_id JOIN activitats a ON a.id = se.activitat_id
-             WHERE a.cicle_id = c.id AND r.estat = 'absencia_justificada') AS absencies_justificades
+             WHERE a.cicle_id = c.id AND r.estat = 'absencia_justificada') AS absencies_justificades,
+           (SELECT COUNT(*) FROM activitats a WHERE a.cicle_id = c.id AND a.estat <> 'arxivada'
+             AND (a.tallerista IS NULL OR trim(a.tallerista) = '')) AS activitats_sense_tallerista,
+           (SELECT COUNT(*) FROM sessions_activitat se JOIN activitats a ON a.id = se.activitat_id
+             WHERE a.cicle_id = c.id AND se.estat <> 'cancellada' AND se.tallerista_absent = 1) AS sessions_falta_tallerista
          FROM cicles c WHERE (?1 IS NULL OR c.any = ?1) ORDER BY c.casal_id, c.data_inici`,
       ).bind(any),
       // Persones diferents del casal en els cicles triats: mateix document o, si no n'hi ha, mateix nom i data de naixement.
@@ -72,11 +76,16 @@ export class D1RepositoriIndicadors implements RepositoriIndicadors {
          FROM casals k`,
       ).bind(any),
       this.db.prepare("SELECT DISTINCT any FROM cicles ORDER BY any DESC"),
+      this.db.prepare(
+        `SELECT casal_id, categoria, estat, COUNT(*) AS n FROM incidencies
+         WHERE (?1 IS NULL OR substr(data, 1, 4) = ?1) GROUP BY casal_id, categoria, estat`,
+      ).bind(any === null ? null : String(any)),
     ]);
     return {
       cicles: cicles!.results as IndicadorsCicleGlobal[],
       casals: casals!.results as IndicadorsCasalGlobal[],
       anys: (anys!.results as { any: number }[]).map((f) => f.any),
+      incidencies: incidencies!.results as RecompteIncidencies[],
     };
   }
 }

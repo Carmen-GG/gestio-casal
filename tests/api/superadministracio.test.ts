@@ -128,7 +128,7 @@ describe("superadministració i responsables", () => {
     expect(fila).toMatchObject({ casal: "Casal de prova", activitats: 2, places_ofertes: 15, sollicituds: 0 });
     const k = r.cos.casals.find((c: { casal_id: string }) => c.casal_id === casal.id);
     expect(k).toMatchObject({ cicles: 1, activitats: 2 });
-    expect(r.cos.totals.casals).toBeGreaterThan(0);
+    expect(Array.isArray(r.cos.referents)).toBe(true);
     const gestor = await clientAutenticat("gestor_casal", casal.id);
     expect((await gestor.json("/api/gestio/administracio/quadre")).status).toBe(403);
   });

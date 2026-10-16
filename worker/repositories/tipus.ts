@@ -13,6 +13,7 @@ import type { CampPersonal } from "../../shared/domain/formulari";
 import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMotor } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
 import type { EstatAssistencia } from "../../shared/domain/assistencia";
+import type { CATEGORIES_INCIDENCIA } from "../../shared/domain/territori";
 import type { CampPlantilla, Estacio, EstatPlantilla, FormatSortida, TipusPlantilla, UsFitxer } from "../../shared/domain/cartells";
 
 export interface Casal {
@@ -21,6 +22,9 @@ export interface Casal {
   nom: string;
   municipi: string;
   adreca: string | null;
+  comarca: string | null;
+  demarcacio: string | null;
+  referent_id: string | null;
   actiu: boolean;
   configuracio: Record<string, unknown>;
   versio: number;
@@ -79,6 +83,8 @@ export interface Activitat {
   data_inici: string | null;
   data_fi: string | null;
   espai: string | null;
+  /** Persona tallerista (buit: sense tallerista assignada). */
+  tallerista: string | null;
   /** Persones a qui va dirigida (text de la PGEc). */
   destinataris: string | null;
   /** Grup d'activitats que no es poden acumular (vegeu `cicles.limits_grups`). */
@@ -101,7 +107,7 @@ export type NovaActivitat = Pick<Activitat, "casal_id" | "cicle_id" | "nom" | "c
     Pick<
       Activitat,
       | "descripcio" | "categoria" | "dies_setmana" | "hora_inici" | "hora_fi" | "horari_text"
-      | "data_inici" | "data_fi" | "espai" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
+      | "data_inici" | "data_fi" | "espai" | "tallerista" | "destinataris" | "grup" | "nombre_sessions" | "minim_participants" | "estat" | "informacio_difusio"
       | "configuracio_continuitat" | "codi_extern"
     >
   >;
@@ -599,6 +605,9 @@ export interface Sessio {
   hora_fi: string | null;
   estat: "prevista" | "realitzada" | "cancellada";
   motiu_cancellacio: string | null;
+  /** La persona tallerista no ha vingut a la sessió. */
+  tallerista_absent: 0 | 1;
+  tallerista_motiu: string | null;
   versio: number;
   /** Nombre de marques registrades en aquesta sessió. */
   marques: number;
@@ -619,6 +628,7 @@ export interface RepositoriAssistencia {
   /** Insereix les sessions que encara no existeixen (mateixa activitat, data i hora d'inici). */
   operacioCrearSessions(sessions: { id: string; activitat_id: string; data: string; hora_inici: string | null; hora_fi: string | null }[], usuariId: string, ara: string): Operacio;
   operacioCancellarSessio(id: string, versio: number, motiu: string, ara: string, operacio: string): Operacio;
+  operacioFaltaTallerista(id: string, absent: boolean, motiu: string | null, ara: string, operacio: string): Operacio;
   marquesActivitat(activitatId: string): Promise<Marca[]>;
   marquesCicle(cicleId: string): Promise<Marca[]>;
   operacioNovaMarca(d: { sessio_id: string; placa_id: string; estat: EstatAssistencia; usuari_id: string; operacio: string }, ara: string): Operacio;
@@ -790,6 +800,10 @@ export interface IndicadorsCicleGlobal {
   presencies: number;
   absencies: number;
   absencies_justificades: number;
+  /** Activitats sense cap tallerista indicada. */
+  activitats_sense_tallerista: number;
+  /** Sessions no cancel·lades en què la tallerista no ha vingut. */
+  sessions_falta_tallerista: number;
 }
 
 /** Recomptes per casal que no depenen del cicle. */
@@ -804,7 +818,56 @@ export interface IndicadorsCasalGlobal {
 export interface RepositoriIndicadors {
   cicle(casalId: string, cicleId: string): Promise<DadesIndicadors>;
   /** Tots els casals i cicles (filtrats per any del cicle si se'n dona). */
-  global(any: number | null): Promise<{ cicles: IndicadorsCicleGlobal[]; casals: IndicadorsCasalGlobal[]; anys: number[] }>;
+  global(any: number | null): Promise<{ cicles: IndicadorsCicleGlobal[]; casals: IndicadorsCasalGlobal[]; anys: number[]; incidencies: RecompteIncidencies[] }>;
+}
+
+/** Incidències d'un casal per categoria i estat (any de la data de la incidència). */
+export interface RecompteIncidencies { casal_id: string; categoria: CategoriaIncidencia; estat: EstatIncidencia; n: number }
+
+// ---------- Territori i referents ----------
+export interface Referent {
+  id: string;
+  nom: string;
+  email: string | null;
+  actiu: boolean;
+  creat_el: string;
+  actualitzat_el: string;
+}
+
+export interface RepositoriTerritori {
+  referents(): Promise<Referent[]>;
+  referent(id: string): Promise<Referent | null>;
+  crearReferent(d: { id: string; nom: string; email: string | null }, ara: string): Promise<void>;
+  actualitzarReferent(id: string, d: { nom: string; email: string | null; actiu: boolean }, ara: string): Promise<boolean>;
+  /** Comarca, demarcació i referent d'un casal. */
+  fixarTerritori(casalId: string, d: { comarca: string | null; demarcacio: string | null; referent_id: string | null }, ara: string): Promise<boolean>;
+}
+
+// ---------- Incidències ----------
+export type CategoriaIncidencia = (typeof CATEGORIES_INCIDENCIA)[number];
+export type EstatIncidencia = "oberta" | "resolta";
+
+export interface Incidencia {
+  id: string;
+  casal_id: string;
+  data: string;
+  categoria: CategoriaIncidencia;
+  descripcio: string;
+  activitat_id: string | null;
+  activitat: string | null;
+  estat: EstatIncidencia;
+  resolucio: string | null;
+  resolta_el: string | null;
+  creat_el: string;
+}
+
+export interface RepositoriIncidencies {
+  llistar(casalId: string, any: number | null): Promise<Incidencia[]>;
+  /** Activitats no arxivades del casal, per vincular-hi una incidència. */
+  activitats(casalId: string): Promise<{ id: string; nom: string; cicle: string }[]>;
+  crear(d: { id: string; casal_id: string; data: string; categoria: CategoriaIncidencia; descripcio: string; activitat_id: string | null; usuari_id: string }, ara: string): Promise<void>;
+  /** Marca la incidència com a resolta; retorna fals si no existeix o ja ho estava. */
+  resoldre(casalId: string, id: string, d: { resolucio: string | null; usuari_id: string }, ara: string): Promise<boolean>;
 }
 
 export interface Repositoris {
@@ -824,6 +887,8 @@ export interface Repositoris {
   comunicats: RepositoriComunicats;
   personesPlataforma: RepositoriPersonesPlataforma;
   indicadors: RepositoriIndicadors;
+  territori: RepositoriTerritori;
+  incidencies: RepositoriIncidencies;
   cartells: RepositoriCartells;
   unitat: UnitatDeTreball;
 }

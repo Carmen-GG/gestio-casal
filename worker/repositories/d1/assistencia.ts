@@ -2,7 +2,7 @@ import type { EstatAssistencia } from "../../../shared/domain/assistencia";
 import type { Marca, RepositoriAssistencia, Sessio } from "../tipus";
 import { comOperacio } from "./util";
 
-const SELECT_SESSIO = `SELECT s.id, s.activitat_id, s.data, s.hora_inici, s.hora_fi, s.estat, s.motiu_cancellacio, s.versio,
+const SELECT_SESSIO = `SELECT s.id, s.activitat_id, s.data, s.hora_inici, s.hora_fi, s.estat, s.motiu_cancellacio, s.tallerista_absent, s.tallerista_motiu, s.versio,
   (SELECT COUNT(*) FROM registres_assistencia r WHERE r.sessio_id = s.id) AS marques
   FROM sessions_activitat s`;
 const ORDRE_SESSIONS = "ORDER BY s.data, s.hora_inici";
@@ -46,6 +46,13 @@ export class D1RepositoriAssistencia implements RepositoriAssistencia {
        WHERE id = ? AND versio = ? AND estat = 'prevista'
          AND NOT EXISTS (SELECT 1 FROM registres_assistencia r WHERE r.sessio_id = sessions_activitat.id)`,
     ).bind(motiu, operacio, ara, id, versio));
+  }
+
+  operacioFaltaTallerista(id: string, absent: boolean, motiu: string | null, ara: string, operacio: string) {
+    return comOperacio(this.db.prepare(
+      `UPDATE sessions_activitat SET tallerista_absent = ?, tallerista_motiu = ?, versio = versio + 1, darrera_operacio = ?, actualitzat_el = ?
+       WHERE id = ? AND estat <> 'cancellada'`,
+    ).bind(absent ? 1 : 0, absent ? motiu : null, operacio, ara, id));
   }
 
   async marquesActivitat(activitatId: string) {
