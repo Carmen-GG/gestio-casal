@@ -14,8 +14,9 @@ import { serveiCartells } from "../../services/cartells";
 import { serveiGestio } from "../../services/gestio";
 import { serveiInstagram } from "../../services/instagram";
 import { peuPerDefecte } from "../../../shared/domain/instagram";
-import type { Activitat, Casal, Cicle, PlantillaCartells } from "../../types/gestio";
+import type { Activitat, Casal, Cicle, FotoCartells, PlantillaCartells } from "../../types/gestio";
 import { useGestio, usePermisos } from "../gestio/context";
+import { GaleriaFotos } from "./GaleriaFotos";
 import { ImatgeFitxer } from "./ImatgeFitxer";
 
 type ImatgeTriada = { nom: string; imatge: ImatgeMaterial };
@@ -65,6 +66,8 @@ function Generador({ casal, plantilles, cicles, potActivitats, potInstagram }: {
   const [resultat, setResultat] = useState<Resultat | null>(null);
   const [enCurs, setEnCurs] = useState<"" | "generant" | "instagram" | RolImatgeTriada>("");
   const [error, setError] = useState<string>("");
+  const [fototecaOberta, setFototecaOberta] = useState(false);
+  const fototeca = useConsulta((s) => (fototecaOberta ? serveiCartells.fotos(casal.id, s) : Promise.resolve(null)), [casal.id, fototecaOberta]);
 
   const activitats = useConsulta(
     (s) => (cicleId && potActivitats ? serveiGestio.activitats(casal.id, cicleId, s).then((r) => r.activitats) : Promise.resolve([] as Activitat[])),
@@ -98,6 +101,21 @@ function Generador({ casal, plantilles, cicles, potActivitats, potInstagram }: {
       setImatges((im) => ({ ...im, [rol]: { nom: fitxer.name, imatge } }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "No s'ha pogut llegir la imatge.");
+    } finally {
+      setEnCurs("");
+    }
+  }
+
+  async function triaDeFototeca(f: FotoCartells) {
+    setEnCurs("fotografia");
+    setError("");
+    try {
+      const [{ preparaImatge }, bytes] = await Promise.all([import("../../cartells/generador"), serveiCartells.fitxer(casal.id, f.fitxer_id)]);
+      const imatge = await preparaImatge(new Blob([bytes], { type: "image/jpeg" }), "fotografia");
+      setImatges((im) => ({ ...im, fotografia: { nom: f.nom, imatge } }));
+      setFototecaOberta(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No s'ha pogut carregar la foto.");
     } finally {
       setEnCurs("");
     }
@@ -255,8 +273,24 @@ function Generador({ casal, plantilles, cicles, potActivitats, potInstagram }: {
                   {enCurs === r ? "Preparant la imatge…" : imatges[r] ? `Triada: ${imatges[r]!.nom}`
                     : r === "fotografia" ? "Feu servir només fotografies amb autorització de les persones que hi surten." : "Logotip de l'entitat col·laboradora."}
                 </p>
+                {r === "fotografia" && (
+                  <button type="button" className="boto boto--secundari boto--petit" aria-expanded={fototecaOberta}
+                    onClick={() => setFototecaOberta((o) => !o)}>
+                    {fototecaOberta ? "Tanca la fototeca" : "Tria-la de la fototeca"}
+                  </button>
+                )}
               </div>
             ))}
+            {fototecaOberta && (
+              <div className="camp--ample">
+                {fototeca.tipus === "carregant" && <Carregant text="Carregant la fototeca…" />}
+                {fototeca.tipus === "error" && <MissatgeError error={fototeca.error} onReintentar={fototeca.reintentar} />}
+                {fototeca.tipus === "dades" && fototeca.dades && (
+                  <GaleriaFotos casalId={casal.id} fotos={fototeca.dades.fotos} ocupat={enCurs !== ""} onTria={(f) => void triaDeFototeca(f)} />
+                )}
+                <p className="text-secundari"><Link to={`/gestio/${casal.id}/cartells/fotos`}>Ves a la fototeca</Link> per pujar-hi carpetes de fotos.</p>
+              </div>
+            )}
             {rols.has("qr") && (
               <CampText etiqueta="Adreça del codi QR" value={adrecaQr} type="url" maxLength={300} obligatori error={errorQr ?? undefined}
                 ajuda="Per defecte, el formulari públic d'inscripció del cicle. El codi només conté aquesta adreça, cap dada personal."

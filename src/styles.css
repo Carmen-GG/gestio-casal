@@ -481,3 +481,14 @@ main:focus { outline: none; }
 .accions-fila--vertical { flex-wrap: wrap; max-width: 12rem; }
 .accions-fila--vertical .boto { white-space: nowrap; text-align: center; }
 .camp-simbol { width: 3.5rem; text-transform: uppercase; text-align: center; font-weight: 600; padding: 0.25rem; }
+
+/* Fototeca de PG-Cartells */
+.galeria-fotos { display: grid; gap: 1rem; grid-template-columns: minmax(12rem, 16rem) 1fr; align-items: start; }
+@media (max-width: 40rem) { .galeria-fotos { grid-template-columns: 1fr; } }
+.galeria-fotos__carpetes ul { max-height: 24rem; overflow-y: auto; }
+.galeria-fotos__carpetes li { margin: 0.2rem 0; }
+.boto-enllac--actiu { font-weight: 700; text-decoration: none; }
+.galeria-fotos__graella { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr)); }
+.galeria-fotos__graella figure { margin: 0; }
+.galeria-fotos__miniatura, .galeria-fotos__graella .imatge-fitxer--buida { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 0.25rem; background: var(--color-vora); display: block; }
+.galeria-fotos__graella figcaption { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0.25rem 0; }

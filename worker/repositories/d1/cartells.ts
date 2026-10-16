@@ -1,5 +1,5 @@
 import type { CampPlantilla, EstatPlantilla, TipusPlantilla, UsFitxer } from "../../../shared/domain/cartells";
-import type { FitxerCartells, NovaPlantillaCartells, PlantillaCartells, RepositoriCartells } from "../tipus";
+import type { FitxerCartells, FotoCartells, NovaPlantillaCartells, PlantillaCartells, RepositoriCartells } from "../tipus";
 import { assignacionsUpdate, comOperacio, marcadors } from "./util";
 
 type FilaPlantilla = Omit<PlantillaCartells, "amb_qr" | "camps"> & { amb_qr: number; camps: string };
@@ -77,4 +77,37 @@ export class D1RepositoriCartells implements RepositoriCartells {
     ).bind(...params).all<FilaPlantilla>();
     return results.map(plantilla);
   }
+
+  // ---------- Fototeca ----------
+
+  async crearFoto(f: FotoCartells) {
+    await this.db.prepare(
+      `INSERT INTO cartells_fotos (id, casal_id, fitxer_id, miniatura_id, carpeta, nom, amplada, alcada, pujada_per, pujada_el)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(f.id, f.casal_id, f.fitxer_id, f.miniatura_id, f.carpeta, f.nom, f.amplada, f.alcada, f.pujada_per, f.pujada_el).run();
+  }
+
+  async foto(id: string) {
+    return this.db.prepare(`SELECT ${COLUMNES_FOTO} FROM cartells_fotos WHERE id = ? AND retirada_el IS NULL`).bind(id).first<FotoCartells>();
+  }
+
+  async fotoPerFitxer(fitxerId: string, casalId: string | null) {
+    return this.db.prepare(`SELECT ${COLUMNES_FOTO} FROM cartells_fotos WHERE fitxer_id = ? AND casal_id IS ? AND retirada_el IS NULL`)
+      .bind(fitxerId, casalId).first<FotoCartells>();
+  }
+
+  async fotos(casalId: string | null) {
+    const { results } = await this.db.prepare(
+      `SELECT ${COLUMNES_FOTO} FROM cartells_fotos WHERE retirada_el IS NULL AND (casal_id IS NULL OR casal_id = ?)
+       ORDER BY casal_id IS NULL, carpeta, nom`,
+    ).bind(casalId).all<FotoCartells>();
+    return results;
+  }
+
+  async retirarFoto(id: string, usuariId: string, ara: string) {
+    await this.db.prepare("UPDATE cartells_fotos SET retirada_per = ?, retirada_el = ? WHERE id = ? AND retirada_el IS NULL")
+      .bind(usuariId, ara, id).run();
+  }
 }
+
+const COLUMNES_FOTO = "id, casal_id, fitxer_id, miniatura_id, carpeta, nom, amplada, alcada, pujada_per, pujada_el";

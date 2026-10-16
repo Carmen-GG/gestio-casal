@@ -980,6 +980,27 @@ export interface RepositoriCartells {
   plantillaPerFitxer(fitxerId: string): Promise<PlantillaCartells | null>;
   /** Plantilles comunes i, si s'indica, les específiques del casal. */
   plantilles(filtre: { casalId: string | null; tipus?: TipusPlantilla; estats?: EstatPlantilla[] }): Promise<PlantillaCartells[]>;
+  // Fototeca
+  crearFoto(f: FotoCartells): Promise<void>;
+  foto(id: string): Promise<FotoCartells | null>;
+  /** Foto vigent amb aquest fitxer al mateix àmbit (per no repetir-la). */
+  fotoPerFitxer(fitxerId: string, casalId: string | null): Promise<FotoCartells | null>;
+  /** Fotos vigents del casal i les comunes (casalId null: només les comunes). */
+  fotos(casalId: string | null): Promise<FotoCartells[]>;
+  retirarFoto(id: string, usuariId: string, ara: string): Promise<void>;
+}
+
+export interface FotoCartells {
+  id: string;
+  casal_id: string | null;
+  fitxer_id: string;
+  miniatura_id: string;
+  carpeta: string;
+  nom: string;
+  amplada: number | null;
+  alcada: number | null;
+  pujada_per: string;
+  pujada_el: string;
 }
 
 // ---------- Instagram ----------

@@ -57,3 +57,13 @@ export const consultaPujada = z.strictObject({
   us: z.enum(USOS_FITXER),
   nom: z.string().trim().min(1).max(200),
 });
+
+/** Foto de la fototeca: els fitxers ja s'han pujat (foto reduïda i miniatura). */
+export const fotoCrear = z.strictObject({
+  fitxer_id: z.uuid(),
+  miniatura_id: z.uuid(),
+  carpeta: z.string().trim().max(300).transform((s) => s.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")).default(""),
+  nom: z.string().trim().min(1).max(200),
+  amplada: z.number().int().positive().max(20000).nullable().default(null),
+  alcada: z.number().int().positive().max(20000).nullable().default(null),
+});
