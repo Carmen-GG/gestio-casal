@@ -476,3 +476,8 @@ main:focus { outline: none; }
 .formulari-en-linia { display: flex; flex-wrap: wrap; gap: 0 1rem; align-items: flex-end; margin-bottom: 1rem; }
 .formulari-en-linia .camp { flex: 1 1 14rem; }
 .formulari-en-linia .boto { margin-bottom: 1rem; }
+
+/* Gestionar activitats: botons en columna i símbol de tipus editable (2026-10-16) */
+.accions-fila--vertical { flex-wrap: wrap; max-width: 12rem; }
+.accions-fila--vertical .boto { white-space: nowrap; text-align: center; }
+.camp-simbol { width: 3.5rem; text-transform: uppercase; text-align: center; font-weight: 600; padding: 0.25rem; }

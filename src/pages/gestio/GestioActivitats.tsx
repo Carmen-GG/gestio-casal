@@ -84,6 +84,22 @@ export function GestioActivitats({ casalId, cicle, activitats, potGestionar, pot
     }
   }
 
+  async function desaSimbol(a: Activitat, valor: string) {
+    const simbol = valor.trim().toUpperCase();
+    if (simbol === (a.grup ?? "")) return;
+    if (simbol && !/^[A-Z0-9]{1,3}$/.test(simbol)) { setError("El tipus ha de ser una lletra o un número (fins a 3 caràcters)."); return; }
+    setError(null); setExit(""); setEnCurs(a.id);
+    try {
+      await serveiGestio.actualitzarActivitat(casalId, a.id, { grup: simbol || null, versio: a.versio });
+      setExit(simbol ? `«${a.nom}» és ara del tipus ${simbol}.` : `«${a.nom}» ja no té tipus.`);
+      onCanvi();
+    } catch (e) {
+      if (e instanceof ErrorClientApi) setError(e); else throw e;
+    } finally {
+      setEnCurs(null);
+    }
+  }
+
   return (
     <div>
       {pot && (
@@ -123,14 +139,16 @@ export function GestioActivitats({ casalId, cicle, activitats, potGestionar, pot
           <table className="taula taula--densa">
             <thead>
               <tr>
-                <th scope="col">Codi FA</th><th scope="col">Activitat</th><th scope="col">Dies i horari</th><th scope="col">Dates</th>
-                <th scope="col">Places</th><th scope="col">Grup</th><th scope="col">Aula</th><th scope="col">A qui va dirigida</th><th scope="col">Estat</th>
+                <th scope="col">Activitat</th><th scope="col">Dies, horari i dates</th>
+                <th scope="col" className="num">Places</th>
+                <th scope="col"><abbr title="Símbol per a les activitats que no es poden acumular: a sota hi poseu quantes en pot tenir cada persona">Tipus</abbr></th>
+                <th scope="col">Estat</th>
                 {(pot || potCartells) && <th scope="col">Accions</th>}
               </tr>
             </thead>
             <tbody>
               {visibles.map((a) => editant === a.id ? (
-                <tr key={a.id}><td colSpan={10}>
+                <tr key={a.id}><td colSpan={6}>
                   <FormActivitat activitat={a} textBoto="Desa l'activitat" onCancelar={() => setEditant(null)} onDesar={async (dades) => {
                     await serveiGestio.actualitzarActivitat(casalId, a.id, { ...dades, versio: a.versio });
                     setEditant(null);
@@ -140,17 +158,28 @@ export function GestioActivitats({ casalId, cicle, activitats, potGestionar, pot
                 </td></tr>
               ) : (
                 <tr key={a.id} className={a.estat !== "activa" ? "fila--inactiva" : undefined}>
-                  <td className="text-secundari">{a.codi_extern ?? "—"}</td>
-                  <td><strong>{a.nom}</strong>{a.gestio === "associacio" && <> <span className="etiqueta" title="No compta a les estadístiques de la superadministració">Associació</span></>}</td>
-                  <td>{teHorari(a) ? formataHorari(a) : "—"}</td>
-                  <td className="sense-salt">{a.data_inici ? <>{dataCurta(a.data_inici)}{a.data_fi && <><br />{dataCurta(a.data_fi)}</>}</> : "—"}</td>
-                  <td>{a.capacitat}</td>
-                  <td>{a.grup ?? "—"}</td>
-                  <td>{a.espai ?? "—"}</td>
-                  <td>{a.destinataris ?? "—"}</td>
+                  <td>
+                    <strong>{a.nom}</strong>{a.gestio === "associacio" && <> <span className="etiqueta" title="No compta a les estadístiques de la superadministració">Associació</span></>}
+                    {(a.codi_extern || a.espai || a.destinataris) && (
+                      <><br /><span className="text-secundari">{[a.codi_extern, a.espai, a.destinataris].filter(Boolean).join(" · ")}</span></>
+                    )}
+                  </td>
+                  <td>
+                    {teHorari(a) ? formataHorari(a) : "—"}
+                    {a.data_inici && <><br /><span className="text-secundari sense-salt">{dataCurta(a.data_inici)}{a.data_fi && ` – ${dataCurta(a.data_fi)}`}</span></>}
+                  </td>
+                  <td className="num">{a.capacitat}</td>
+                  <td>
+                    {pot ? (
+                      <input key={`${a.id}-${a.versio}`} className="camp-simbol" aria-label={`Tipus de ${a.nom}`} defaultValue={a.grup ?? ""} maxLength={3}
+                        placeholder="—" disabled={enCurs === a.id}
+                        onBlur={(e) => void desaSimbol(a, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }} />
+                    ) : a.grup ?? "—"}
+                  </td>
                   <td>{a.estat === "activa" ? "Al formulari" : "No surt al formulari"}</td>
                   {(pot || potCartells) && (
-                    <td><div className="accions-fila accions-fila--horitzontal">
+                    <td><div className="accions-fila accions-fila--vertical">
                       {pot && <button type="button" className="boto boto--secundari boto--petit" onClick={() => setEditant(a.id)}>Edita</button>}
                       {potCartells && (
                         <Link className="boto boto--secundari boto--petit"
@@ -199,14 +228,19 @@ export function GestioActivitats({ casalId, cicle, activitats, potGestionar, pot
 function LimitsGrups({ casalId, cicle, activitats, editable, onCanvi }: {
   casalId: string; cicle: Cicle; activitats: Activitat[]; editable: boolean; onCanvi: (missatge: string) => void;
 }) {
-  const grups = [...new Set([...activitats.flatMap((a) => (a.grup != null ? [a.grup] : [])), ...Object.keys(cicle.limits_grups).map(Number)])]
-    .sort((a, b) => a - b);
+  const grups = [...new Set([...activitats.flatMap((a) => (a.grup != null ? [String(a.grup)] : [])), ...Object.keys(cicle.limits_grups)])]
+    .sort((a, b) => a.localeCompare(b, "ca", { numeric: true }));
   const [valors, setValors] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(cicle.limits_grups).map(([g, n]) => [g, String(n)])));
   const [error, setError] = useState<ErrorClientApi | null>(null);
   const [desant, setDesant] = useState(false);
   if (grups.length === 0) {
-    return <p className="text-secundari">Si hi ha activitats que una persona no pot acumular (per exemple, només una d'esportiva), poseu-los el mateix número a «Grup» amb «Edita» i aquí podreu indicar el màxim de cada grup.</p>;
+    return (
+      <p className="text-secundari">
+        Si hi ha activitats que una persona no pot acumular (per exemple, només una d'esportiva), escriviu el mateix símbol (una lletra o un número)
+        a la columna «Tipus» de la taula. Aquí sota apareixerà cada símbol perquè indiqueu quantes activitats d'aquell tipus pot tenir una persona alhora.
+      </p>
+    );
   }
 
   async function desa() {
@@ -218,7 +252,7 @@ function LimitsGrups({ casalId, cicle, activitats, editable, onCanvi }: {
         return v ? [[String(g), Number(v)]] : [];
       }));
       await serveiGestio.actualitzarCicle(casalId, cicle.id, { versio: cicle.versio, limits_grups: limits });
-      onCanvi("S'ha desat el màxim d'activitats per grup.");
+      onCanvi("S'ha desat quantes activitats de cada tipus pot tenir una persona.");
     } catch (e) {
       if (e instanceof ErrorClientApi) setError(e); else throw e;
     } finally {
@@ -228,15 +262,18 @@ function LimitsGrups({ casalId, cicle, activitats, editable, onCanvi }: {
 
   return (
     <div className="limits-grups">
-      <h3 className="subseccio">Màxim d'activitats per grup</h3>
-      <p className="text-secundari">Quantes activitats de cada grup pot obtenir una mateixa persona a l'assignació. Deixeu-ho buit si no hi ha límit.</p>
+      <h3 className="subseccio">Quantes activitats de cada tipus pot tenir una persona</h3>
+      <p className="text-secundari">
+        Per a cada símbol, indiqueu quantes activitats d'aquest tipus pot obtenir una mateixa persona a l'assignació. Amb 1, només una alhora;
+        amb 2, fins a dues. Deixeu-ho buit si no hi ha límit.
+      </p>
       {error && <MissatgeError error={error} />}
       <div className="limits-grups__llista">
         {grups.map((g) => {
-          const noms = activitats.filter((a) => a.grup === g).map((a) => a.nom);
+          const noms = activitats.filter((a) => a.grup != null && String(a.grup) === g).map((a) => a.nom);
           return (
             <div key={g} className="camp camp--compacte">
-              <label htmlFor={`limit-grup-${g}`}>Grup {g}</label>
+              <label htmlFor={`limit-grup-${g}`}>Tipus {g}</label>
               <input id={`limit-grup-${g}`} type="number" min={1} max={20} inputMode="numeric" disabled={!editable}
                 value={valors[String(g)] ?? ""} onChange={(e) => setValors((v) => ({ ...v, [String(g)]: e.target.value }))} />
               <p className="camp__ajuda">{noms.length ? noms.join(", ") : "Cap activitat en aquest grup"}</p>
@@ -246,7 +283,7 @@ function LimitsGrups({ casalId, cicle, activitats, editable, onCanvi }: {
       </div>
       {editable && (
         <button type="button" className="boto boto--secundari" disabled={desant} onClick={() => void desa()}>
-          {desant ? "Desant…" : "Desa el màxim per grup"}
+          {desant ? "Desant…" : "Desa els màxims"}
         </button>
       )}
     </div>

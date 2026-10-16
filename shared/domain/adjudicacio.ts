@@ -119,7 +119,7 @@ export interface ActivitatMotor {
   /** Les activitats no actives no adjudiquen places. */
   disponible: boolean;
   /** Grup d'activitats que no es poden acumular (vegeu `EntradaMotor.limits_grups`). */
-  grup?: number | null;
+  grup?: string | number | null;
 }
 
 export interface EntradaMotor {

@@ -90,7 +90,7 @@ export interface Activitat {
   /** Persones a qui va dirigida (text de la PGEc). */
   destinataris: string | null;
   /** Grup d'activitats que no es poden acumular (vegeu `cicles.limits_grups`). */
-  grup: number | null;
+  grup: string | null;
   capacitat: number;
   nombre_sessions: number | null;
   /** Mínim de participants perquè es faci. Només genera avisos. */

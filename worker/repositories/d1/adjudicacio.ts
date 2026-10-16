@@ -77,7 +77,7 @@ export class D1RepositoriAdjudicacio implements RepositoriAdjudicacio {
       this.db.prepare(`SELECT pr.sollicitud_id, pr.activitat_id, pr.ordre FROM preferencies pr
                        JOIN sollicituds s ON s.id = pr.sollicitud_id
                        WHERE s.casal_id = ? AND s.cicle_id = ? ORDER BY pr.sollicitud_id, pr.ordre`).bind(casalId, cicleId),
-      this.db.prepare(`SELECT id, nom, capacitat, estat, minim_participants, grup FROM activitats WHERE casal_id = ? AND cicle_id = ? AND estat <> 'arxivada'
+      this.db.prepare(`SELECT id, nom, capacitat, estat, minim_participants, simbol_grup AS grup FROM activitats WHERE casal_id = ? AND cicle_id = ? AND estat <> 'arxivada'
                        ORDER BY nom COLLATE NOCASE, id`).bind(casalId, cicleId),
       this.db.prepare("SELECT limits_grups FROM cicles WHERE id = ? AND casal_id = ?").bind(cicleId, casalId),
     ]);

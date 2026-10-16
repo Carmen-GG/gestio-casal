@@ -38,7 +38,7 @@ const campsCicle = {
   /** Percentatge mínim d'assistència per identificar persones per sota (sense cap acció automàtica). */
   llindar_assistencia: z.number().int().min(1, "Mínim 1%.").max(100, "Màxim 100%.").nullable().optional(),
   /** Màxim d'activitats de cada grup per persona ({"1": 1, "2": 3}). */
-  limits_grups: z.record(z.string().regex(/^[1-9][0-9]?$/, "Grup no vàlid."), z.number().int().min(1, "Mínim 1.").max(20, "Màxim 20."))
+  limits_grups: z.record(z.string().regex(/^[A-Za-z0-9]{1,3}$/, "Símbol no vàlid.").transform((s) => s.toUpperCase()), z.number().int().min(1, "Mínim 1.").max(20, "Màxim 20."))
     .refine((r) => Object.keys(r).length <= 99).optional(),
 };
 
@@ -90,7 +90,11 @@ const campsActivitat = {
   tallerista: textOpcional(120).optional(),
   gestio: z.enum(["generalitat", "associacio"]).optional(),
   destinataris: textOpcional(200).optional(),
-  grup: z.number().int().min(1, "Mínim 1.").max(99, "Màxim 99.").nullable().optional(),
+  /** Símbol del tipus d'activitat (lletra o número, fins a 3 caràcters). Els números d'abans també s'accepten. */
+  grup: z.union([z.number().int().min(1).max(999).transform(String), z.string()])
+    .transform((s) => s.trim().toUpperCase())
+    .refine((s) => s === "" || /^[A-Z0-9]{1,3}$/.test(s), "Una lletra o un número (fins a 3 caràcters).")
+    .transform((s) => (s === "" ? null : s)).nullable().optional(),
   capacitat: z.number().int().min(0).max(10000),
   nombre_sessions: z.number().int().min(0).max(1000).nullable().optional(),
   minim_participants: z.number().int().min(0).max(10000).nullable().optional(),

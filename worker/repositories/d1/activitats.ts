@@ -3,14 +3,18 @@ import { assignacionsUpdate, comOperacio, comStatement, jsonLlistaNumeros, jsonO
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
 
-type Fila = Omit<Activitat, "dies_setmana" | "informacio_difusio" | "configuracio_continuitat"> & {
+type Fila = Omit<Activitat, "dies_setmana" | "informacio_difusio" | "configuracio_continuitat" | "grup"> & {
+  /** Columna antiga (número); el símbol del grup és a `simbol_grup`. */
+  grup: number | null;
+  simbol_grup: string | null;
   dies_setmana: string;
   informacio_difusio: string;
   configuracio_continuitat: string;
 };
 
-const mapa = (f: Fila): Activitat => ({
+const mapa = ({ simbol_grup, ...f }: Fila): Activitat => ({
   ...f,
+  grup: simbol_grup,
   dies_setmana: jsonLlistaNumeros(f.dies_setmana),
   informacio_difusio: jsonObjecte(f.informacio_difusio),
   configuracio_continuitat: jsonObjecte(f.configuracio_continuitat),
@@ -42,7 +46,7 @@ export class D1RepositoriActivitats implements RepositoriActivitats {
       this.db
         .prepare(
           `INSERT INTO activitats (id, casal_id, cicle_id, nom, descripcio, categoria, dies_setmana, hora_inici,
-             hora_fi, horari_text, data_inici, data_fi, espai, tallerista, gestio, destinataris, grup, capacitat, nombre_sessions, minim_participants, estat,
+             hora_fi, horari_text, data_inici, data_fi, espai, tallerista, gestio, destinataris, simbol_grup, capacitat, nombre_sessions, minim_participants, estat,
              informacio_difusio, configuracio_continuitat, codi_extern, darrera_operacio, creat_el, actualitzat_el)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
@@ -61,9 +65,12 @@ export class D1RepositoriActivitats implements RepositoriActivitats {
   }
 
   operacioActualitzar(casalId: string, id: string, versioActual: number, canvis: CanvisActivitat, ara: string, operacio: string) {
-    const { sql, valors } = assignacionsUpdate(canvis, [
+    // La propietat `grup` es desa a la columna `simbol_grup`.
+    const { grup, ...resta } = canvis;
+    const columnes: Record<string, unknown> = grup === undefined ? resta : { ...resta, simbol_grup: grup };
+    const { sql, valors } = assignacionsUpdate(columnes, [
       "nom", "descripcio", "categoria", "dies_setmana", "hora_inici", "hora_fi", "horari_text", "data_inici",
-      "data_fi", "espai", "tallerista", "gestio", "destinataris", "grup", "capacitat", "nombre_sessions", "minim_participants", "estat", "informacio_difusio",
+      "data_fi", "espai", "tallerista", "gestio", "destinataris", "simbol_grup", "capacitat", "nombre_sessions", "minim_participants", "estat", "informacio_difusio",
       "configuracio_continuitat", "codi_extern",
     ]);
     return comOperacio(
