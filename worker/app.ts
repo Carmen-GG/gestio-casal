@@ -10,6 +10,7 @@ import { rutesAuth } from "./routes/auth";
 import { rutesWhatsapp } from "./routes/whatsapp";
 import { rutesGestio } from "./routes/gestio";
 import { esPujadaFitxer, rutesCartells } from "./routes/cartells";
+import { rutesInstagram, rutesInstagramPubliques } from "./routes/instagram";
 import type { UsuariAutenticat } from "./auth/permisos";
 
 export type Entorn = {
@@ -49,11 +50,13 @@ export function crearApp(deps: DependenciesApp = {}) {
     }
   });
 
+  app.route("/public/instagram", rutesInstagramPubliques);
   app.route("/public", rutesPubliques);
   app.route("/auth", rutesAuth);
   app.route("/whatsapp", rutesWhatsapp);
   app.route("/gestio", rutesGestio);
   app.route("/gestio", rutesCartells);
+  app.route("/gestio", rutesInstagram);
 
   app.notFound((c) => respostaError(c, errors.noTrobat("Ruta no trobada.")));
 

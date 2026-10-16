@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { ETIQUETES_ESTACIO, ETIQUETES_ROL, ETIQUETES_TIPUS_PLANTILLA, type RolCamp } from "../../../shared/domain/cartells";
 import {
   ROLS_TEXT, errorUrlQr, slugFitxer, textosPerDefecte, type RolText, type TextosMaterial,
@@ -12,6 +12,8 @@ import type { AvisMaterial, ImatgeMaterial } from "../../cartells/generador";
 import { ErrorClientApi } from "../../services/api";
 import { serveiCartells } from "../../services/cartells";
 import { serveiGestio } from "../../services/gestio";
+import { serveiInstagram } from "../../services/instagram";
+import { peuPerDefecte } from "../../../shared/domain/instagram";
 import type { Activitat, Casal, Cicle, PlantillaCartells } from "../../types/gestio";
 import { useGestio, usePermisos } from "../gestio/context";
 import { ImatgeFitxer } from "./ImatgeFitxer";
@@ -42,23 +44,26 @@ export function NouMaterial() {
   if (consulta.tipus === "carregant") return <Carregant />;
   if (consulta.tipus === "error") return <MissatgeError error={consulta.error} onReintentar={consulta.reintentar} />;
   return <Generador casal={consulta.dades.casal} plantilles={consulta.dades.plantilles} cicles={consulta.dades.cicles}
-    potActivitats={pot("activitats.consultar")} />;
+    potActivitats={pot("activitats.consultar")} potInstagram={pot("instagram.publicar")} />;
 }
 
-function Generador({ casal, plantilles, cicles, potActivitats }: {
-  casal: Casal; plantilles: PlantillaCartells[]; cicles: Cicle[]; potActivitats: boolean;
+function Generador({ casal, plantilles, cicles, potActivitats, potInstagram }: {
+  casal: Casal; plantilles: PlantillaCartells[]; cicles: Cicle[]; potActivitats: boolean; potInstagram: boolean;
 }) {
+  const navega = useNavigate();
   // Des de la llista d'activitats d'un cicle s'arriba amb el cicle i l'activitat ja triats.
   const [params] = useSearchParams();
   const cicleInicial = cicles.find((c) => c.id === params.get("cicle"))?.id;
   const [cicleId, setCicleId] = useState(cicleInicial ?? cicles[0]?.id ?? "");
   const [activitatId, setActivitatId] = useState(cicleInicial ? (params.get("activitat") ?? "") : "");
-  const [plantillaId, setPlantillaId] = useState(plantilles[0]?.id ?? "");
+  // Des de la pàgina d'Instagram s'arriba amb una plantilla d'Instagram ja triada.
+  const [plantillaId, setPlantillaId] = useState(
+    (params.get("tipus") === "instagram" ? plantilles.find((p) => p.tipus === "instagram") : undefined)?.id ?? plantilles[0]?.id ?? "");
   const [editats, setEditats] = useState<TextosMaterial>({});
   const [imatges, setImatges] = useState<Partial<Record<RolImatgeTriada, ImatgeTriada>>>({});
   const [urlQr, setUrlQr] = useState<string | null>(null);
   const [resultat, setResultat] = useState<Resultat | null>(null);
-  const [enCurs, setEnCurs] = useState<"" | "generant" | RolImatgeTriada>("");
+  const [enCurs, setEnCurs] = useState<"" | "generant" | "instagram" | RolImatgeTriada>("");
   const [error, setError] = useState<string>("");
 
   const activitats = useConsulta(
@@ -137,6 +142,27 @@ function Generador({ casal, plantilles, cicles, potActivitats }: {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  /** Desa la imatge (JPEG, l'únic format que accepta Instagram) i obre la publicació per revisar-la i publicar-la. */
+  async function preparaInstagram() {
+    if (!resultat) return;
+    setEnCurs("instagram");
+    setError("");
+    try {
+      const { imatgeJpeg } = await import("../../instagram/imatge");
+      const jpeg = new File([await imatgeJpeg(resultat.fitxer)], resultat.nomFitxer.replace(/\.png$/, ".jpg"), { type: "image/jpeg" });
+      const { fitxer } = await serveiCartells.pujarFitxer(casal.id, "material", jpeg);
+      const titol = (activitat?.nom ?? [textos.titol_1, textos.titol_2, textos.titol_3].filter(Boolean).join(" ")).trim() || "Publicació";
+      const { publicacio } = await serveiInstagram.crear(casal.id, {
+        fitxer_id: fitxer.id, titol: titol.slice(0, 120),
+        peu: peuPerDefecte(textos, { casal: casal.nom, urlInscripcio: cicleId ? (rols.has("qr") && !errorQr ? adrecaQr.trim() : urlPerDefecte) : null }),
+      });
+      navega(`/gestio/${casal.id}/instagram/${publicacio.id}`);
+    } catch (e) {
+      setError(e instanceof ErrorClientApi ? e.missatgeUsuari : e instanceof Error ? e.message : "No s'ha pogut preparar la publicació.");
+      setEnCurs("");
+    }
   }
 
   const canviaText = (rol: RolText, valor: string) => setEditats((t) => ({ ...t, [rol]: valor }));
@@ -251,6 +277,11 @@ function Generador({ casal, plantilles, cicles, potActivitats }: {
             {resultat && (
               <button type="button" className="boto boto--secundari" onClick={descarrega}>
                 {plantilla.tipus === "instagram" ? "Descarrega la imatge PNG" : "Descarrega el PDF"}
+              </button>
+            )}
+            {resultat && plantilla.tipus === "instagram" && potInstagram && (
+              <button type="button" className="boto" onClick={() => void preparaInstagram()} disabled={enCurs !== ""}>
+                {enCurs === "instagram" ? "Preparant…" : "Prepara la publicació a Instagram"}
               </button>
             )}
           </div>

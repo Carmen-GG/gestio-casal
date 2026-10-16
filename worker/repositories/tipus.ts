@@ -13,6 +13,7 @@ import type { CampPersonal } from "../../shared/domain/formulari";
 import type { ActivitatMotor, ParametresAdjudicacio, ResultatMotor, SollicitudMotor } from "../../shared/domain/adjudicacio";
 import type { EstatPlaca } from "../../shared/schemas/adjudicacio";
 import type { EstatAssistencia } from "../../shared/domain/assistencia";
+import type { EstatPublicacio } from "../../shared/domain/instagram";
 import type { CATEGORIES_INCIDENCIA } from "../../shared/domain/territori";
 import type { CampPlantilla, Estacio, EstatPlantilla, FormatSortida, TipusPlantilla, UsFitxer } from "../../shared/domain/cartells";
 
@@ -923,6 +924,7 @@ export interface Repositoris {
   territori: RepositoriTerritori;
   incidencies: RepositoriIncidencies;
   cartells: RepositoriCartells;
+  instagram: RepositoriInstagram;
   unitat: UnitatDeTreball;
 }
 
@@ -978,6 +980,56 @@ export interface RepositoriCartells {
   plantillaPerFitxer(fitxerId: string): Promise<PlantillaCartells | null>;
   /** Plantilles comunes i, si s'indica, les específiques del casal. */
   plantilles(filtre: { casalId: string | null; tipus?: TipusPlantilla; estats?: EstatPlantilla[] }): Promise<PlantillaCartells[]>;
+}
+
+// ---------- Instagram ----------
+
+/** Compte d'Instagram connectat a un casal. El testimoni xifrat no surt mai del servidor. */
+export interface CompteInstagram {
+  casal_id: string;
+  ig_usuari_id: string;
+  nom_usuari: string;
+  testimoni_xifrat: string;
+  testimoni_caduca_el: string | null;
+  testimoni_renovat_el: string;
+  connectat_per: string;
+  connectat_el: string;
+}
+
+export interface PublicacioInstagram {
+  id: string;
+  casal_id: string;
+  fitxer_id: string;
+  titol: string;
+  peu: string;
+  estat: EstatPublicacio;
+  ig_media_id: string | null;
+  enllac: string | null;
+  error_missatge: string | null;
+  imatge_testimoni_resum: string | null;
+  imatge_caduca_el: string | null;
+  versio: number;
+  creat_per: string;
+  creat_el: string;
+  publicat_per: string | null;
+  publicat_el: string | null;
+  actualitzat_el: string;
+}
+
+export type CanvisPublicacio = Partial<Pick<PublicacioInstagram,
+  "peu" | "estat" | "ig_media_id" | "enllac" | "error_missatge" | "imatge_testimoni_resum" | "imatge_caduca_el" | "publicat_per" | "publicat_el">>;
+
+export interface RepositoriInstagram {
+  compte(casalId: string): Promise<CompteInstagram | null>;
+  desarCompte(c: CompteInstagram): Promise<void>;
+  renovarTestimoni(casalId: string, testimoniXifrat: string, caducaEl: string | null, ara: string): Promise<void>;
+  esborrarCompte(casalId: string): Promise<void>;
+  crearPublicacio(p: Omit<PublicacioInstagram, "estat" | "ig_media_id" | "enllac" | "error_missatge" | "imatge_testimoni_resum" | "imatge_caduca_el" | "versio" | "publicat_per" | "publicat_el" | "actualitzat_el">): Promise<void>;
+  publicacio(id: string): Promise<PublicacioInstagram | null>;
+  publicacioPerImatge(testimoniResum: string): Promise<PublicacioInstagram | null>;
+  publicacions(casalId: string, limit: number): Promise<PublicacioInstagram[]>;
+  /** Aplica els canvis només si la versió coincideix; retorna si s'han aplicat. */
+  actualitzarPublicacio(id: string, versio: number, canvis: CanvisPublicacio, ara: string): Promise<boolean>;
 }
 
 export interface ContactePersona {

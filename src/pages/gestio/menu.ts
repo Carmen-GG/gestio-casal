@@ -45,7 +45,7 @@ export const MENU: ElementMenu[] = [
           { text: "Configuració de WhatsApp Business", desti: { ruta: "whatsapp" }, permis: "casal.configurar" },
         ],
       },
-      { text: "Instagram", desti: { properament: "instagram" }, permis: "cartells.consultar" },
+      { text: "Instagram", desti: { ruta: "instagram" }, permis: "instagram.publicar" },
     ],
   },
   { text: "Equip del casal", desti: { ruta: "usuaris" }, permis: "usuaris.gestionar" },

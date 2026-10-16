@@ -93,6 +93,8 @@ async function descarregar(ruta: string, signal?: AbortSignal): Promise<ArrayBuf
 export const api = {
   get: <T>(ruta: string, signal?: AbortSignal) => peticio<T>(ruta, { method: "GET", signal }),
   post: <T>(ruta: string, json: unknown = {}, headers?: Record<string, string>) => peticio<T>(ruta, { method: "POST", json, headers }),
+  /** Operacions que depenen d'un servei extern i poden trigar (p. ex. publicar a Instagram). */
+  postLent: <T>(ruta: string, json: unknown = {}) => peticio<T>(ruta, { method: "POST", json, tempsMaxim: TEMPS_MAXIM_FITXERS_MS }),
   patch: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PATCH", json }),
   put: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PUT", json }),
   delete: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "DELETE", json }),

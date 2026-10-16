@@ -9,6 +9,7 @@ declare global {
       LIMIT_SOLLICITUDS?: RateLimit;
       LIMIT_ENTRADA?: RateLimit;
       FITXERS: R2Bucket;
+      INSTAGRAM_CLAU?: string;
       TEST_MIGRATIONS: import("cloudflare:test").D1Migration[];
     }
   }

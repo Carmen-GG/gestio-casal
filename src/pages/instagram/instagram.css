@@ -1,0 +1,22 @@
+/* Mòdul d'Instagram: previsualització de la publicació i estats. */
+.ig-detall { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 24rem) minmax(0, 1fr); align-items: start; }
+@media (max-width: 52rem) { .ig-detall { grid-template-columns: minmax(0, 1fr); } }
+
+.ig-previsualitzacio { margin: 0; background: var(--color-superficie); border: 1px solid var(--color-vora); border-radius: 8px; overflow: hidden; max-width: 24rem; }
+.ig-previsualitzacio__capcalera { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; font-weight: 600; font-size: 0.95rem; }
+.ig-previsualitzacio__avatar { width: 2rem; height: 2rem; border-radius: 50%; background: linear-gradient(45deg, #f9a825, #d81b60, #6a1b9a); flex: none; }
+.ig-previsualitzacio img, .ig-previsualitzacio__buida { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--color-fons); }
+.ig-previsualitzacio figcaption { padding: 0.6rem 0.75rem 0.9rem; font-size: 0.95rem; }
+.ig-previsualitzacio__text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.ig-dialeg__imatge { display: block; width: 100%; max-width: 16rem; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--color-vora); margin: 0.5rem 0; }
+.ig-dialeg__text { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow-y: auto; background: var(--color-fons); padding: 0.5rem; border-radius: 4px; }
+
+.ig-connexio { margin-top: 1rem; border-top: 1px solid var(--color-vora); padding-top: 0.5rem; }
+.ig-connexio ol { padding-left: 1.25rem; }
+.ig-connexio textarea { font-family: ui-monospace, monospace; font-size: 0.85rem; }
+
+.etiqueta-ig--esborrany, .etiqueta-ig--publicant { border-color: #8a5a00; color: #5c3c00; }
+.etiqueta-ig--publicada, .etiqueta-ig--publicada_manualment { border-color: var(--color-exit); color: var(--color-exit); background: var(--color-exit-fons); }
+.etiqueta-ig--error { border-color: var(--color-error); color: var(--color-error); }
+.etiqueta-ig--descartada { color: var(--color-text-secundari); }

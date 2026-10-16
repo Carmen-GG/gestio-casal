@@ -14,6 +14,7 @@ import { D1RepositoriWhatsapp } from "./whatsapp";
 import { D1RepositoriComunicats } from "./comunicats";
 import { D1RepositoriPersonesPlataforma } from "./persones-plataforma";
 import { D1RepositoriCartells } from "./cartells";
+import { D1RepositoriInstagram } from "./instagram";
 import { D1RepositoriIncidencies, D1RepositoriTerritori } from "./territori";
 import { D1RepositoriAuditoria, D1RepositoriHistorial, D1UnitatDeTreball } from "./registres";
 
@@ -38,6 +39,7 @@ export function repositorisD1(db: D1Database, rellotge: Rellotge): Repositoris {
     territori: new D1RepositoriTerritori(db),
     incidencies: new D1RepositoriIncidencies(db),
     cartells: new D1RepositoriCartells(db),
+    instagram: new D1RepositoriInstagram(db),
     unitat: new D1UnitatDeTreball(db),
   };
 }
