@@ -5,7 +5,7 @@ import { errors } from "../http/errors";
 import { cosValidat, idRuta } from "../http/validacio";
 import {
   activitatActualitzar, activitatCanviEstat, activitatCrear, activitatDuplicar, assignarResponsable, assignarRol, casalActualitzar,
-  cicleActualitzar, cicleCanviEstat, cicleCrear, revocarRol,
+  cicleActualitzar, cicleCanviEstat, cicleEliminar, cicleCrear, revocarRol,
 } from "../../shared/schemas/gestio";
 import { transicionsPermeses } from "../../shared/domain/cicles";
 import { configuracioFormulariEfectiva } from "../../shared/domain/formulari";
@@ -151,6 +151,11 @@ export const rutesGestio = new Hono<Entorn>()
     const { versio, motiu, ...canvis } = await cosValidat(c, cicleActualitzar);
     const cicle = await cicles(c).actualitzar(casalId, idRuta(c, "cicleId"), canvis, { ...ctx(c), versio, motiu });
     return c.json({ cicle });
+  })
+  .delete("/casals/:casalId/cicles/:cicleId", async (c) => {
+    const casalId = casalAutoritzat(c, "cicles.gestionar");
+    const { versio, motiu } = await cosValidat(c, cicleEliminar);
+    return c.json(await cicles(c).eliminar(casalId, idRuta(c, "cicleId"), { versio, motiu }, ctx(c)));
   })
   .post("/casals/:casalId/cicles/:cicleId/estat", async (c) => {
     const casalId = casalAutoritzat(c, "cicles.gestionar");

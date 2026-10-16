@@ -134,4 +134,44 @@ export class ServeiCicles {
   acceptaSollicituds(cicle: Cicle): boolean {
     return acceptaSollicituds(cicle, this.rellotge.ara());
   }
+
+  /**
+   * Elimina un cicle (petició de 2026-10-16). Només si encara no té inscripcions, places,
+   * assistència, adjudicacions ni comunicacions: aquestes dades no s'esborren mai. En aquest cas
+   * cal arxivar-lo. Les activitats del cicle (i el seu calendari) s'esborren amb ell.
+   */
+  async eliminar(casalId: string, cicleId: string, d: { versio: number; motiu: string }, ctx: ContextOperacio) {
+    const cicle = await this.obtenir(casalId, cicleId);
+    if (cicle.versio !== d.versio) throw errors.conflicte("conflicte_concurrencia", "El cicle s'ha modificat mentrestant. Recarregueu-lo.");
+    const dades = await this.repos.cicles.dadesVinculades(cicleId);
+    const bloquejants = [
+      dades.sollicituds && `${dades.sollicituds} sol·licituds`,
+      dades.places && `${dades.places} places`,
+      dades.marques_assistencia && "assistència registrada",
+      dades.adjudicacions && "adjudicacions o sortejos",
+      dades.altres && "baixes, comunicacions o incidències",
+    ].filter(Boolean);
+    if (bloquejants.length) {
+      throw errors.conflicte("cicle_amb_dades",
+        `No es pot eliminar el cicle perquè ja té ${bloquejants.join(", ")}. Si ja no s'ha de fer servir, arxiveu-lo.`);
+    }
+    const ara = isoAra(this.rellotge);
+    try {
+      await this.repos.unitat.executar([
+        ...this.repos.cicles.operacionsEliminar(casalId, cicleId),
+        this.repos.auditoria.operacioRegistrar({
+          casal_id: casalId, usuari_id: ctx.usuariId, tipus_operacio: "cicle.eliminacio", entitat: "cicle", entitat_id: cicleId,
+          resultat: "exit", motiu: d.motiu, id_peticio: ctx.idPeticio ?? null,
+          detalls: { nom: cicle.nom, any: cicle.any, estat: cicle.estat, activitats: dades.activitats },
+        }, ara),
+      ]);
+    } catch (e) {
+      // Alguna dada vinculada que no s'ha comptat: la clau forana atura l'esborrat i no es perd res.
+      if (e instanceof Error && /FOREIGN KEY/i.test(e.message)) {
+        throw errors.conflicte("cicle_amb_dades", "No es pot eliminar el cicle perquè té dades vinculades. Si ja no s'ha de fer servir, arxiveu-lo.");
+      }
+      throw e;
+    }
+    return { ok: true, activitats: dades.activitats };
+  }
 }

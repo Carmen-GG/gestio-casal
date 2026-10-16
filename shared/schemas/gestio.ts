@@ -63,6 +63,13 @@ export const cicleActualitzar = z
     motiu,
   });
 
+/** Eliminar un cicle: confirmació explícita i motiu (queda a l'auditoria). */
+export const cicleEliminar = z.strictObject({
+  versio,
+  confirmacio: z.literal(true, "Cal confirmar l'eliminació."),
+  motiu: z.string().trim().min(3, "Indiqueu el motiu (mínim 3 caràcters).").max(500),
+});
+
 export const cicleCanviEstat = z.strictObject({
   estat: z.enum(ESTATS_CICLE),
   versio,

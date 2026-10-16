@@ -95,6 +95,7 @@ export const api = {
   post: <T>(ruta: string, json: unknown = {}, headers?: Record<string, string>) => peticio<T>(ruta, { method: "POST", json, headers }),
   patch: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PATCH", json }),
   put: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "PUT", json }),
+  delete: <T>(ruta: string, json: unknown) => peticio<T>(ruta, { method: "DELETE", json }),
   /** Puja un fitxer tal qual: el tipus va a Content-Type (cal preflight des d'un altre origen). */
   pujar: <T>(ruta: string, fitxer: Blob, tipus: string) =>
     peticio<T>(ruta, { method: "POST", body: fitxer, headers: { "Content-Type": tipus }, tempsMaxim: TEMPS_MAXIM_FITXERS_MS }),

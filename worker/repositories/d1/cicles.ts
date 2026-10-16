@@ -1,6 +1,6 @@
 import type { EstatCicle } from "../../../shared/domain/cicles";
 import { LLINDAR_ASSISTENCIA_PER_DEFECTE } from "../../../shared/domain/assistencia";
-import type { CanvisCicle, Cicle, NouCicle, RepositoriCicles } from "../tipus";
+import type { CanvisCicle, Cicle, DadesCicle, NouCicle, RepositoriCicles } from "../tipus";
 import { assignacionsUpdate, comOperacio, comStatement, jsonObjecte, marcadors } from "./util";
 import { nouId } from "../../lib/ids";
 import { isoAra, type Rellotge } from "../../lib/rellotge";
@@ -10,6 +10,8 @@ type Fila = Omit<Cicle, "configuracio_formulari" | "limits_grups"> & { configura
 const mapa = (f: Fila): Cicle => ({
   ...f, configuracio_formulari: jsonObjecte(f.configuracio_formulari), limits_grups: jsonObjecte(f.limits_grups) as Record<string, number>,
 });
+
+const DE_LES_ACTIVITATS = "SELECT id FROM activitats WHERE cicle_id = ?1";
 
 export class D1RepositoriCicles implements RepositoriCicles {
   constructor(private readonly db: D1Database, private readonly rellotge: Rellotge) {}
@@ -78,5 +80,40 @@ export class D1RepositoriCicles implements RepositoriCicles {
         )
         .bind(...valors, ara, operacio, id, casalId, versioActual),
     );
+  }
+
+  async dadesVinculades(cicleId: string) {
+    const fila = await this.db.prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM activitats WHERE cicle_id = ?1) AS activitats,
+         (SELECT COUNT(*) FROM sollicituds WHERE cicle_id = ?1) AS sollicituds,
+         (SELECT COUNT(*) FROM places WHERE activitat_id IN (${DE_LES_ACTIVITATS})) AS places,
+         (SELECT COUNT(*) FROM registres_assistencia r JOIN sessions_activitat s ON s.id = r.sessio_id
+           WHERE s.activitat_id IN (${DE_LES_ACTIVITATS})) AS marques_assistencia,
+         (SELECT COUNT(*) FROM execucions_adjudicacio WHERE cicle_id = ?1)
+           + (SELECT COUNT(*) FROM sortejos_adjudicacio WHERE cicle_id = ?1) AS adjudicacions,
+         (SELECT COUNT(*) FROM baixes_voluntaries WHERE cicle_id = ?1)
+           + (SELECT COUNT(*) FROM comunicacions_placa WHERE cicle_id = ?1)
+           + (SELECT COUNT(*) FROM whatsapp_enviaments WHERE cicle_id = ?1)
+           + (SELECT COUNT(*) FROM whatsapp_missatges WHERE cicle_id = ?1)
+           + (SELECT COUNT(*) FROM incidencies WHERE activitat_id IN (${DE_LES_ACTIVITATS})) AS altres`,
+    ).bind(cicleId).first<DadesCicle>();
+    return fila!;
+  }
+
+  operacionsEliminar(casalId: string, cicleId: string) {
+    // Ordre: primer el que depèn de les activitats, després les activitats i, al final, el cicle.
+    const sql = [
+      `DELETE FROM sessions_activitat WHERE activitat_id IN (${DE_LES_ACTIVITATS})`,
+      "DELETE FROM configuracions_adjudicacio WHERE cicle_id = ?1",
+      "DELETE FROM numeros_sorteig WHERE cicle_id = ?1",
+      "DELETE FROM revisions_duplicats WHERE cicle_id = ?1",
+      "DELETE FROM activitats WHERE cicle_id = ?1",
+      "DELETE FROM importacions WHERE cicle_id = ?1",
+    ];
+    return [
+      ...sql.map((q) => comOperacio(this.db.prepare(q).bind(cicleId))),
+      comOperacio(this.db.prepare("DELETE FROM cicles WHERE id = ? AND casal_id = ?").bind(cicleId, casalId)),
+    ];
   }
 }
