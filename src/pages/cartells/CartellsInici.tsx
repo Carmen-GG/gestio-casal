@@ -41,6 +41,10 @@ export function CartellsInici() {
           </li>
         )}
         <li>
+          <Link to={`/gestio/${casalId}/cartells/fotos`}>Fototeca</Link>
+          <span> · Carpetes de fotos per triar-ne una a cada material{pot("cartells.fotografies") ? "; podeu pujar-hi carpetes senceres" : ""}.</span>
+        </li>
+        <li>
           <Link to={`/gestio/${casalId}/cartells/plantilles`}>Plantilles</Link>
           <span> · Cartells i publicacions d'Instagram disponibles{pot("cartells.plantilles") ? ", i càrrega de plantilles noves" : ""}.</span>
         </li>

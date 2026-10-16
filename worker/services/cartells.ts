@@ -1,10 +1,10 @@
 import { MIDA_MAXIMA_FITXER, TIPUS_MIME_PER_US, type EstatPlantilla, type TipusPlantilla, type UsFitxer } from "../../shared/domain/cartells";
-import type { plantillaActualitzar, plantillaCrear } from "../../shared/schemas/cartells";
+import type { fotoCrear, plantillaActualitzar, plantillaCrear } from "../../shared/schemas/cartells";
 import { ErrorAplicacio, errors } from "../http/errors";
 import { resumSha256Bytes } from "../lib/cripto";
 import { nouId } from "../lib/ids";
 import { isoAra, type Rellotge } from "../lib/rellotge";
-import type { FitxerCartells, PlantillaCartells, Repositoris } from "../repositories/tipus";
+import type { FitxerCartells, FotoCartells, PlantillaCartells, Repositoris } from "../repositories/tipus";
 import { escriuAmbTraca, type ContextOperacio } from "./traca";
 import type { z } from "zod";
 
@@ -89,6 +89,43 @@ export class ServeiCartells {
     const objecte = await this.fitxers.get(fitxer.clau);
     if (!objecte) throw new ErrorAplicacio(503, "fitxer_no_disponible", "El fitxer no està disponible a l'emmagatzematge.");
     return { fitxer, objecte };
+  }
+
+  // ---------- Fototeca ----------
+
+  /**
+   * Afegeix a la fototeca una foto ja pujada (foto i miniatura del mateix àmbit). Si la mateixa
+   * foto ja hi és, la retorna sense duplicar-la (carpetes pujades dues vegades).
+   */
+  async afegirFoto(casalId: string | null, d: z.output<typeof fotoCrear>, ctx: ContextOperacio & { usuariId: string }) {
+    const [fitxer, miniatura] = await Promise.all([this.repos.cartells.fitxer(d.fitxer_id), this.repos.cartells.fitxer(d.miniatura_id)]);
+    if (!fitxer || fitxer.us !== "fotografia" || fitxer.casal_id !== casalId) throw errors.peticioInvalida("La foto no s'ha pujat correctament.");
+    if (!miniatura || miniatura.us !== "previsualitzacio" || miniatura.casal_id !== casalId) throw errors.peticioInvalida("La miniatura no s'ha pujat correctament.");
+    const existent = await this.repos.cartells.fotoPerFitxer(fitxer.id, casalId);
+    if (existent) return { foto: existent, existent: true };
+    const foto: FotoCartells = { id: nouId(), casal_id: casalId, ...d, pujada_per: ctx.usuariId, pujada_el: isoAra(this.rellotge) };
+    await this.repos.cartells.crearFoto(foto);
+    return { foto, existent: false };
+  }
+
+  async fotos(casalId: string | null) {
+    return this.repos.cartells.fotos(casalId);
+  }
+
+  /** Foto visible des del casal: és del casal o és comuna. */
+  async fotoDelCasal(casalId: string | null, id: string) {
+    const foto = await this.repos.cartells.foto(id);
+    if (!foto || (foto.casal_id !== null && foto.casal_id !== casalId)) throw errors.noTrobat("No s'ha trobat la foto.");
+    return foto;
+  }
+
+  async retirarFoto(foto: FotoCartells, ctx: ContextOperacio & { usuariId: string }) {
+    const ara = isoAra(this.rellotge);
+    await this.repos.cartells.retirarFoto(foto.id, ctx.usuariId, ara);
+    await this.repos.auditoria.registrar({
+      casal_id: foto.casal_id, usuari_id: ctx.usuariId, tipus_operacio: "cartells.foto_retirada", entitat: "cartells_foto",
+      entitat_id: foto.id, resultat: "exit", id_peticio: ctx.idPeticio ?? null, detalls: { carpeta: foto.carpeta },
+    }, ara);
   }
 
   async plantilles(casalId: string | null, filtre: { tipus?: TipusPlantilla; nomesActives: boolean }) {

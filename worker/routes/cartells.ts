@@ -5,7 +5,7 @@ import { errors, ErrorAplicacio } from "../http/errors";
 import { llegeixFitxer } from "../http/fitxers";
 import { cosValidat, idRuta } from "../http/validacio";
 import { MIDA_MAXIMA_FITXER, TIPUS_PLANTILLA, type TipusPlantilla, type UsFitxer } from "../../shared/domain/cartells";
-import { consultaPujada, plantillaActualitzar, plantillaCrear } from "../../shared/schemas/cartells";
+import { consultaPujada, fotoCrear, plantillaActualitzar, plantillaCrear } from "../../shared/schemas/cartells";
 import { errorsPerCamp } from "../../shared/schemas/comuns";
 import { ServeiCartells } from "../services/cartells";
 
@@ -45,8 +45,11 @@ async function pujada(c: C, casalId: string | null) {
   const consulta = consultaPujada.safeParse({ us: c.req.query("us"), nom: c.req.query("nom") });
   if (!consulta.success) throw errors.peticioInvalida("Dades no vàlides.", errorsPerCamp(consulta.error));
   const { us, nom } = consulta.data;
-  if (casalId === null) exigeixGlobal(c, PERMIS_PUJADA_COMU[us]);
-  else c.get("usuari").exigeix(PERMIS_PUJADA_CASAL[us], casalId);
+  // Les miniatures serveixen per a les plantilles i per a la fototeca.
+  const alternatiu = us === "previsualitzacio" ? (casalId === null ? "cartells.recursos_comuns" : "cartells.fotografies") : null;
+  if (casalId === null) {
+    if (!(alternatiu && c.get("usuari").esGlobal(alternatiu))) exigeixGlobal(c, PERMIS_PUJADA_COMU[us]);
+  } else if (!(alternatiu && c.get("usuari").pot(alternatiu, casalId))) c.get("usuari").exigeix(PERMIS_PUJADA_CASAL[us], casalId);
   // El tipus del fitxer va a Content-Type: un formulari d'un altre lloc no el pot enviar sense preflight CORS.
   const tipusMime = (c.req.header("Content-Type") ?? "").split(";")[0]!.trim().toLowerCase();
   const contingut = await llegeixFitxer(c.req.raw, MIDA_MAXIMA_FITXER[us]);
@@ -92,6 +95,40 @@ export const rutesCartells = new Hono<Entorn>()
         "Cache-Control": fitxer.us === "plantilla" || fitxer.us === "previsualitzacio" ? "private, max-age=604800, immutable" : "no-store",
       },
     });
+  })
+
+  // ---------- Fototeca ----------
+  .get("/casals/:casalId/cartells/fotos", async (c) => {
+    const casalId = casalAutoritzat(c, "cartells.consultar");
+    return c.json({ fotos: await servei(c).fotos(casalId) });
+  })
+  .post("/casals/:casalId/cartells/fotos", async (c) => {
+    const casalId = casalAutoritzat(c, "cartells.fotografies");
+    const r = await servei(c).afegirFoto(casalId, await cosValidat(c, fotoCrear), ctx(c));
+    return c.json(r, r.existent ? 200 : 201);
+  })
+  .delete("/casals/:casalId/cartells/fotos/:fotoId", async (c) => {
+    const casalId = casalAutoritzat(c, "cartells.consultar");
+    const foto = await servei(c).fotoDelCasal(casalId, idRuta(c, "fotoId"));
+    // Una foto comuna la retira només la superadministració.
+    if (foto.casal_id === null) exigeixGlobal(c, "cartells.recursos_comuns");
+    else c.get("usuari").exigeix("cartells.fotografies", casalId);
+    await servei(c).retirarFoto(foto, ctx(c));
+    return c.json({ ok: true });
+  })
+  .get("/cartells/fotos", async (c) => {
+    exigeixGlobal(c, "cartells.recursos_comuns");
+    return c.json({ fotos: await servei(c).fotos(null) });
+  })
+  .post("/cartells/fotos", async (c) => {
+    exigeixGlobal(c, "cartells.recursos_comuns");
+    const r = await servei(c).afegirFoto(null, await cosValidat(c, fotoCrear), ctx(c));
+    return c.json(r, r.existent ? 200 : 201);
+  })
+  .delete("/cartells/fotos/:fotoId", async (c) => {
+    exigeixGlobal(c, "cartells.recursos_comuns");
+    await servei(c).retirarFoto(await servei(c).fotoDelCasal(null, idRuta(c, "fotoId")), ctx(c));
+    return c.json({ ok: true });
   })
 
   // ---------- Plantilles ----------

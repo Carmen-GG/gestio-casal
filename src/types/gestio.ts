@@ -334,6 +334,10 @@ export interface IndicadorsCicle {
 export type { CampPlantilla, EstatPlantilla, TipusPlantilla } from "../../shared/domain/cartells";
 import type { CampPlantilla, Estacio, EstatPlantilla, FormatSortida, TipusPlantilla, UsFitxer } from "../../shared/domain/cartells";
 
+export interface FotoCartells {
+  id: string; casal_id: string | null; fitxer_id: string; miniatura_id: string; carpeta: string; nom: string;
+  amplada: number | null; alcada: number | null; pujada_per: string; pujada_el: string;
+}
 export interface FitxerCartells {
   id: string; casal_id: string | null; us: UsFitxer; tipus_mime: string; mida: number; sha256: string;
   nom_original: string; pujat_per: string; pujat_el: string;
