@@ -10,6 +10,7 @@ Al menú del panell, quan hi ha un casal triat, apareixen els dos mòduls: **Ins
 | Emmagatzematge de fitxers (R2) i metadades (D1) | Fet |
 | Plantilles: càrrega, biblioteca, fitxa, rols dels camps, estats | Fet |
 | Generador de cartells PDF, imatges d'Instagram i codis QR | Fet (sense desar historial encara) |
+| Publicació a Instagram (vegeu [instagram.md](instagram.md)) | Fet: amb confirmació, o des del mòbil |
 | Fotografies, historial de materials, importació d'Excel | Pendent |
 
 ## Plantilles originals

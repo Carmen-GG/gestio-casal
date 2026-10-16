@@ -12,6 +12,7 @@ import { D1RepositoriIndicadors } from "./indicadors";
 import { D1RepositoriComunicacions } from "./comunicacions";
 import { D1RepositoriPersonesPlataforma } from "./persones-plataforma";
 import { D1RepositoriCartells } from "./cartells";
+import { D1RepositoriInstagram } from "./instagram";
 import { D1RepositoriAuditoria, D1RepositoriHistorial, D1UnitatDeTreball } from "./registres";
 
 export function repositorisD1(db: D1Database, rellotge: Rellotge): Repositoris {
@@ -31,6 +32,7 @@ export function repositorisD1(db: D1Database, rellotge: Rellotge): Repositoris {
     personesPlataforma: new D1RepositoriPersonesPlataforma(db),
     indicadors: new D1RepositoriIndicadors(db),
     cartells: new D1RepositoriCartells(db),
+    instagram: new D1RepositoriInstagram(db),
     unitat: new D1UnitatDeTreball(db),
   };
 }

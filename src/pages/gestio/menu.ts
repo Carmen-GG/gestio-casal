@@ -43,7 +43,7 @@ export const MENU: ElementMenu[] = [
           { text: "Comunicacions segons activitat", desti: { seccio: "comunicacions" }, permis: "sollicituds.dades_contacte" },
         ],
       },
-      { text: "Instagram", desti: { properament: "instagram" } },
+      { text: "Instagram", desti: { ruta: "instagram" }, permis: "instagram.publicar" },
     ],
   },
   { text: "Equip del casal", desti: { ruta: "usuaris" }, permis: "usuaris.gestionar" },

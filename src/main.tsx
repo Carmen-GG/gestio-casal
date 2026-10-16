@@ -29,6 +29,8 @@ import { CartellsInici } from "./pages/cartells/CartellsInici";
 import { Plantilles } from "./pages/cartells/Plantilles";
 import { DetallPlantilla } from "./pages/cartells/DetallPlantilla";
 import { NouMaterial } from "./pages/cartells/NouMaterial";
+import { Instagram } from "./pages/instagram/Instagram";
+import { DetallPublicacio } from "./pages/instagram/DetallPublicacio";
 import "./styles.css";
 
 const router = createBrowserRouter([
@@ -65,6 +67,8 @@ const router = createBrowserRouter([
           { path: ":casalId/cartells/plantilles", element: <Plantilles /> },
           { path: ":casalId/cartells/plantilles/:plantillaId", element: <DetallPlantilla /> },
           { path: ":casalId/cartells/nou", element: <NouMaterial /> },
+          { path: ":casalId/instagram", element: <Instagram /> },
+          { path: ":casalId/instagram/:publicacioId", element: <DetallPublicacio /> },
         ],
       },
       { path: "*", element: <NoTrobada /> },

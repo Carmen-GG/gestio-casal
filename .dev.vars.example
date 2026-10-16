@@ -5,3 +5,7 @@
 # (Fase 2) Clau per signar les sessions de l'autenticació de desenvolupament.
 # Genereu-ne una d'aleatòria: node -e "console.log(crypto.randomBytes(32).toString('base64url'))"
 # SESSION_SECRET=
+#
+# Clau per xifrar els testimonis d'accés dels comptes d'Instagram (docs/instagram.md).
+# Sense aquesta clau no es pot connectar cap compte; la resta funciona.
+# INSTAGRAM_CLAU=

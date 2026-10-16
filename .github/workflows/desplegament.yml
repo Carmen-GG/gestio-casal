@@ -47,6 +47,19 @@ jobs:
         run: |
           npx wrangler deploy | tee "$RUNNER_TEMP/deploy.log"
           echo "url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' "$RUNNER_TEMP/deploy.log" | head -1)" >> "$GITHUB_OUTPUT"
+      # Clau per xifrar els testimonis d'Instagram dels casals (docs/instagram.md). Es crea una
+      # sola vegada; si ja existeix no es toca (canviar-la obligaria a tornar a connectar els comptes).
+      # El valor no es mostra mai al registre.
+      - name: Secret d'Instagram
+        run: |
+          # Si no es pot llegir la llista, s'atura: mai es crea una clau nova a cegues.
+          secrets="$(npx wrangler secret list --env "$CLOUDFLARE_ENV")"
+          if grep -qw 'INSTAGRAM_CLAU' <<< "$secrets"; then
+            echo "INSTAGRAM_CLAU ja existeix."
+          else
+            openssl rand -base64 32 | tr -d '\n' | npx wrangler secret put INSTAGRAM_CLAU --env "$CLOUDFLARE_ENV" > /dev/null
+            echo "S'ha creat INSTAGRAM_CLAU."
+          fi
       # Comprovació final: el Worker respon i arriba a la base de dades.
       - name: Comprovació de salut
         if: steps.desplegament.outputs.url != ''

@@ -11,6 +11,11 @@ export interface Env {
    * Opcional: si no està configurat, no es limita (p. ex. en algunes proves).
    */
   LIMIT_SOLLICITUDS?: RateLimit;
+  /**
+   * Secret per xifrar els testimonis d'accés dels comptes d'Instagram dels casals.
+   * Sense aquest secret no es pot connectar cap compte (la resta de l'aplicació funciona).
+   */
+  INSTAGRAM_CLAU?: string;
   /** Limitador dels intents d'entrada amb contrasenya. Opcional com l'anterior. */
   LIMIT_ENTRADA?: RateLimit;
 }
